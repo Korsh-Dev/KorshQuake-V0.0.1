@@ -1,0 +1,4 @@
+# KorshQuake utiliza únicamente la biblioteca estándar de Python 3.9+
+# No requiere paquetes pip externos obligatorios para correr.
+# Para desarrollo o pruebas opcionales:
+# requests>=2.31.0

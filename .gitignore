@@ -1,0 +1,17 @@
+# Entornos y temporales de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+
+# Instaladores y binarios pesados de escritorio
+*.zip
+*.exe
+GlobalQuakeApp/
+*.bat
+
+# IDEs y sistemas operativos
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

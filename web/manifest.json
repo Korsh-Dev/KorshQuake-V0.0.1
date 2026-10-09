@@ -1,0 +1,26 @@
+{
+  "name": "KorshQuake - Monitor Sísmico en Tiempo Real",
+  "short_name": "KorshQuake",
+  "description": "Sistema de detección, monitoreo y alerta temprana de terremotos en tiempo real para Panamá, Venezuela, España y Argentina.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#050b14",
+  "theme_color": "#050b14",
+  "categories": ["weather", "utilities", "news"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

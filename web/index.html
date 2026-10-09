@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>KorshQuake v1.1.2 PRO - Monitor Sísmico en Tiempo Real</title>
+  
+  <!-- PWA & Mobile Meta Tags -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#050b14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="KorshQuake">
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Local Leaflet CSS (100% local, no depende de CDNs externas) -->
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header / Navigation Bar -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-container">
+        <div class="logo-pulse"></div>
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M2 12h5l2-4 4 8 2-4h7"></path>
+        </svg>
+      </div>
+      <div>
+        <h1 class="app-title">KorshQuake <span class="badge-version">v1.1.2 PRO</span></h1>
+        <p class="app-subtitle">Monitor Sísmico en Vivo: Panamá 🇵🇦 • Venezuela 🇻🇪 • España 🇪🇸 • Argentina 🇦🇷</p>
+      </div>
+    </div>
+
+    <!-- Live Telemetry Stats -->
+    <div class="header-stats">
+      <div class="stat-pill" title="Streaming Continuo en Tiempo Real">
+        <span class="stat-dot pulse-green"></span>
+        <span class="stat-label">Streaming:</span>
+        <span class="stat-val font-mono text-cyan">EN VIVO (2.5s)</span>
+      </div>
+      <div class="stat-pill" id="cluster-pill" style="cursor: pointer;" title="Ver Clúster de Redes Sísmicas">
+        <span class="stat-dot pulse-green"></span>
+        <span class="stat-label">Redes Regionales:</span>
+        <span class="stat-val font-mono" id="cluster-count">7 Servidores ONLINE</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-dot" id="gq-app-dot"></span>
+        <span class="stat-label">Engine:</span>
+        <span class="stat-val font-mono" id="gq-app-status">KorshQuake Core</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="header-actions">
+      <!-- Selector de Umbral de Alertas en Vivo -->
+      <div class="alert-selector-wrap" title="Configura cuándo debe sonar la alarma sísmica">
+        <select id="select-audio-threshold" class="select-dark select-sm font-mono">
+          <option value="3.5" selected>🔊 Alerta: M 3.5+ (Solo en Vivo)</option>
+          <option value="4.5">⚠️ Alerta: M 4.5+ (Solo Fuertes)</option>
+          <option value="6.0">🚨 Alerta: M 6.0+ (Solo Mayores)</option>
+          <option value="off">🔇 Silencio Total (Mudo)</option>
+        </select>
+      </div>
+
+      <!-- Botón Descargar APK / App Móvil -->
+      <button class="btn btn-primary" id="btn-open-apk-modal" title="Descargar KorshQuake APK para Android">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+          <line x1="12" y1="18" x2="12.01" y2="18"></line>
+        </svg>
+        <span>📲 KorshQuake APK</span>
+      </button>
+
+      <button class="btn btn-secondary" id="btn-open-servers" title="Ver estado y latencia de las redes sísmicas de los 4 países">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+          <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+          <line x1="6" y1="6" x2="6.01" y2="6"></line>
+          <line x1="6" y1="18" x2="6.01" y2="18"></line>
+        </svg>
+        <span>Redes</span>
+      </button>
+      <button class="btn btn-secondary" id="btn-toggle-sound" title="Alternar Sonido Rápido">
+        <svg id="icon-sound" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+        <span id="sound-label">Audio: ON</span>
+      </button>
+      <button class="btn btn-secondary" id="btn-open-logs" title="Ver logs en vivo de KorshQuake">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="4 17 10 11 4 5"></polyline>
+          <line x1="12" y1="19" x2="20" y2="19"></line>
+        </svg>
+        <span>Logs</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Early Warning Banner -->
+  <div class="eew-banner" id="eew-banner" style="display: none;">
+    <div class="eew-content">
+      <div class="eew-badge">
+        <span class="eew-icon">⚠️</span>
+        <span>KORSHQUAKE ALERTA TEMPRANA EN VIVO</span>
+      </div>
+      <div class="eew-details">
+        <div class="eew-title" id="eew-title">Sismo Mayor Detectado</div>
+        <div class="eew-meta font-mono" id="eew-meta">Cálculo de hypocentro en progreso</div>
+      </div>
+      <div class="eew-intensity-box">
+        <span class="intensity-label">INTENSIDAD MÁX</span>
+        <span class="intensity-val font-mono" id="eew-intensity">VI - FUERTE</span>
+      </div>
+    </div>
+    <button class="eew-close" id="btn-close-eew" title="Ocultar Alerta">&times;</button>
+  </div>
+
+  <!-- Metric Quick Cards Bar -->
+  <section class="metrics-bar">
+    <div class="metric-card">
+      <div class="metric-icon-box cyan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      </div>
+      <div class="metric-data">
+        <span class="metric-num font-mono" id="stat-total-quakes">--</span>
+        <span class="metric-title">Sismos en 4 Países</span>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-icon-box red">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      </div>
+      <div class="metric-data">
+        <span class="metric-num font-mono text-red" id="stat-max-mag">--</span>
+        <span class="metric-title">Magnitud Máxima</span>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-icon-box orange">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      </div>
+      <div class="metric-data">
+        <span class="metric-num font-mono" id="stat-last-time">--</span>
+        <span class="metric-title">Último Evento</span>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-icon-box green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+      </div>
+      <div class="metric-data">
+        <span class="metric-num font-mono text-green" id="stat-system-health">FILTRADO ESTRICTO</span>
+        <span class="metric-title">PA • VE • ES • AR Activos</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Country Quick Tabs Bar -->
+  <section class="country-nav-bar">
+    <div class="country-tabs-label font-mono">Región Focalizada:</div>
+    <div class="country-tabs-group" id="country-tabs">
+      <button class="country-pill active" data-country="all">
+        <span class="country-pill-flag">🌐</span>
+        <span>Todos (4 Países)</span>
+        <span class="country-pill-count font-mono" id="count-pill-all">0</span>
+      </button>
+      <button class="country-pill" data-country="PA">
+        <span class="country-pill-flag">🇵🇦</span>
+        <span>Panamá</span>
+        <span class="country-pill-count font-mono" id="count-pill-pa">0</span>
+      </button>
+      <button class="country-pill" data-country="VE">
+        <span class="country-pill-flag">🇻🇪</span>
+        <span>Venezuela</span>
+        <span class="country-pill-count font-mono" id="count-pill-ve">0</span>
+      </button>
+      <button class="country-pill" data-country="ES">
+        <span class="country-pill-flag">🇪🇸</span>
+        <span>España</span>
+        <span class="country-pill-count font-mono" id="count-pill-es">0</span>
+      </button>
+      <button class="country-pill" data-country="AR">
+        <span class="country-pill-flag">🇦🇷</span>
+        <span>Argentina</span>
+        <span class="country-pill-count font-mono" id="count-pill-ar">0</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Main View Container -->
+  <main class="main-layout">
+    <!-- Center Left: Interactive Seismic Map -->
+    <section class="map-section glass-panel">
+      <div class="map-header">
+        <div class="map-title-box">
+          <h2 id="map-section-title">KorshQuake: Panamá, Venezuela, España y Argentina</h2>
+          <span class="live-tag"><span class="pulse-dot"></span> EN VIVO</span>
+        </div>
+        <!-- Map Filters & Layer Switcher -->
+        <div class="map-controls">
+          <div class="filter-group">
+            <label for="select-layer">Capa:</label>
+            <select id="select-layer" class="select-dark">
+              <option value="dark" selected>Modo Oscuro (Esri Canvas)</option>
+              <option value="satellite">Satélite (Alta Resolución)</option>
+              <option value="topo">Físico / Topográfico</option>
+              <option value="vector">Vectorial Tectónico (Offline)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="filter-mag">Filtro Magnitud:</label>
+            <select id="filter-mag" class="select-dark">
+              <option value="all">Todas las Magnitudes</option>
+              <option value="consensus">🎯 Solo Consenso Multi-Red</option>
+              <option value="3">M 3.0+ Moderados</option>
+              <option value="5">M 5.0+ Fuertes</option>
+              <option value="6">M 6.0+ Mayores</option>
+            </select>
+          </div>
+          <button class="btn btn-sm btn-secondary" id="btn-recenter" title="Reajustar vista del mapa">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
+            Centrar
+          </button>
+        </div>
+      </div>
+
+      <!-- Leaflet Map Container -->
+      <div id="map"></div>
+
+      <!-- Wave Propagation Overlay Legend -->
+      <div class="map-legend">
+        <div class="legend-item"><span class="legend-color cyan"></span> M &lt; 3.0</div>
+        <div class="legend-item"><span class="legend-color yellow"></span> M 3.0 - 4.9</div>
+        <div class="legend-item"><span class="legend-color orange"></span> M 5.0 - 6.4</div>
+        <div class="legend-item"><span class="legend-color red"></span> M 6.5+ Mayor</div>
+        <div class="legend-divider"></div>
+        <div class="legend-item"><span class="legend-ring wave-p"></span> Onda P (~8 km/s)</div>
+        <div class="legend-item"><span class="legend-ring wave-s"></span> Onda S (~4 km/s)</div>
+        <div class="legend-divider"></div>
+        <div class="legend-item"><span class="legend-plate-line"></span> Placas Tectónicas</div>
+      </div>
+    </section>
+
+    <!-- Right Column: Sidebar Feed & Waveform Seismograph -->
+    <aside class="sidebar-section">
+      <!-- Live Station Waveform Monitor -->
+      <div class="seismograph-panel glass-panel">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <span class="live-dot pulse-red"></span>
+            <h3>Monitor Sismográfico de Estación</h3>
+          </div>
+          <span class="freq-tag font-mono">100 Hz / Z-Axis</span>
+        </div>
+        <canvas id="seismograph-canvas" width="450" height="110"></canvas>
+        <div class="seismo-meta font-mono">
+          <span>Estación Primaria: <strong class="text-cyan">KORSH-NET-AK135</strong></span>
+          <span id="seismo-peak">PGA: 0.12 cm/s²</span>
+        </div>
+      </div>
+
+      <!-- Earthquake Live Activity Feed -->
+      <div class="feed-panel glass-panel">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            <h3 id="feed-panel-title">Sismos Recientes</h3>
+          </div>
+          <span class="badge-count font-mono" id="feed-count">0</span>
+        </div>
+
+        <div class="quake-list" id="quake-list">
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Conectando con redes de Panamá, Venezuela, España y Argentina...</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Modal: Descargar e Instalar KorshQuake en Android (APK / PWA) -->
+  <div class="modal-overlay" id="modal-apk">
+    <div class="modal-content glass-panel" style="max-width: 540px; height: auto;">
+      <div class="modal-header">
+        <div class="modal-title-box">
+          <span class="terminal-dot pulse-green"></span>
+          <h3>Instalar KorshQuake en Android (APK)</h3>
+        </div>
+        <button class="modal-close" id="btn-close-apk">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 24px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="/icons/icon-192.png" alt="KorshQuake" style="width: 80px; height: 80px; border-radius: 18px; box-shadow: 0 0 20px rgba(0,229,255,0.4);">
+          <h2 style="font-size: 1.3rem; margin-top: 10px;">KorshQuake Mobile v1.1.2 PRO</h2>
+          <p style="color: var(--text-muted); font-size: 0.85rem;">Monitoreo sísmico en tiempo real en la palma de tu mano</p>
+        </div>
+
+        <div style="background: rgba(0, 229, 255, 0.08); border: 1px solid rgba(0, 229, 255, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+          <h4 style="color: var(--cyan); font-size: 0.9rem; margin-bottom: 6px;">📲 Opción 1: Descarga Directa del Archivo APK</h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Descarga directamente el archivo instalador oficial <strong>KorshQuake.apk</strong> para tu celular Android.</p>
+          <a href="/KorshQuake.apk" download="KorshQuake.apk" class="btn btn-primary" style="display: inline-flex; width: 100%; justify-content: center; gap: 8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Descargar KorshQuake.apk (0.24 MB)</span>
+          </a>
+        </div>
+
+        <div style="background: rgba(0, 230, 118, 0.08); border: 1px solid rgba(0, 230, 118, 0.25); border-radius: 10px; padding: 14px;">
+          <h4 style="color: var(--green); font-size: 0.9rem; margin-bottom: 6px;">⚡ Opción 2: Abrir en Celular por Wi-Fi e Instalar como WebAPK</h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">Conecta tu celular a la misma red Wi-Fi y abre en Chrome:</p>
+          <div class="font-mono" style="background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 6px; color: #fff; font-size: 0.9rem; user-select: all; text-align: center;">
+            http://192.168.1.13:8080
+          </div>
+          <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 8px;">Toca en el menú de Chrome <strong>"Instalar aplicación"</strong> o <strong>"Añadir a pantalla de inicio"</strong> y Android creará la app nativa con icono propio.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" id="btn-close-apk-footer">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Servers Cluster Modal -->
+  <div class="modal-overlay" id="modal-servers">
+    <div class="modal-content glass-panel" style="height: 580px;">
+      <div class="modal-header">
+        <div class="modal-title-box">
+          <span class="terminal-dot pulse-green"></span>
+          <h3>KorshQuake: Redes Sísmicas de Panamá, Venezuela, España y Argentina</h3>
+        </div>
+        <button class="modal-close" id="btn-close-servers">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px; overflow-y: auto;">
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px;">
+          Ingesta continua y triangulación en tiempo real de redes nacionales y centros sismológicos oficiales para <strong>Panamá, Venezuela, España y Argentina</strong>:
+        </p>
+        <div class="servers-grid" id="servers-grid">
+          <!-- Dynamic Servers Cards inserted via JS -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" id="btn-close-servers-footer">Cerrar</button>
+        <button class="btn btn-primary btn-sm" id="btn-refresh-servers">Actualizar Latencias</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Logs Modal -->
+  <div class="modal-overlay" id="modal-logs">
+    <div class="modal-content glass-panel">
+      <div class="modal-header">
+        <div class="modal-title-box">
+          <span class="terminal-dot pulse-green"></span>
+          <h3>Consola en Tiempo Real - KorshQuake v1.1.2 PRO</h3>
+        </div>
+        <button class="modal-close" id="btn-close-logs">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="terminal-view font-mono" id="terminal-view">
+          <!-- Terminal lines -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" id="btn-copy-logs">Copiar Logs</button>
+        <button class="btn btn-primary btn-sm" id="btn-refresh-logs">Actualizar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Local Leaflet JS (No CDN dependency) -->
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <!-- Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>
