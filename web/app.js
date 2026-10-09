@@ -97,6 +97,15 @@ function playAlertSound(type = 'beep') {
       osc.start();
       osc.stop(audioCtx.currentTime + 0.12);
     }
+
+    // Vibración háptica en dispositivos móviles (Android / navegadores con soporte)
+    if ('vibrate' in navigator) {
+      if (type === 'major') {
+        navigator.vibrate([250, 100, 250, 100, 500]);
+      } else if (type === 'moderate') {
+        navigator.vibrate([120, 60, 120]);
+      }
+    }
   } catch (err) {
     console.warn('Audio playback error:', err);
   }
@@ -383,6 +392,9 @@ function renderQuakes() {
           <span><strong>Redes Sísmicas:</strong> <strong style="color: #fff;">${escapeHtml(props.source_feed || 'USGS')}</strong></span>
           <span><strong>Hora UTC:</strong> ${new Date(props.time).toUTCString()}</span>
         </div>
+        <button class="btn btn-primary btn-sm" style="width: 100%; margin-top: 10px; justify-content: center; font-size: 0.82rem; padding: 6px 12px;" onclick="openPredictForEvent('${feature.id}')">
+          ⚡ Predicción de Arribo EEW
+        </button>
       </div>
     `;
     marker.bindPopup(popupHtml);
@@ -840,10 +852,11 @@ function startWaveAnimation() {
 
 // Motor de Predicciones y Alerta Temprana (EEW)
 let predictPollInterval = null;
+let currentPredictUrl = '/api/predict';
 
 async function fetchPredictions() {
   try {
-    const res = await fetch('/api/predict');
+    const res = await fetch(currentPredictUrl);
     const data = await res.json();
     renderPredictionsModal(data);
   } catch (err) {
@@ -913,17 +926,34 @@ function renderPredictionsModal(data) {
   }).join('');
 }
 
-function openPredictModal() {
+window.openPredictModal = function(customUrl = null) {
   const modal = document.getElementById('modal-predict');
   if (modal) {
+    currentPredictUrl = customUrl || '/api/predict';
     modal.classList.add('active');
     fetchPredictions();
     if (predictPollInterval) clearInterval(predictPollInterval);
     predictPollInterval = setInterval(fetchPredictions, 1000);
   }
-}
+};
 
-function closePredictModal() {
+window.openPredictForEvent = function(eventId) {
+  const ev = allQuakes.find(q => q.id === eventId);
+  if (ev && ev.geometry && ev.properties) {
+    const coords = ev.geometry.coordinates;
+    const lat = coords[1];
+    const lon = coords[0];
+    const depth = coords.length > 2 ? coords[2] : 10.0;
+    const mag = ev.properties.mag || 4.0;
+    const time = ev.properties.time || Date.now();
+    const url = `/api/predict?lat=${lat}&lon=${lon}&mag=${mag}&depth=${depth}&time=${time}`;
+    openPredictModal(url);
+  } else {
+    openPredictModal('/api/predict');
+  }
+};
+
+window.closePredictModal = function() {
   const modal = document.getElementById('modal-predict');
   if (modal) {
     modal.classList.remove('active');
@@ -932,7 +962,7 @@ function closePredictModal() {
     clearInterval(predictPollInterval);
     predictPollInterval = null;
   }
-}
+};
 
 // Event Listeners & Boot
 document.addEventListener('DOMContentLoaded', () => {
@@ -1042,15 +1072,59 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnOpenApk = document.getElementById('btn-open-apk-modal');
   const btnCloseApk = document.getElementById('btn-close-apk');
   const btnCloseApkFooter = document.getElementById('btn-close-apk-footer');
+  const apkAppUrlInput = document.getElementById('apk-app-url');
+  const btnCopyAppUrl = document.getElementById('btn-copy-app-url');
+  const btnDlApk = document.getElementById('btn-download-apk-link');
 
-  if (btnOpenApk && modalApk) {
-    btnOpenApk.addEventListener('click', () => modalApk.classList.add('active'));
+  const setupApkModal = () => {
+    if (modalApk) {
+      modalApk.classList.add('active');
+      if (apkAppUrlInput) {
+        apkAppUrlInput.value = window.location.origin;
+      }
+    }
+  };
+
+  if (btnOpenApk) btnOpenApk.addEventListener('click', setupApkModal);
+  if (btnCloseApk) btnCloseApk.addEventListener('click', () => modalApk.classList.remove('active'));
+  if (btnCloseApkFooter) btnCloseApkFooter.addEventListener('click', () => modalApk.classList.remove('active'));
+
+  if (btnCopyAppUrl && apkAppUrlInput) {
+    btnCopyAppUrl.addEventListener('click', () => {
+      navigator.clipboard.writeText(apkAppUrlInput.value || window.location.origin);
+      showToast('✓ Enlace copiado al portapapeles');
+    });
   }
-  if (btnCloseApk && modalApk) {
-    btnCloseApk.addEventListener('click', () => modalApk.classList.remove('active'));
+
+  if (btnDlApk) {
+    btnDlApk.addEventListener('click', () => {
+      showToast('📲 Descargando KorshQuake.apk (0.25 MB)...');
+    });
   }
-  if (btnCloseApkFooter && modalApk) {
-    btnCloseApkFooter.addEventListener('click', () => modalApk.classList.remove('active'));
+
+  // Capturar instalación WebAPK / PWA nativa (beforeinstallprompt)
+  let deferredPwaPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPwaPrompt = e;
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner) banner.style.display = 'block';
+  });
+
+  const btnNativeInstall = document.getElementById('btn-native-install-pwa');
+  if (btnNativeInstall) {
+    btnNativeInstall.addEventListener('click', async () => {
+      if (deferredPwaPrompt) {
+        deferredPwaPrompt.prompt();
+        const { outcome } = await deferredPwaPrompt.userChoice;
+        if (outcome === 'accepted') {
+          showToast('✓ KorshQuake se está instalando en tu pantalla de inicio');
+          const banner = document.getElementById('pwa-install-banner');
+          if (banner) banner.style.display = 'none';
+        }
+        deferredPwaPrompt = null;
+      }
+    });
   }
 
   // Menu & Settings Modal Handlers
@@ -1174,12 +1248,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabNavMap = document.getElementById('tab-nav-map');
   const tabNavFeed = document.getElementById('tab-nav-feed');
   const tabNavWaves = document.getElementById('tab-nav-waves');
+  const tabNavPredict = document.getElementById('tab-nav-predict');
   const tabNavSettings = document.getElementById('tab-nav-settings');
 
   if (tabNavMap) tabNavMap.addEventListener('click', () => setMobileView('map'));
   if (tabNavFeed) tabNavFeed.addEventListener('click', () => setMobileView('feed'));
   if (tabNavWaves) tabNavWaves.addEventListener('click', () => setMobileView('waves'));
+  if (tabNavPredict) tabNavPredict.addEventListener('click', () => openPredictModal());
   if (tabNavSettings) tabNavSettings.addEventListener('click', openMenuModal);
+
+  // Soporte para deep-links: ?country=PA / VE / ES / AR o ?view=predict
+  const urlParams = new URLSearchParams(window.location.search);
+  const cp = urlParams.get('country');
+  const vp = urlParams.get('view');
+  if (cp && REGION_VIEWPORTS[cp.toUpperCase()]) {
+    setCountryFilter(cp.toUpperCase());
+  }
+  if (vp === 'predict' || vp === 'eew') {
+    openPredictModal();
+  } else if (vp === 'apk') {
+    setupApkModal();
+  }
 
   // Inicializar en vista de mapa para móvil
   if (window.innerWidth <= 768) {

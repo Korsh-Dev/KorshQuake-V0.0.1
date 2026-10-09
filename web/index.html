@@ -331,33 +331,52 @@
       <div class="modal-header">
         <div class="modal-title-box">
           <span class="terminal-dot pulse-green"></span>
-          <h3>Instalar KorshQuake en Android (APK)</h3>
+          <h3>Instalar KorshQuake Mobile (APK & PWA)</h3>
         </div>
         <button class="modal-close" id="btn-close-apk">&times;</button>
       </div>
       <div class="modal-body" style="padding: 24px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <img src="/icons/icon-192.png" alt="KorshQuake" style="width: 80px; height: 80px; border-radius: 18px; box-shadow: 0 0 20px rgba(0,229,255,0.4);">
-          <h2 style="font-size: 1.3rem; margin-top: 10px;">KorshQuake Mobile v1.1.2 PRO</h2>
-          <p style="color: var(--text-muted); font-size: 0.85rem;">Monitoreo sísmico en tiempo real en la palma de tu mano</p>
+          <img src="/icons/icon-192.png" alt="KorshQuake" style="width: 80px; height: 80px; border-radius: 18px; box-shadow: 0 0 25px rgba(0,229,255,0.45); border: 1px solid rgba(0,229,255,0.4);">
+          <h2 style="font-size: 1.3rem; margin-top: 10px; color: #fff;">KorshQuake Mobile v1.1.2 PRO</h2>
+          <div style="display: flex; gap: 8px; justify-content: center; margin-top: 6px;">
+            <span class="country-badge-tag" style="background: rgba(0,230,118,0.15); color: #00e676; border-color: rgba(0,230,118,0.3);">✓ Android Nativo / PWA</span>
+            <span class="country-badge-tag" style="background: rgba(0,229,255,0.15); color: #00e5ff; border-color: rgba(0,229,255,0.3);">0.25 MB Ultraligero</span>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 8px;">Monitoreo sísmico y predicción de ondas en tiempo real en la palma de tu mano.</p>
         </div>
 
+        <!-- Botón 1-Clic para PWA/WebAPK (si está disponible en el navegador) -->
+        <div id="pwa-install-banner" style="display: none; background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(2,132,199,0.2)); border: 1px solid #00e5ff; border-radius: 10px; padding: 14px; margin-bottom: 16px; text-align: center;">
+          <h4 style="color: #00e5ff; font-size: 0.95rem; margin-bottom: 6px;">⚡ Instalación Instantánea Detectada</h4>
+          <p style="font-size: 0.8rem; color: #cbd5e1; margin-bottom: 10px;">Tu navegador permite instalar KorshQuake directamente como aplicación nativa en tu pantalla de inicio.</p>
+          <button id="btn-native-install-pwa" class="btn btn-primary" style="width: 100%; justify-content: center; font-weight: 700;">
+            📲 Instalar App en tu Celular (1-Clic)
+          </button>
+        </div>
+
+        <!-- Opción 1: Descarga directa APK Android -->
         <div style="background: rgba(0, 229, 255, 0.08); border: 1px solid rgba(0, 229, 255, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
-          <h4 style="color: var(--cyan); font-size: 0.9rem; margin-bottom: 6px;">📲 Opción 1: Descarga Directa del Archivo APK</h4>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Descarga directamente el archivo instalador oficial <strong>KorshQuake.apk</strong> para tu celular Android.</p>
-          <a href="/KorshQuake.apk" download="KorshQuake.apk" class="btn btn-primary" style="display: inline-flex; width: 100%; justify-content: center; gap: 8px;">
+          <h4 style="color: var(--cyan); font-size: 0.9rem; margin-bottom: 6px;">📲 Opción 1: Descarga Directa del Instalador APK</h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Descarga directamente el archivo instalador oficial <strong>KorshQuake.apk</strong> para tu celular o tablet Android.</p>
+          <a href="/KorshQuake.apk" download="KorshQuake.apk" class="btn btn-primary" id="btn-download-apk-link" style="display: inline-flex; width: 100%; justify-content: center; gap: 8px;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            <span>Descargar KorshQuake.apk (0.24 MB)</span>
+            <span>Descargar KorshQuake.apk (0.25 MB)</span>
           </a>
         </div>
 
+        <!-- Opción 2: Instalación como WebAPK / PWA -->
         <div style="background: rgba(0, 230, 118, 0.08); border: 1px solid rgba(0, 230, 118, 0.25); border-radius: 10px; padding: 14px;">
-          <h4 style="color: var(--green); font-size: 0.9rem; margin-bottom: 6px;">⚡ Opción 2: Abrir en Celular por Wi-Fi e Instalar como WebAPK</h4>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">Conecta tu celular a la misma red Wi-Fi y abre en Chrome:</p>
-          <div class="font-mono" style="background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 6px; color: #fff; font-size: 0.9rem; user-select: all; text-align: center;">
-            http://192.168.1.13:8080
+          <h4 style="color: var(--green); font-size: 0.9rem; margin-bottom: 6px;">🌐 Opción 2: Instalar desde Navegador (WebAPK / iOS)</h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">Abre esta dirección en el navegador de tu celular (Chrome o Safari):</p>
+          <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
+            <input type="text" id="apk-app-url" readonly class="font-mono" style="flex: 1; background: rgba(0,0,0,0.5); border: 1px solid #1e3a5f; color: #00e5ff; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; text-align: center;" value="">
+            <button class="btn btn-secondary btn-sm" id="btn-copy-app-url" title="Copiar URL">Copiar</button>
           </div>
-          <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 8px;">Toca en el menú de Chrome <strong>"Instalar aplicación"</strong> o <strong>"Añadir a pantalla de inicio"</strong> y Android creará la app nativa con icono propio.</p>
+          <p style="font-size: 0.75rem; color: var(--text-dim);">
+            En Chrome: Menú ⋮ → <strong>"Instalar aplicación"</strong>.<br>
+            En iPhone / Safari: Compartir ⎋ → <strong>"Agregar a pantalla de inicio"</strong>.
+          </p>
         </div>
       </div>
       <div class="modal-footer">
@@ -553,6 +572,16 @@
         </svg>
       </div>
       <span class="nav-label">Ondas</span>
+    </button>
+
+    <button class="nav-tab" data-tab="predict" id="tab-nav-predict" aria-label="Predicciones EEW">
+      <div class="nav-icon-wrap">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      </div>
+      <span class="nav-label" style="color: #00e5ff; font-weight: 600;">EEW</span>
     </button>
 
     <button class="nav-tab" data-tab="settings" id="tab-nav-settings" aria-label="Ajustes">

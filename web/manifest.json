@@ -2,13 +2,45 @@
   "name": "KorshQuake - Monitor Sísmico en Tiempo Real",
   "short_name": "KorshQuake",
   "description": "Sistema de detección, monitoreo y alerta temprana de terremotos en tiempo real para Panamá, Venezuela, España y Argentina.",
-  "start_url": "/",
+  "id": "/?source=pwa",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#050b14",
   "theme_color": "#050b14",
   "categories": ["weather", "utilities", "news"],
+  "shortcuts": [
+    {
+      "name": "Panamá 🇵🇦",
+      "short_name": "Panamá",
+      "description": "Monitoreo sísmico en Panamá",
+      "url": "/?country=PA",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Venezuela 🇻🇪",
+      "short_name": "Venezuela",
+      "description": "Monitoreo sísmico en Venezuela",
+      "url": "/?country=VE",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "España 🇪🇸",
+      "short_name": "España",
+      "description": "Monitoreo sísmico en España",
+      "url": "/?country=ES",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Argentina 🇦🇷",
+      "short_name": "Argentina",
+      "description": "Monitoreo sísmico en Argentina",
+      "url": "/?country=AR",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",

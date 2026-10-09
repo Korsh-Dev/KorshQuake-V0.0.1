@@ -1635,4 +1635,17 @@ body {
   }
 }
 
+/* Responsive EEW Predict Table */
+#modal-predict table {
+  min-width: 580px;
+}
+
+@media (max-width: 600px) {
+  #predict-event-banner {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+}
+
 
