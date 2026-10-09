@@ -367,5 +367,15 @@ class TestKorshQuakeServer(unittest.TestCase):
         self.assertIn("service", stats)
         self.assertGreaterEqual(stats["confirmed_clusters_count"], 1)
 
+        # Verificar que el cluster confirmado se encuentre en el feed de sismos (/api/quakes)
+        url_quakes = f"http://127.0.0.1:{self.port}/api/quakes"
+        resp_quakes = urllib.request.urlopen(url_quakes, timeout=5)
+        self.assertEqual(resp_quakes.status, 200)
+        quakes_data = json.loads(resp_quakes.read().decode("utf-8"))
+        features = quakes_data.get("features", [])
+        cluster_feature = next((f for f in features if f.get("id") == data["cluster_id"]), None)
+        self.assertIsNotNone(cluster_feature)
+        self.assertEqual(cluster_feature["properties"]["status"], "CROWDSOURCED_CONFIRMED")
+
 if __name__ == '__main__':
     unittest.main()

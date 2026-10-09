@@ -1185,6 +1185,7 @@ def process_mesh_trigger(node_id, lat, lon, pga, sta_lta=4.0, device="Mobile Acc
                 _confirmed_mesh_clusters.append({
                     "cluster_id": cluster_id,
                     "alert": eew_alert,
+                    "feature": quake_feature,
                     "timestamp": now
                 })
 
