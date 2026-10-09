@@ -104,13 +104,14 @@ class TestKorshQuakeServer(unittest.TestCase):
         self.assertEqual(set(data["counts_by_country"].keys()), {"PA", "VE", "ES", "AR"})
 
     def test_health_endpoint(self):
-        url = f"http://127.0.0.1:{self.port}/api/health"
-        req = urllib.request.urlopen(url, timeout=5)
-        self.assertEqual(req.status, 200)
-        data = json.loads(req.read().decode('utf-8'))
-        self.assertEqual(data["status"], "healthy")
-        self.assertTrue(data["worker_thread_alive"])
-        self.assertIn("memory_events_count", data)
+        for ep in ["/api/health", "/health"]:
+            url = f"http://127.0.0.1:{self.port}{ep}"
+            req = urllib.request.urlopen(url, timeout=5)
+            self.assertEqual(req.status, 200)
+            data = json.loads(req.read().decode('utf-8'))
+            self.assertEqual(data["status"], "healthy")
+            self.assertTrue(data["worker_thread_alive"])
+            self.assertIn("memory_events_count", data)
 
     def test_quakes_query_parameters(self):
         # Filtro de país específico

@@ -1140,8 +1140,8 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
                 })
             return
 
-        # 6. API: Health Check (/api/health)
-        if path == "/api/health":
+        # 6. API: Health Check (/api/health y /health)
+        if path in ["/api/health", "/health"]:
             now = time.time()
             ram_age_ms = int((now - _last_ram_update_time) * 1000) if _last_ram_update_time else 0
             health_data = {
