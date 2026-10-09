@@ -464,6 +464,98 @@ function saveAlertedIds() {
   } catch (e) {}
 }
 
+// --- Ingesta de Alertas en Tiempo Real por SSE Push (/api/events/live) ---
+let liveEventSource = null;
+
+function handleLiveEarthquakePush(feature) {
+  if (!feature || !feature.id || !feature.properties) return;
+  const p = feature.properties;
+  const mag = p.mag || 0;
+  const place = p.place || 'Epicentro';
+  const flag = p.country_flag || '';
+  const countryName = p.country_name || '';
+
+  // 1. Insertar o actualizar en allQuakes
+  const existingIdx = allQuakes.findIndex(q => q.id === feature.id);
+  if (existingIdx !== -1) {
+    allQuakes[existingIdx] = feature;
+  } else {
+    allQuakes.unshift(feature);
+    if (allQuakes.length > 250) allQuakes.pop();
+  }
+
+  // 2. Notificación en vivo si es un evento nuevo
+  if (!alertedQuakesSet.has(feature.id)) {
+    alertedQuakesSet.add(feature.id);
+    saveAlertedIds();
+
+    const thresholdSelect = document.getElementById('select-audio-threshold');
+    const thresholdMode = thresholdSelect ? thresholdSelect.value : '3.5';
+
+    let shouldSound = false;
+    if (thresholdMode !== 'off') {
+      const minMag = parseFloat(thresholdMode) || 3.5;
+      if (mag >= minMag) shouldSound = true;
+    }
+
+    if (shouldSound) {
+      playAlertSound(mag >= 4.5 ? 'major' : 'moderate');
+    }
+
+    if ('vibrate' in navigator) {
+      navigator.vibrate(mag >= 5.0 ? [400, 150, 400, 150, 600] : [200, 100, 200]);
+    }
+
+    showToast(`🚨 ¡ONDA SÍSMICA EN VIVO! ${flag} M ${mag.toFixed(1)} - ${place}`);
+
+    // Disparar banner EEW de alerta temprana
+    triggerEarlyWarning(feature);
+
+    // Si es moderado o fuerte, abrir modal de propagación de onda P y S
+    if (mag >= 4.0) {
+      openPredictForEvent(feature.id);
+    }
+  }
+
+  // 3. Re-renderizar mapa, ondas y tarjetas
+  renderQuakes();
+  updateWavefronts();
+}
+
+function initRealtimeStream() {
+  if (!window.EventSource) return;
+  if (liveEventSource) {
+    try { liveEventSource.close(); } catch (e) {}
+  }
+
+  try {
+    liveEventSource = new EventSource('/api/events/live');
+
+    liveEventSource.addEventListener('ready', (e) => {
+      console.log('📡 KorshQuake Realtime EEW Stream conectado:', e.data);
+      const clusterPill = document.getElementById('cluster-pill');
+      if (clusterPill) {
+        clusterPill.title = 'Red Sísmica en Vivo: Stream WebSocket EMSC Activo';
+      }
+    });
+
+    liveEventSource.addEventListener('earthquake', (e) => {
+      try {
+        const feature = JSON.parse(e.data);
+        handleLiveEarthquakePush(feature);
+      } catch (err) {
+        console.warn('Error procesando evento SSE:', err);
+      }
+    });
+
+    liveEventSource.onerror = () => {
+      // EventSource auto-reconecta automáticamente en cortes
+    };
+  } catch (err) {
+    console.warn('No se pudo inicializar EventSource:', err);
+  }
+}
+
 // Fetch Earthquakes con Detección Estricta en Tiempo Real
 async function fetchQuakes() {
   try {
@@ -1287,6 +1379,9 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn('SW no disponible en este contexto:', err);
     });
   }
+
+  // Conexión persistente SSE en tiempo real (Notificaciones instantáneas de onda P y S)
+  initRealtimeStream();
 
   // Initial fetch and auto-polling ultra-rápido en tiempo real
   fetchQuakes();

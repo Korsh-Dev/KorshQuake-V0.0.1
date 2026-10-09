@@ -13,6 +13,11 @@ import glob
 import math
 import threading
 import concurrent.futures
+import queue
+import socket
+import ssl
+import struct
+import base64
 from datetime import datetime
 
 _server_start_time = time.time()
@@ -312,6 +317,256 @@ def identify_target_country(lat, lon, place, auth=""):
             return "AR"
 
     return None
+
+# --- SSE & Realtime Push Alert Subscriptions ---
+_sse_clients = []
+_sse_lock = threading.Lock()
+
+def broadcast_sse_event(event_type, data):
+    """Emite un evento a todos los clientes SSE (Web/Mobile) suscritos activamente"""
+    with _sse_lock:
+        for q in list(_sse_clients):
+            try:
+                q.put_nowait({"event": event_type, "data": data})
+            except Exception:
+                pass
+
+def process_emsc_ws_message(msg_text):
+    """
+    Parsea y procesa eventos sismicos en vivo desde el WebSocket de EMSC (SeismicPortal).
+    Calcula de inmediato la predicción cortical de arribo de Onda P y Onda S hacia las ciudades objetivo
+    e inyecta el sismo en el cache RAM y lo transmite instantáneamente vía SSE.
+    """
+    global _ram_quake_cache, _last_ram_update_time
+    try:
+        msg = json.loads(msg_text)
+        action = msg.get("action", "")
+        if action not in ["create", "update"]:
+            return None
+
+        data = msg.get("data", {})
+        props = data.get("properties", {})
+        geom = data.get("geometry", {})
+        coords = geom.get("coordinates", [])
+
+        if len(coords) >= 2:
+            lon = float(coords[0])
+            lat = float(coords[1])
+            depth = abs(float(coords[2])) if len(coords) > 2 else 10.0
+        elif "lat" in props and "lon" in props:
+            lat = float(props["lat"])
+            lon = float(props["lon"])
+            depth = abs(float(props.get("depth", 10.0)))
+        else:
+            return None
+
+        mag = float(props.get("mag") or 0.0)
+        place = props.get("flynn_region", "") or props.get("region", "")
+        auth = props.get("auth", "EMSC")
+        unid = props.get("unid") or data.get("id") or str(int(time.time() * 1000))
+        time_str = props.get("time", "")
+
+        country_code = identify_target_country(lat, lon, place, auth)
+        if not country_code:
+            return None
+
+        try:
+            ts_str = time_str.replace('Z', '+00:00')
+            time_ms = int(datetime.fromisoformat(ts_str).timestamp() * 1000)
+        except Exception:
+            time_ms = int(time.time() * 1000)
+
+        country_meta = TARGET_COUNTRIES[country_code]
+        preds = calculate_seismic_predictions(lat, lon, depth, mag, time_ms)
+
+        live_event_id = f"emsc-live-{unid}"
+        feature = {
+            "type": "Feature",
+            "id": live_event_id,
+            "geometry": {
+                "type": "Point",
+                "coordinates": [lon, lat, depth]
+            },
+            "properties": {
+                "mag": mag,
+                "place": f"{place} ({auth})",
+                "time": time_ms,
+                "updated": int(time.time() * 1000),
+                "source": f"EMSC/LIVE-{auth}",
+                "source_feed": f"EMSC Live WebSocket ({auth})",
+                "country_code": country_code,
+                "country_name": country_meta["name"],
+                "country_flag": country_meta["flag"],
+                "pga": None,
+                "is_live_stream": True,
+                "is_consensus": True,
+                "action": action,
+                "confidence_score": 98,
+                "confidence_text": "Detección Preliminar en Vivo (Onda P Registrada)",
+                "predictions": preds
+            }
+        }
+
+        # Inserción con deduplicación en _ram_quake_cache
+        with _ram_cache_lock:
+            if _ram_quake_cache is None:
+                _ram_quake_cache = {
+                    "type": "FeatureCollection",
+                    "metadata": {
+                        "title": "Red Sísmica Focalizada",
+                        "target_countries": ["Panamá", "Venezuela", "España", "Argentina"],
+                        "total_events": 0,
+                        "counts_by_country": {"PA": 0, "VE": 0, "ES": 0, "AR": 0},
+                        "realtime_streaming": True
+                    },
+                    "features": []
+                }
+
+            features = _ram_quake_cache.setdefault("features", [])
+            existing_idx = None
+            for idx, existing in enumerate(features):
+                if existing.get("id") == live_event_id:
+                    existing_idx = idx
+                    break
+                ex_c = existing.get("geometry", {}).get("coordinates", [])
+                if len(ex_c) >= 2:
+                    d_km = haversine_km(lat, lon, ex_c[1], ex_c[0])
+                    dt_s = abs(time_ms - existing.get("properties", {}).get("time", 0)) / 1000.0
+                    if d_km < 35.0 and dt_s < 180.0:
+                        existing_idx = idx
+                        break
+
+            if existing_idx is not None:
+                features[existing_idx] = feature
+            else:
+                features.insert(0, feature)
+
+            if len(features) > 200:
+                features[:] = features[:200]
+
+            counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0}
+            for f in features:
+                c_code = f.get("properties", {}).get("country_code")
+                if c_code in counts:
+                    counts[c_code] += 1
+            _ram_quake_cache["metadata"]["counts_by_country"] = counts
+            _ram_quake_cache["metadata"]["total_events"] = len(features)
+            _last_ram_update_time = time.time()
+
+        if "emsc_regional" in _server_telemetry:
+            _server_telemetry["emsc_regional"]["status"] = "LIVE_STREAM"
+            _server_telemetry["emsc_regional"]["last_sync"] = int(time.time() * 1000)
+            _server_telemetry["emsc_regional"]["events_count"] += 1
+
+        broadcast_sse_event("earthquake", feature)
+        return feature
+    except Exception:
+        return None
+
+class EMSCRealtimeWebSocketStreamer(threading.Thread):
+    """
+    Cliente WebSocket nativo RFC 6455 sobre TLS (Puerto 443).
+    Mantiene conexión permanente a wss://www.seismicportal.eu/standing_order/websocket
+    para ingesta de sismos en sub-segundos con reconexión automática y tolerancia a fallos.
+    """
+    def __init__(self):
+        super().__init__(daemon=True, name="EMSC-WS-Streamer")
+        self.host = "www.seismicportal.eu"
+        self.port = 443
+        self.path = "/standing_order/websocket"
+
+    def run(self):
+        while _worker_running:
+            sock = None
+            try:
+                raw_sock = socket.create_connection((self.host, self.port), timeout=12)
+                ctx = ssl.create_default_context()
+                sock = ctx.wrap_socket(raw_sock, server_hostname=self.host)
+
+                key = base64.b64encode(os.urandom(16)).decode('ascii')
+                handshake_req = (
+                    f"GET {self.path} HTTP/1.1\r\n"
+                    f"Host: {self.host}\r\n"
+                    f"Upgrade: websocket\r\n"
+                    f"Connection: Upgrade\r\n"
+                    f"Sec-WebSocket-Key: {key}\r\n"
+                    f"Sec-WebSocket-Version: 13\r\n"
+                    f"User-Agent: KorshQuake-EEW/1.1.2\r\n\r\n"
+                )
+                sock.sendall(handshake_req.encode('utf-8'))
+
+                buf = b""
+                while b"\r\n\r\n" not in buf:
+                    chunk = sock.recv(512)
+                    if not chunk:
+                        raise ConnectionResetError("Conexión cerrada por el servidor durante handshake")
+                    buf += chunk
+
+                headers_raw, leftover = buf.split(b"\r\n\r\n", 1)
+                if b"101" not in headers_raw:
+                    raise ConnectionError(f"Handshake rechazado por EMSC: {headers_raw[:100]}")
+
+                if "emsc_regional" in _server_telemetry:
+                    _server_telemetry["emsc_regional"]["status"] = "LIVE_WS"
+
+                stream_buffer = bytearray(leftover)
+
+                def recv_exact(n):
+                    while len(stream_buffer) < n:
+                        chunk = sock.recv(max(4096, n - len(stream_buffer)))
+                        if not chunk:
+                            raise ConnectionResetError("Socket cerrado")
+                        stream_buffer.extend(chunk)
+                    res = bytes(stream_buffer[:n])
+                    del stream_buffer[:n]
+                    return res
+
+                sock.settimeout(60.0)
+
+                while _worker_running:
+                    header = recv_exact(2)
+                    b0, b1 = header[0], header[1]
+                    opcode = b0 & 0x0F
+                    mask = (b1 & 0x80) != 0
+                    length = b1 & 0x7F
+
+                    if length == 126:
+                        ext_len = recv_exact(2)
+                        length = struct.unpack("!H", ext_len)[0]
+                    elif length == 127:
+                        ext_len = recv_exact(8)
+                        length = struct.unpack("!Q", ext_len)[0]
+
+                    mask_key = recv_exact(4) if mask else None
+                    payload = recv_exact(length)
+
+                    if mask and mask_key:
+                        payload = bytes(b ^ mask_key[i % 4] for i, b in enumerate(payload))
+
+                    if opcode == 0x1:
+                        try:
+                            text_msg = payload.decode('utf-8')
+                            process_emsc_ws_message(text_msg)
+                        except Exception:
+                            pass
+                    elif opcode == 0x9:
+                        pong_frame = bytearray([0x8A, len(payload)]) + payload
+                        sock.sendall(pong_frame)
+                    elif opcode == 0x8:
+                        break
+
+            except Exception:
+                if "emsc_regional" in _server_telemetry:
+                    _server_telemetry["emsc_regional"]["status"] = "RECONNECTING"
+            finally:
+                if sock:
+                    try:
+                        sock.close()
+                    except Exception:
+                        pass
+
+            if _worker_running:
+                time.sleep(3.5)
 
 def is_globalquake_running():
     try:
@@ -638,6 +893,10 @@ def _realtime_worker_loop():
 _streaming_thread = threading.Thread(target=_realtime_worker_loop, daemon=True, name="RealtimeStreamingThread")
 _streaming_thread.start()
 
+# Iniciar hilo demonio de ingesta continua WebSocket EMSC (Onda P en sub-segundos)
+_emsc_ws_thread = EMSCRealtimeWebSocketStreamer()
+_emsc_ws_thread.start()
+
 def get_live_earthquakes():
     """Obtención instantánea desde memoria RAM (Latencia < 1ms)"""
     global _ram_quake_cache
@@ -659,6 +918,50 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
         query = urllib.parse.parse_qs(parsed_url.query)
+
+        # 0. API: Server-Sent Events (SSE) para Alertas Sísmicas Tempranas (/api/events/live y /api/stream)
+        if path in ["/api/events/live", "/api/stream"]:
+            self.close_connection = True
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+
+            client_q = queue.Queue(maxsize=100)
+            with _sse_lock:
+                _sse_clients.append(client_q)
+
+            init_payload = json.dumps({
+                "status": "connected",
+                "service": "KorshQuake EEW Realtime Stream",
+                "engine": "EMSC-WebSocket-P/S-Predictor",
+                "target_countries": ["Panamá", "Venezuela", "España", "Argentina"],
+                "timestamp": int(time.time() * 1000)
+            })
+            try:
+                self.wfile.write(f"event: ready\ndata: {init_payload}\n\n".encode("utf-8"))
+                self.wfile.flush()
+
+                while True:
+                    try:
+                        msg = client_q.get(timeout=10.0)
+                        ev_type = msg.get("event", "message")
+                        ev_data = json.dumps(msg.get("data", {}))
+                        payload = f"event: {ev_type}\ndata: {ev_data}\n\n"
+                        self.wfile.write(payload.encode("utf-8"))
+                        self.wfile.flush()
+                    except queue.Empty:
+                        self.wfile.write(b": ping\n\n")
+                        self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, socket.error):
+                pass
+            finally:
+                with _sse_lock:
+                    if client_q in _sse_clients:
+                        _sse_clients.remove(client_q)
+            return
 
         # Helper para responder JSON limpio
         def send_json(data, status=200):

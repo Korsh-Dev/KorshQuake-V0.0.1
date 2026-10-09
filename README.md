@@ -94,10 +94,12 @@ server {
 ---
 
 ## 📡 Endpoints de la API
-- `GET /api/quakes` : GeoJSON en memoria RAM con sismos filtrados de Panamá, Venezuela, España y Argentina.
-- `GET /api/status` : Telemetría del servidor, modo de streaming y latencias.
-- `GET /api/servers`: Estado de las redes sismológicas conectadas.
-- `GET /api/logs`   : Logs en tiempo real del motor sísmico.
+- `GET /api/events/live`: Canal de transmisión continua SSE (*Server-Sent Events*) para alertas sísmicas y detección de Onda P/S en tiempo real.
+- `GET /api/predict`    : Motor EEW de predicción de arribo de Onda P ($7.8\text{ km/s}$) y Onda S ($4.1\text{ km/s}$), PGA y MMI hacia centros urbanos.
+- `GET /api/quakes`     : GeoJSON en memoria RAM con sismos filtrados de Panamá, Venezuela, España y Argentina.
+- `GET /api/status`     : Telemetría del servidor, modo de streaming y latencias.
+- `GET /api/servers`    : Estado y latencia de las redes sismológicas conectadas.
+- `GET /api/logs`       : Logs en tiempo real del motor sísmico.
 - `GET /KorshQuake.apk` : Descarga del archivo APK instalable para Android.
 
 ---

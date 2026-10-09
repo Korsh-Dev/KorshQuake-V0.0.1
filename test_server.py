@@ -193,5 +193,65 @@ class TestKorshQuakeServer(unittest.TestCase):
             self.assertIn("predictions", props)
             self.assertIsInstance(props["predictions"], list)
 
+    def test_live_events_sse_endpoint(self):
+        import socket
+        s = socket.create_connection(('127.0.0.1', self.port), timeout=5)
+        req = (
+            f"GET /api/events/live HTTP/1.1\r\n"
+            f"Host: 127.0.0.1:{self.port}\r\n"
+            f"Accept: text/event-stream\r\n"
+            f"Connection: close\r\n\r\n"
+        )
+        s.sendall(req.encode('utf-8'))
+        resp = ""
+        s.settimeout(2.5)
+        for _ in range(5):
+            try:
+                chunk = s.recv(512).decode('utf-8', errors='ignore')
+                if not chunk:
+                    break
+                resp += chunk
+                if "event: ready" in resp:
+                    break
+            except Exception:
+                break
+        s.close()
+        self.assertIn("200 OK", resp)
+        self.assertIn("text/event-stream", resp)
+        self.assertIn("event: ready", resp)
+
+    def test_process_emsc_ws_message_injection(self):
+        # Simular mensaje WebSocket de EMSC para Chiriquí (Panamá)
+        ws_msg = json.dumps({
+            "action": "create",
+            "data": {
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [-82.43, 8.42, -10.0]
+                },
+                "properties": {
+                    "unid": "test_eew_panama_999",
+                    "time": "2026-10-09T22:00:00Z",
+                    "mag": 5.8,
+                    "flynn_region": "Panama-Costa Rica Border",
+                    "auth": "IGN",
+                    "lat": 8.42,
+                    "lon": -82.43,
+                    "depth": 10.0
+                }
+            }
+        })
+        event = server.process_emsc_ws_message(ws_msg)
+        self.assertIsNotNone(event)
+        self.assertEqual(event["properties"]["country_code"], "PA")
+        self.assertEqual(event["properties"]["mag"], 5.8)
+        self.assertIn("predictions", event["properties"])
+        self.assertGreater(len(event["properties"]["predictions"]), 0)
+
+        # Verificar que el evento fue inyectado en el caché del servidor
+        quakes = server.get_live_earthquakes()
+        found_in_cache = any(f.get("id") == "emsc-live-test_eew_panama_999" for f in quakes.get("features", []))
+        self.assertTrue(found_in_cache, "El sismo en vivo debe estar presente en el cache RAM del servidor")
+
 if __name__ == '__main__':
     unittest.main()
