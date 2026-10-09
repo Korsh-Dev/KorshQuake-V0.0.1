@@ -324,16 +324,19 @@
           <span id="seismo-peak">PGA: 0.00 gal</span>
         </div>
 
-        <!-- Sensor & Network Cluster Controls -->
+        <!-- Sensor & Network Utility Controls -->
         <div class="seismo-controls">
           <button class="btn btn-sm btn-outline" id="btn-calibrate-sensor" title="Calibrar gravedad y nivel de ruido actual">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
             Calibrar Sensor
           </button>
-          <button class="btn btn-sm btn-primary" id="btn-test-cluster" title="Simular sacudida multi-nodo para verificar predicción en vivo">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-            Probar Alerta Multi-Nodo
+          <button class="btn btn-sm btn-secondary" id="btn-open-diagnostics" title="Verificar estado de salud y utilidad del nodo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <span style="color: #00e5ff;">Salud del Nodo</span>
           </button>
+          <a href="/admin" class="btn btn-sm btn-secondary" title="Consola técnica y pruebas sísmicas para administradores" style="font-size: 0.72rem; padding: 4px 8px; opacity: 0.85;">
+            ⚙️ Admin (/admin)
+          </a>
         </div>
       </div>
 
@@ -687,5 +690,102 @@
   <script src="vendor/leaflet/leaflet.js"></script>
   <!-- Application Script -->
   <script src="app.js"></script>
+
+  <!-- Modal: Términos de Servicio y Activación en Segundo Plano -->
+  <div class="modal-overlay" id="modal-terms" style="display: none;">
+    <div class="modal-content glass-panel" style="max-width: 520px; height: auto;">
+      <div class="modal-header">
+        <div class="modal-title-box">
+          <span class="terminal-dot pulse-green"></span>
+          <h3>Activación de Nodo Sísmico Ciudadano</h3>
+        </div>
+      </div>
+      <div class="modal-body" style="padding: 22px;">
+        <div style="text-align: center; margin-bottom: 16px;">
+          <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(0,229,255,0.12); border: 2px solid var(--cyan); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h2 style="font-size: 1.2rem; color: #fff;">Protección Sísmica Comunitaria 24/7</h2>
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 6px;">
+            Para convertir este teléfono en una estación sismográfica activa capaz de alertar segundos antes de la onda destructiva, es necesario aceptar los siguientes términos técnicos.
+          </p>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 14px; margin-bottom: 16px; font-size: 0.8rem; line-height: 1.5; color: #cbd5e1;">
+          <p style="margin-bottom: 10px;">
+            <strong>1. Acelerómetro Físico 3D:</strong> El sensor de movimiento muestreará vibraciones anómalas mediante filtrado dinámico de gravedad y relación de energía STA/LTA.
+          </p>
+          <p style="margin-bottom: 10px;">
+            <strong>2. Cero Falsas Alarmas Individuales:</strong> Si tu teléfono se cae o se mueve, no dispara alarmas. El sistema exige correlación de &ge;2 teléfonos en &le;50 km y &le;5 s.
+          </p>
+          <p style="margin-bottom: 10px;">
+            <strong>3. Operación en Segundo Plano:</strong> Para salvar vidas cuando el teléfono esté bloqueado, la app requiere mantenerse activa en segundo plano (sin congelarse por ahorro de batería).
+          </p>
+          <p>
+            <strong>4. Privacidad Estricta:</strong> Solo se transmiten valores numéricos de aceleración en gal y coordenadas aproximadas. Cero acceso a archivos, llamadas o datos personales.
+          </p>
+        </div>
+
+        <button class="btn btn-primary" id="btn-accept-terms" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem; font-weight: 700;">
+          🛡️ Aceptar Términos y Activar Protección 24/7
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Diagnóstico de Salud y Utilidad del Nodo -->
+  <div class="modal-overlay" id="modal-diagnostics">
+    <div class="modal-content glass-panel" style="max-width: 500px; height: auto;">
+      <div class="modal-header">
+        <div class="modal-title-box">
+          <span class="terminal-dot pulse-green"></span>
+          <h3>Diagnóstico de Salud del Nodo Sismográfico</h3>
+        </div>
+        <button class="modal-close" id="btn-close-diagnostics">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <div style="display: flex; flex-direction: column; gap: 12px;" class="font-mono" style="font-size: 0.82rem;">
+          <div style="background: rgba(0,0,0,0.35); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 600; color: #fff;">1. Sensor de Movimiento Físico</div>
+              <div style="font-size: 0.72rem; color: var(--text-muted);" id="diag-sensor-detail">Detectando 3 ejes...</div>
+            </div>
+            <span id="diag-sensor-badge" style="color: var(--green); font-weight: 700;">ACTIVO</span>
+          </div>
+
+          <div style="background: rgba(0,0,0,0.35); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 600; color: #fff;">2. Protección en Segundo Plano</div>
+              <div style="font-size: 0.72rem; color: var(--text-muted);" id="diag-bg-detail">WakeLock y telemetría activa</div>
+            </div>
+            <span id="diag-bg-badge" style="color: var(--green); font-weight: 700;">HABILITADO</span>
+          </div>
+
+          <div style="background: rgba(0,0,0,0.35); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 600; color: #fff;">3. Enlace con Hub KorshQuake</div>
+              <div style="font-size: 0.72rem; color: var(--text-muted);" id="diag-hub-detail">SSE Stream & Ping 12s</div>
+            </div>
+            <span id="diag-hub-badge" style="color: var(--cyan); font-weight: 700;">CONECTADO</span>
+          </div>
+
+          <div style="background: rgba(0,0,0,0.35); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 600; color: #fff;">4. Filtro de Falsos Positivos</div>
+              <div style="font-size: 0.72rem; color: var(--text-muted);">Requiere coincidencia &ge; 2 nodos</div>
+            </div>
+            <span style="color: var(--green); font-weight: 700;">PROTEGIDO</span>
+          </div>
+        </div>
+
+        <div style="margin-top: 18px; text-align: center;">
+          <a href="/admin" class="btn btn-secondary" style="font-size: 0.78rem;">
+            ⚙️ Abrir Consola Técnica de Administrador (/admin)
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

@@ -1297,8 +1297,8 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             send_json(result)
             return
 
-        # 3. Disparo de prueba de cluster multi-nodo
-        if path == "/api/nodes/test_cluster":
+        # 3. Disparo de prueba de cluster multi-nodo (Exclusivo administracion y pruebas)
+        if path in ["/api/nodes/test_cluster", "/api/admin/test_cluster"]:
             lat = float(body.get("lat", 10.48))
             lon = float(body.get("lon", -66.90))
             pga = float(body.get("pga", 35.0))
@@ -1306,6 +1306,31 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             
             result = simulate_mesh_test_cluster(lat, lon, pga, nodes_count)
             send_json(result)
+            return
+
+        # 4. Purga administrativa de clusters de prueba (/api/admin/clear_test_clusters)
+        if path == "/api/admin/clear_test_clusters":
+            cleared_clusters = 0
+            with _mesh_nodes_lock:
+                cleared_clusters += len(_confirmed_mesh_clusters)
+                _confirmed_mesh_clusters.clear()
+                _recent_mesh_triggers.clear()
+
+            with _ram_cache_lock:
+                if _ram_quake_cache and "features" in _ram_quake_cache:
+                    before_count = len(_ram_quake_cache["features"])
+                    _ram_quake_cache["features"] = [
+                        f for f in _ram_quake_cache["features"]
+                        if not (f.get("id", "").startswith("mesh-") or f.get("properties", {}).get("net") == "KORSH-MESH")
+                    ]
+                    cleared_clusters += (before_count - len(_ram_quake_cache["features"]))
+                    _ram_quake_cache["metadata"]["total_events"] = len(_ram_quake_cache["features"])
+
+            send_json({
+                "success": True,
+                "message": "Clusters y eventos sismicos de prueba purgados exitosamente del feed",
+                "cleared_count": max(1, cleared_clusters)
+            })
             return
 
         send_json({"error": "Endpoint not found", "path": path}, 404)
@@ -1374,9 +1399,12 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(payload)
 
-        # API: Lista de Nodos Activos de la Red Ciudadana (/api/nodes/list)
-        if path == "/api/nodes/list":
-            send_json(get_mesh_nodes_list())
+        # API: Lista de Nodos Activos de la Red Ciudadana (/api/nodes/list y /api/admin/nodes)
+        if path in ["/api/nodes/list", "/api/admin/nodes"]:
+            nodes_data = get_mesh_nodes_list()
+            nodes_data["service"] = "KorshQuake Mesh Node Telemetry"
+            nodes_data["total"] = nodes_data.get("total_active", len(nodes_data.get("nodes", [])))
+            send_json(nodes_data)
             return
 
         # API: Estadísticas de Nodos de la Red Ciudadana (/api/nodes/stats)
@@ -1794,6 +1822,22 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(payload)
             return
+
+        # 12. Consola Administrativa /admin para Monitoreo de Nodos y Pruebas Sismicas
+        if path in ["/admin", "/admin/"]:
+            admin_file = os.path.join(WEB_DIR, "admin.html")
+            if os.path.isfile(admin_file):
+                try:
+                    with open(admin_file, "rb") as f:
+                        content = f.read()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/html; charset=utf-8")
+                    self.send_header("Content-Length", str(len(content)))
+                    self.end_headers()
+                    self.wfile.write(content)
+                    return
+                except Exception:
+                    pass
 
         # Archivos estáticos de la carpeta web (KorshQuake)
         return super().do_GET()

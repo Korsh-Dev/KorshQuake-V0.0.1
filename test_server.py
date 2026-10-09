@@ -377,5 +377,31 @@ class TestKorshQuakeServer(unittest.TestCase):
         self.assertIsNotNone(cluster_feature)
         self.assertEqual(cluster_feature["properties"]["status"], "CROWDSOURCED_CONFIRMED")
 
+    def test_admin_portal_and_cluster_purge(self):
+        # 1. Probar acceso a la interfaz web de admin /admin
+        url_admin = f"http://127.0.0.1:{self.port}/admin"
+        resp_admin = urllib.request.urlopen(url_admin, timeout=5)
+        self.assertEqual(resp_admin.status, 200)
+        self.assertIn("text/html", resp_admin.headers.get("Content-Type", ""))
+        html_body = resp_admin.read().decode("utf-8")
+        self.assertIn("Admin Console", html_body)
+
+        # 2. Probar API de listado de nodos para administradores /api/admin/nodes
+        url_nodes = f"http://127.0.0.1:{self.port}/api/admin/nodes"
+        resp_nodes = urllib.request.urlopen(url_nodes, timeout=5)
+        self.assertEqual(resp_nodes.status, 200)
+        nodes_data = json.loads(resp_nodes.read().decode("utf-8"))
+        self.assertIn("nodes", nodes_data)
+        self.assertIn("total", nodes_data)
+
+        # 3. Probar purga administrativa de clusters de prueba /api/admin/clear_test_clusters
+        url_clear = f"http://127.0.0.1:{self.port}/api/admin/clear_test_clusters"
+        req_clear = urllib.request.Request(url_clear, data=b"{}", headers={"Content-Type": "application/json"})
+        resp_clear = urllib.request.urlopen(req_clear, timeout=5)
+        self.assertEqual(resp_clear.status, 200)
+        clear_res = json.loads(resp_clear.read().decode("utf-8"))
+        self.assertTrue(clear_res.get("success"))
+        self.assertGreaterEqual(clear_res.get("cleared_count", 0), 1)
+
 if __name__ == '__main__':
     unittest.main()

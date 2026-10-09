@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KorshQuake Network Admin Console - Centro de Control de Nodos</title>
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #050b14;
+      --bg-card: rgba(13, 23, 38, 0.85);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-glow: rgba(0, 229, 255, 0.35);
+      --cyan: #00e5ff;
+      --green: #00e676;
+      --orange: #ff9100;
+      --red: #ff1744;
+      --text-main: #f0f4f8;
+      --text-muted: #8ba2b8;
+      --font-main: 'Inter', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-image: radial-gradient(circle at 10% 10%, rgba(0, 229, 255, 0.06) 0%, transparent 40%),
+                        radial-gradient(circle at 90% 90%, rgba(255, 23, 68, 0.05) 0%, transparent 40%);
+    }
+    .font-mono { font-family: var(--font-mono); }
+    header.admin-header {
+      background: rgba(8, 16, 28, 0.95);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .brand-box { display: flex; align-items: center; gap: 12px; }
+    .brand-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, rgba(0,229,255,0.2), rgba(2,132,199,0.3));
+      border: 1px solid var(--cyan);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--cyan);
+    }
+    .admin-title { font-size: 1.15rem; font-weight: 700; color: #fff; }
+    .admin-badge {
+      font-size: 0.68rem; font-weight: 700;
+      background: rgba(255, 23, 68, 0.15); color: var(--red);
+      border: 1px solid rgba(255, 23, 68, 0.4);
+      padding: 2px 8px; border-radius: 12px;
+    }
+    .header-links { display: flex; gap: 12px; align-items: center; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; text-decoration: none; border: 1px solid transparent; transition: all 0.2s;
+    }
+    .btn-secondary { background: rgba(255,255,255,0.06); color: var(--text-main); border-color: var(--border-subtle); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.12); }
+    .btn-primary { background: linear-gradient(135deg, #00b4d8, #0077b6); color: #fff; }
+    .btn-primary:hover { filter: brightness(1.15); }
+    .btn-danger { background: rgba(255, 23, 68, 0.15); color: var(--red); border-color: rgba(255, 23, 68, 0.35); }
+    .btn-danger:hover { background: rgba(255, 23, 68, 0.3); }
+
+    main.admin-content {
+      flex: 1; padding: 24px; max-width: 1400px; width: 100%; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .stats-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;
+    }
+    .stat-card {
+      background: var(--bg-card); border: 1px solid var(--border-subtle);
+      border-radius: 12px; padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .stat-title { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat-value { font-size: 1.8rem; font-weight: 700; color: #fff; }
+
+    .grid-panels {
+      display: grid; grid-template-columns: 2fr 1fr; gap: 20px;
+    }
+    @media (max-width: 1024px) {
+      .grid-panels { grid-template-columns: 1fr; }
+    }
+    .admin-panel {
+      background: var(--bg-card); border: 1px solid var(--border-subtle);
+      border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+    }
+    .panel-header {
+      padding: 14px 18px; border-bottom: 1px solid var(--border-subtle);
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(5, 11, 20, 0.6);
+    }
+    .panel-title { font-size: 0.95rem; font-weight: 600; color: #fff; }
+
+    /* Nodes Table */
+    .table-container { overflow-x: auto; flex: 1; max-height: 480px; }
+    table.data-table {
+      width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;
+    }
+    table.data-table th {
+      background: rgba(0,0,0,0.4); padding: 10px 14px;
+      color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border-subtle);
+      position: sticky; top: 0; z-index: 10;
+    }
+    table.data-table td {
+      padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04);
+      color: var(--text-main);
+    }
+    table.data-table tr:hover td { background: rgba(0, 229, 255, 0.04); }
+    .status-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green); margin-right: 6px; box-shadow: 0 0 8px rgba(0,230,118,0.6);
+    }
+
+    /* Simulation Form */
+    .form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
+    .form-input, .form-select {
+      background: rgba(0,0,0,0.5); border: 1px solid var(--border-subtle);
+      color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; font-family: inherit;
+    }
+    .form-input:focus, .form-select:focus { border-color: var(--cyan); outline: none; }
+    .actions-box { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+
+    /* Activity Logs Box */
+    .log-box {
+      background: #02060d; padding: 12px; border-radius: 8px;
+      font-size: 0.72rem; color: #a0aec0; max-height: 180px; overflow-y: auto;
+      border: 1px solid rgba(255,255,255,0.05); line-height: 1.5;
+    }
+    .toast-notice {
+      position: fixed; bottom: 20px; right: 20px; z-index: 1000;
+      background: rgba(5, 12, 22, 0.95); border: 1px solid var(--cyan);
+      color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 0.82rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6); display: none;
+    }
+  </style>
+</head>
+<body>
+  <header class="admin-header">
+    <div class="brand-box">
+      <div class="brand-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M2 12h5l2-4 4 8 2-4h7"></path>
+        </svg>
+      </div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h1 class="admin-title">KorshQuake Network Admin Console</h1>
+          <span class="admin-badge">ADMIN EXCLUSIVO</span>
+        </div>
+        <p style="font-size: 0.75rem; color: var(--text-muted);">Monitoreo de Nodos Ciudadanos y Pruebas Sísmicas de Red</p>
+      </div>
+    </div>
+    <div class="header-links">
+      <span class="font-mono" style="font-size: 0.78rem; color: var(--cyan);"><span class="status-dot"></span> HUB ONLINE</span>
+      <a href="/" class="btn btn-secondary">🌐 Ver Aplicación Pública</a>
+    </div>
+  </header>
+
+  <main class="admin-content">
+    <!-- Métricas Generales -->
+    <section class="stats-row">
+      <div class="stat-card">
+        <span class="stat-title">Nodos Celulares Activos</span>
+        <span class="stat-value font-mono text-cyan" id="stat-nodes-count">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">Clusters Confirmados</span>
+        <span class="stat-value font-mono" id="stat-clusters-count" style="color: var(--orange);">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">Filtro de Falsos Positivos</span>
+        <span class="stat-value font-mono" style="color: var(--green);">ACTIVO (&ge;2 tel)</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">Redes Sísmicas Oficiales</span>
+        <span class="stat-value font-mono" id="stat-servers-count">7 Activos</span>
+      </div>
+    </section>
+
+    <!-- Grid de Gestión -->
+    <div class="grid-panels">
+      <!-- Panel de Nodos -->
+      <section class="admin-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">📡 Nodos Sismográficos Ciudadanos Registrados</h2>
+          <button class="btn btn-secondary" id="btn-refresh-nodes">🔄 Refrescar</button>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID Nodo</th>
+                <th>País / Región</th>
+                <th>Coordenadas</th>
+                <th>Ruido Basal</th>
+                <th>Último Ping</th>
+                <th>Plataforma</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="nodes-tbody">
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                  Conectando con el clúster de telemetría de nodos...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Panel de Pruebas y Control Sísmico -->
+      <section class="admin-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">⚡ Centro de Simulación Sísmica (Admin)</h2>
+        </div>
+        <div style="padding: 18px;">
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 16px;">
+            Ejecuta simulaciones multi-nodo para calibrar algoritmos de predicción sin causar pánico en los usuarios.
+          </p>
+
+          <div class="form-group">
+            <label for="sim-region">Región / Ciudad Epicentral:</label>
+            <select id="sim-region" class="form-select font-mono">
+              <option value="VE" selected>🇻🇪 Venezuela (Caracas / Falla San Sebastián)</option>
+              <option value="ES">🇪🇸 España (Madrid / Granada Falla Alhama)</option>
+              <option value="PA">🇵🇦 Panamá (Ciudad de Panamá / Falla Pedro Miguel)</option>
+              <option value="AR">🇦🇷 Argentina (San Juan / Falla La Laja)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="sim-nodes">Teléfonos Móviles Coincidentes:</label>
+            <select id="sim-nodes" class="form-select font-mono">
+              <option value="2">2 Teléfonos (Mínimo de confirmación)</option>
+              <option value="3" selected>3 Teléfonos (Alta confianza)</option>
+              <option value="5">5 Teléfonos (Clúster denso metropolitano)</option>
+              <option value="8">8 Teléfonos (Red de alta densidad)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="sim-pga">Aceleración PGA Simulada (gal):</label>
+            <input type="number" id="sim-pga" class="form-input font-mono" value="38.5" min="10" max="150" step="0.5">
+          </div>
+
+          <div class="actions-box">
+            <button class="btn btn-primary" id="btn-run-simulation" style="justify-content: center; padding: 10px;">
+              ⚡ Disparar Prueba de Cluster Multi-Nodo
+            </button>
+            <button class="btn btn-danger" id="btn-clear-test-clusters" style="justify-content: center; padding: 9px;">
+              🧹 Purgar Clusters de Prueba del Feed
+            </button>
+          </div>
+
+          <div style="margin-top: 16px;">
+            <label style="font-size: 0.72rem; color: var(--text-muted);">Consola de Eventos:</label>
+            <div class="log-box font-mono" id="admin-log">
+              [SISTEMA] Consola administrativa lista. Esperando comando.
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="toast-notice" id="admin-toast"></div>
+
+  <script>
+    const REGION_COORDS = {
+      VE: { lat: 10.4806, lon: -66.9036, name: 'Venezuela (Caracas)' },
+      ES: { lat: 40.4168, lon: -3.7038, name: 'España (Madrid)' },
+      PA: { lat: 8.9824, lon: -79.5199, name: 'Panamá (Ciudad de Panamá)' },
+      AR: { lat: -31.5375, lon: -68.5364, name: 'Argentina (San Juan)' }
+    };
+
+    function log(msg) {
+      const box = document.getElementById('admin-log');
+      const time = new Date().toLocaleTimeString();
+      box.innerHTML = `[${time}] ${msg}<br>` + box.innerHTML;
+    }
+
+    function showToast(text) {
+      const t = document.getElementById('admin-toast');
+      t.textContent = text;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 4000);
+    }
+
+    async function loadNodes() {
+      try {
+        const res = await fetch('/api/admin/nodes');
+        const data = await res.json();
+        const tbody = document.getElementById('nodes-tbody');
+        document.getElementById('stat-nodes-count').textContent = data.total || 0;
+
+        if (!data.nodes || data.nodes.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">No hay nodos activos en este momento. Abre la APK o WebApp en tu celular para conectar como nodo.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data.nodes.map(n => {
+          const ago = Math.max(0, Math.round((Date.now() - n.last_seen * 1000) / 1000));
+          return `
+            <tr>
+              <td class="font-mono"><strong style="color: var(--cyan);">${n.node_id}</strong></td>
+              <td>${n.country || 'VE'}</td>
+              <td class="font-mono">${n.lat.toFixed(4)}, ${n.lon.toFixed(4)}</td>
+              <td class="font-mono">${n.noise_floor ? n.noise_floor.toFixed(2) : '0.00'} gal</td>
+              <td class="font-mono">${ago}s</td>
+              <td>${n.platform || 'Android'}</td>
+              <td><span class="status-dot"></span> <span style="color: var(--green);">ONLINE</span></td>
+            </tr>
+          `;
+        }).join('');
+      } catch (e) {
+        log('Error cargando nodos: ' + e.message);
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/nodes/stats');
+        const data = await res.json();
+        document.getElementById('stat-clusters-count').textContent = data.confirmed_clusters_count || 0;
+      } catch (e) {}
+    }
+
+    document.getElementById('btn-refresh-nodes').addEventListener('click', () => {
+      loadNodes();
+      loadStats();
+      showToast('Nodos actualizados.');
+    });
+
+    document.getElementById('btn-run-simulation').addEventListener('click', async () => {
+      const regKey = document.getElementById('sim-region').value;
+      const coords = REGION_COORDS[regKey];
+      const nodesCount = parseInt(document.getElementById('sim-nodes').value, 10);
+      const pga = parseFloat(document.getElementById('sim-pga').value) || 35.0;
+
+      log(`Disparando simulación de cluster: ${coords.name}, ${nodesCount} nodos, PGA: ${pga} gal...`);
+
+      try {
+        const res = await fetch('/api/nodes/test_cluster', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lat: coords.lat,
+            lon: coords.lon,
+            pga: pga,
+            nodes_count: nodesCount,
+            country: regKey
+          })
+        });
+        const out = await res.json();
+        if (out.cluster_detected) {
+          log(`✅ ÉXITO: Sismo confirmado (ID: ${out.cluster_id}, Mag: M${out.estimated_magnitude}, EEW emitido).`);
+          showToast(`✅ Cluster Sísmico Confirmado: M${out.estimated_magnitude} en ${coords.name}`);
+        } else {
+          log(`⚠️ Alerta: ${out.message || 'No se alcanzó el umbral de coincidencia'}`);
+        }
+        loadStats();
+        loadNodes();
+      } catch (e) {
+        log(`❌ Error ejecutando simulación: ${e.message}`);
+      }
+    });
+
+    document.getElementById('btn-clear-test-clusters').addEventListener('click', async () => {
+      if (!confirm('¿Deseas purgar todos los sismos de prueba del feed en vivo?')) return;
+      try {
+        const res = await fetch('/api/admin/clear_test_clusters', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        const out = await res.json();
+        log(`🧹 Purga completada: ${out.cleared_count} clusters de prueba eliminados.`);
+        showToast(`🧹 ${out.cleared_count} clusters de prueba eliminados del feed.`);
+        loadStats();
+      } catch (e) {
+        log(`❌ Error purgando clusters: ${e.message}`);
+      }
+    });
+
+    loadNodes();
+    loadStats();
+    setInterval(loadNodes, 4000);
+    setInterval(loadStats, 5000);
+  </script>
+</body>
+</html>

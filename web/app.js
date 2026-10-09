@@ -447,7 +447,7 @@ function renderQuakes() {
 let seenQuakeIds = new Set();
 let alertedQuakesSet = new Set();
 let isFirstLoad = true;
-const MAX_LIVE_ALERT_AGE_MS = 10 * 60 * 1000; // Solo sismos ocurridos en los últimos 10 minutos (EN VIVO)
+const MAX_LIVE_ALERT_AGE_MS = 60 * 1000; // FILTRO ESTRICTO EN TIEMPO REAL: Solo sismos ocurridos en los últimos 60 segundos
 
 // Cargar historial de sismos alertados para evitar duplicación
 try {
@@ -492,14 +492,25 @@ function handleLiveEarthquakePush(feature) {
     const thresholdSelect = document.getElementById('select-audio-threshold');
     const thresholdMode = thresholdSelect ? thresholdSelect.value : '3.5';
 
+    const eventTime = p.time || 0;
+    const now = Date.now();
+    const ageMs = now - eventTime;
+
+    // FILTRO ESTRICTO DE SALVAGUARDA VITAL:
+    // Solo emitir sonido de alarma si el evento ocurrió hace MENOS de 60 segundos
+    // NUNCA asustar con sismos antiguos ni actualizaciones de catálogo pasadas
     let shouldSound = false;
-    if (thresholdMode !== 'off') {
+    if (thresholdMode !== 'off' && ageMs >= -15000 && ageMs <= 60000) {
       const minMag = parseFloat(thresholdMode) || 3.5;
       if (mag >= minMag) shouldSound = true;
     }
 
     if (shouldSound) {
       playAlertSound(mag >= 4.5 ? 'major' : 'moderate');
+      showToast(`🚨 SISMO EN VIVO DETECTADO: M ${mag.toFixed(1)} en ${place} (${flag} ${countryName})`);
+      if (mag >= 4.5) {
+        triggerEarlyWarning(feature);
+      }
     }
 
     if ('vibrate' in navigator) {
@@ -703,6 +714,11 @@ async function fetchServers() {
 // Early Warning Banner Trigger
 function triggerEarlyWarning(quake) {
   if (!quake || !quake.properties) return;
+  const now = Date.now();
+  const originTime = quake.properties.time || now;
+  // REGLA VITAL: Solo activar advertencia si ocurrió hace menos de 60 segundos
+  if ((now - originTime) > 60000) return;
+
   const banner = document.getElementById('eew-banner');
   const title = document.getElementById('eew-title');
   const meta = document.getElementById('eew-meta');
@@ -724,6 +740,10 @@ function triggerEarlyWarning(quake) {
   }
 
   banner.style.display = 'flex';
+  if (window._eewBannerTimeout) clearTimeout(window._eewBannerTimeout);
+  window._eewBannerTimeout = setTimeout(() => {
+    if (banner) banner.style.display = 'none';
+  }, 45000);
 }
 
 // Fetch GlobalQuake Status
@@ -1043,6 +1063,11 @@ async function updateMeshNodesMapLayer() {
 }
 
 function handleCitizenMeshAlert(alertData) {
+  const now = Date.now();
+  const alertEpoch = alertData.detection_epoch_ms || now;
+  // Descartar si el disparo tiene más de 25 segundos
+  if (Math.abs(now - alertEpoch) > 25000) return;
+
   // 1. Mostrar banner de Alerta Temprana en UI
   const eewBanner = document.getElementById('eew-banner');
   const eewTitle = document.getElementById('eew-title');
@@ -1841,6 +1866,87 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', () => {
     if (map) map.invalidateSize();
   });
+
+
+  // =========================================================================
+  // GESTIÓN DE TÉRMINOS, SEGUNDO PLANO Y SALUD DEL NODO SÍSMICO
+  // =========================================================================
+  const modalTerms = document.getElementById('modal-terms');
+  const btnAcceptTerms = document.getElementById('btn-accept-terms');
+  const termsAccepted = localStorage.getItem('korshquake_terms_accepted') === 'true';
+
+  if (!termsAccepted && modalTerms) {
+    modalTerms.classList.add('active');
+  }
+
+  // Activar Screen WakeLock para mantener el sensor activo y prevenir Doze en móvil
+  async function activateBackgroundKeepAlive() {
+    try {
+      if ('wakeLock' in navigator) {
+        window._wakeLock = await navigator.wakeLock.request('screen');
+        console.log('[KORSH-MESH] Screen WakeLock activo para protección 24/7');
+      }
+    } catch (err) {
+      console.warn('[KORSH-MESH] WakeLock no disponible:', err);
+    }
+  }
+
+  if (btnAcceptTerms) {
+    btnAcceptTerms.addEventListener('click', async () => {
+      localStorage.setItem('korshquake_terms_accepted', 'true');
+      if (modalTerms) modalTerms.classList.remove('active');
+
+      // Solicitar permisos de notificación en el navegador / PWA
+      if ('Notification' in window && Notification.permission !== 'granted') {
+        try { await Notification.requestPermission(); } catch (e) {}
+      }
+
+      // Activar WakeLock para operación en segundo plano
+      await activateBackgroundKeepAlive();
+
+      // Solicitar permisos de acelerómetro en iOS si aplica
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        try { await DeviceMotionEvent.requestPermission(); } catch (e) {}
+      }
+
+      showToast('🛡️ Nodo Sísmico Activado: Protección Comunitaria 24/7 Conectada');
+      calibrateSensorBaseline();
+    });
+  }
+
+  if (termsAccepted) {
+    activateBackgroundKeepAlive();
+  }
+
+  // Modal de Diagnóstico de Salud del Nodo
+  const modalDiag = document.getElementById('modal-diagnostics');
+  const btnOpenDiag = document.getElementById('btn-open-diagnostics');
+  const btnCloseDiag = document.getElementById('btn-close-diagnostics');
+
+  if (btnOpenDiag && modalDiag) {
+    btnOpenDiag.addEventListener('click', () => {
+      const diagSensorDetail = document.getElementById('diag-sensor-detail');
+      const diagSensorBadge = document.getElementById('diag-sensor-badge');
+      if (diagSensorDetail && diagSensorBadge) {
+        diagSensorDetail.textContent = `Acelerómetro 3D: X=${sensorCurrentX.toFixed(2)}, Y=${sensorCurrentY.toFixed(2)}, Z=${sensorCurrentZ.toFixed(2)} gal`;
+        diagSensorBadge.textContent = 'ACTIVO';
+        diagSensorBadge.style.color = 'var(--green)';
+      }
+      modalDiag.classList.add('active');
+    });
+  }
+
+  if (btnCloseDiag && modalDiag) {
+    btnCloseDiag.addEventListener('click', () => {
+      modalDiag.classList.remove('active');
+    });
+  }
+
+  if (modalDiag) {
+    modalDiag.addEventListener('click', (e) => {
+      if (e.target === modalDiag) modalDiag.classList.remove('active');
+    });
+  }
 
   // Service Worker Registration for Android PWA / WebAPK
   if ('serviceWorker' in navigator) {
