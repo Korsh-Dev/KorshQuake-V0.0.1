@@ -570,16 +570,30 @@ class EMSCRealtimeWebSocketStreamer(threading.Thread):
 
 def is_globalquake_running():
     try:
-        output = subprocess.check_output(
-            'powershell -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like \'*GlobalQuake*\' } | Select-Object ProcessId, CommandLine"',
-            shell=True,
-            text=True,
-            timeout=5
-        )
-        lines = [line.strip() for line in output.strip().split('\n') if line.strip() and not line.strip().startswith('ProcessId') and not line.strip().startswith('---')]
-        if lines:
-            return True, lines[0]
-        return False, None
+        if sys.platform == "win32":
+            output = subprocess.check_output(
+                'powershell -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*GlobalQuake*' } | Select-Object ProcessId, CommandLine"',
+                shell=True,
+                text=True,
+                timeout=5
+            )
+            lines = [line.strip() for line in output.strip().split('\n') if line.strip() and not line.strip().startswith('ProcessId') and not line.strip().startswith('---')]
+            if lines:
+                return True, lines[0]
+            return False, None
+        else:
+            try:
+                output = subprocess.check_output(
+                    ['pgrep', '-f', 'GlobalQuake'],
+                    text=True,
+                    timeout=5
+                )
+                lines = [line.strip() for line in output.strip().split('\n') if line.strip()]
+                if lines:
+                    return True, f"PID {lines[0]}"
+            except Exception:
+                pass
+            return False, None
     except Exception:
         return False, None
 

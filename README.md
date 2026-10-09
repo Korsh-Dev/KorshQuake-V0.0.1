@@ -110,3 +110,22 @@ Para verificar el funcionamiento y filtrado estricto:
 python3 test_server.py
 ```
 Todos los tests deben pasar con código de salida `0`.
+
+
+## Despliegue en Produccion (quake.korsh.online)
+
+El servicio esta contenerizado con Docker Compose y conectado a Nginx con proxy inverso SSL:
+
+- **Dominio Publico:** `https://quake.korsh.online`
+- **Globo 3D:** `https://quake.korsh.online/gods-eye`
+- **Healthcheck:** `https://quake.korsh.online/api/health`
+- **SSE Stream en Vivo:** `https://quake.korsh.online/api/events/live`
+
+### Componentes de Despliegue (`deploy/`)
+
+- `deploy/auto-update.sh`: Script de actualizacion automatica con Git pull, Docker build y reinicio sin caidas.
+- `deploy/webhook_listener.py`: Servidor ligero en puerto 8089 para recibir webhooks de GitHub en `/api/github-webhook`.
+- `deploy/korshquake-updater.timer`: Timer systemd que consulta GitHub cada 60 segundos para despliegue automatico continuo.
+- `deploy/korshquake-updater.service`: Servicio oneshot disparado por el timer.
+- `deploy/korshquake-webhook.service`: Servicio systemd persistente del listener de webhook.
+- `deploy/nginx-quake.korsh.online.conf`: Configuracion de Nginx con SSL y streaming HTTP/1.1 sin buffer (`proxy_buffering off`).
