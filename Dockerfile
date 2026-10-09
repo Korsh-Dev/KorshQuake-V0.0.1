@@ -2,16 +2,22 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Metadatos del contenedor
 LABEL maintainer="Korsh-Dev"
 LABEL description="KorshQuake - Realtime Seismic Monitoring Hub"
 
-# Copiar código del proyecto
-COPY server.py test_server.py requirements.txt KorshQuake.apk ./
-COPY web ./web
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Exponer el puerto del servidor HTTP
+COPY requirements.txt ./
+RUN if [ -s requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi
+
+COPY server.py test_server.py KorshQuake.apk ./
+COPY web ./web
+COPY gods-eye-view ./gods-eye-view
+
 EXPOSE 8080
 
-# Ejecutar el servidor multihilo de KorshQuake
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health').read()" || exit 1
+
 CMD ["python", "server.py", "8080"]
