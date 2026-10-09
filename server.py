@@ -839,6 +839,16 @@ def _execute_full_fetch():
 
     if raw_events:
         fused_features = merge_and_triangulate_events(raw_events)
+
+        # Incorporar sismos detectados por la red ciudadana móvil (KorshQuake Mesh)
+        try:
+            with _mesh_nodes_lock:
+                for cl in list(_confirmed_mesh_clusters):
+                    feat = cl.get("feature")
+                    if feat and not any(f.get("id") == feat.get("id") for f in fused_features):
+                        fused_features.insert(0, feat)
+        except Exception:
+            pass
         counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0}
         for f in fused_features:
             cc = f["properties"].get("country_code")
