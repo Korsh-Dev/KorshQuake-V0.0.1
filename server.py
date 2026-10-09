@@ -11,6 +11,7 @@ import time
 import re
 import glob
 import math
+import collections
 import threading
 import concurrent.futures
 import queue
@@ -924,9 +925,381 @@ def get_live_earthquakes():
         _ram_quake_cache = data
         return _ram_quake_cache
 
+
+# ==============================================================================
+# MOTOR DE RED SÍSMICA CIUDADANA Y CORRELACIÓN MULTIESTACIÓN MÓVIL (KORSH-MESH)
+# ==============================================================================
+_mesh_nodes_lock = threading.Lock()
+_mesh_nodes = {}  # node_id -> dict(lat, lon, accuracy, pga, sta_lta, noise_floor, last_seen, platform, device)
+_recent_mesh_triggers = collections.deque(maxlen=300)  # dict(node_id, lat, lon, pga, sta_lta, timestamp)
+_confirmed_mesh_clusters = collections.deque(maxlen=50) # dict(cluster_id, timestamp, nodes, epicenter, magnitude, pga_max)
+_last_cluster_by_region = {} # region_key -> timestamp
+
+def reverse_geocode_country(lat, lon):
+    """Identifica el país objetivo (PA, VE, ES, AR) o asigna GLOBAL."""
+    try:
+        c = identify_target_country(float(lat), float(lon), "")
+        return c if c else "GLOBAL"
+    except Exception:
+        return "GLOBAL"
+
+def calculate_haversine_distance(lat1, lon1, lat2, lon2):
+    """Calcula la distancia geodésica exacta en kilómetros entre dos coordenadas WGS84."""
+    try:
+        R = 6371.0 # Radio medio de la Tierra en km
+        p1, p2 = math.radians(float(lat1)), math.radians(float(lat2))
+        dp = math.radians(float(lat2) - float(lat1))
+        dl = math.radians(float(lon2) - float(lon1))
+        a = math.sin(dp / 2.0)**2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2.0)**2
+        c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(max(0.0, 1.0 - a)))
+        return R * c
+    except Exception:
+        return 999999.0
+
+def register_mesh_node(node_id, lat, lon, accuracy=10.0, pga=0.0, sta_lta=1.0, noise_floor=0.02, platform="mobile", device="Mobile Sensor"):
+    """Registra o actualiza el latido de un teléfono o aplicación activa como nodo sismográfico."""
+    now = time.time()
+    with _mesh_nodes_lock:
+        # Purgar nodos inactivos (sin reporte en más de 65 segundos)
+        expired = [nid for nid, data in _mesh_nodes.items() if (now - data.get("last_seen", 0)) > 65.0]
+        for nid in expired:
+            _mesh_nodes.pop(nid, None)
+
+        country_code = reverse_geocode_country(float(lat), float(lon))
+        if country_code not in TARGET_COUNTRIES:
+            country_code = "VE"
+        country_name = TARGET_COUNTRIES[country_code]["name"]
+
+        _mesh_nodes[node_id] = {
+            "node_id": node_id,
+            "lat": float(lat),
+            "lon": float(lon),
+            "accuracy": float(accuracy),
+            "pga": float(pga),
+            "sta_lta": float(sta_lta),
+            "noise_floor": float(noise_floor),
+            "country": country_code,
+            "country_name": country_name,
+            "country_code": country_code,
+            "country_name": country_name,
+            "country_code": country_code,
+            "platform": platform,
+            "device": device,
+            "last_seen": now
+        }
+        
+        # Conteo de nodos activos en un radio de 50km
+        nearby_count = 0
+        for nid, data in _mesh_nodes.items():
+            if nid != node_id and calculate_haversine_distance(lat, lon, data["lat"], data["lon"]) <= 50.0:
+                nearby_count += 1
+                
+        return {
+            "node_id": node_id,
+            "status": "active_node",
+            "country": country_code,
+            "country_code": country_code,
+            "country_name": country_name,
+            "total_network_nodes": len(_mesh_nodes),
+            "nearby_nodes_count": nearby_count,
+            "timestamp": int(now * 1000)
+        }
+
+def get_mesh_nodes_list():
+    """Devuelve la lista actual de nodos activos para visualización en mapa y globo 3D."""
+    now = time.time()
+    with _mesh_nodes_lock:
+        active_list = []
+        for nid, n in _mesh_nodes.items():
+            age_sec = round(now - n.get("last_seen", now), 1)
+            if age_sec <= 65.0:
+                active_list.append({
+                    "node_id": nid,
+                    "lat": n["lat"],
+                    "lon": n["lon"],
+                    "country": n.get("country", "Unknown"),
+                    "pga": n.get("pga", 0.0),
+                    "sta_lta": n.get("sta_lta", 1.0),
+                    "platform": n.get("platform", "mobile"),
+                    "device": n.get("device", "Phone"),
+                    "age_sec": age_sec,
+                    "status": "monitoring" if n.get("sta_lta", 1.0) < 3.5 else "trigger_spike"
+                })
+        return {
+            "total_active": len(active_list),
+            "nodes": active_list,
+            "timestamp": int(now * 1000)
+        }
+
+def process_mesh_trigger(node_id, lat, lon, pga, sta_lta=4.0, device="Mobile Accelerometer", force_cluster=False):
+    """
+    Procesa un disparo de aceleración sospechoso desde un teléfono móvil.
+    Compara en tiempo real con otros teléfonos en un radio físico de hasta 50 km
+    y una ventana temporal de 5 segundos para predecir y confirmar el sismo.
+    """
+    global _ram_quake_cache, _last_ram_update_time
+    now = time.time()
+    lat = float(lat)
+    lon = float(lon)
+    pga = float(pga)
+    sta_lta = float(sta_lta)
+
+    trigger_data = {
+        "node_id": node_id,
+        "lat": lat,
+        "lon": lon,
+        "pga": pga,
+        "sta_lta": sta_lta,
+        "timestamp": now,
+        "device": device
+    }
+
+    with _mesh_nodes_lock:
+        _recent_mesh_triggers.append(trigger_data)
+
+        # 1. Ventana temporal: triggers de los últimos 5.0 segundos
+        TIME_WINDOW = 5.0
+        SPATIAL_RADIUS = 50.0 # km
+        MIN_CONFIRMING_NODES = 2
+
+        recent_candidates = [
+            t for t in _recent_mesh_triggers 
+            if (now - t["timestamp"]) <= TIME_WINDOW
+        ]
+
+        # 2. Correlación de vecindad espacial
+        cluster_candidates = []
+        for c in recent_candidates:
+            dist = calculate_haversine_distance(lat, lon, c["lat"], c["lon"])
+            if dist <= SPATIAL_RADIUS:
+                cluster_candidates.append(c)
+
+        # Unificar por nodo único (para no contar el mismo teléfono varias veces)
+        unique_nodes = {c["node_id"]: c for c in cluster_candidates}
+        nodes_count = len(unique_nodes)
+
+        # 3. ¿Se confirma coincidencia multiestación entre teléfonos independientes?
+        if nodes_count >= MIN_CONFIRMING_NODES:
+            region_key = f"{round(lat, 1)}_{round(lon, 1)}"
+            last_alert_time = _last_cluster_by_region.get(region_key, 0.0)
+            
+            # Cooldown de 4 segundos por región para no duplicar alertas del mismo frente de onda
+            if force_cluster or (now - last_alert_time) > 4.0:
+                _last_cluster_by_region[region_key] = now
+
+                # Epicentro ponderado por amplitud PGA
+                weights = [max(0.1, n["pga"]) for n in unique_nodes.values()]
+                sum_w = sum(weights) or 1.0
+                epi_lat = sum(n["lat"] * w for n, w in zip(unique_nodes.values(), weights)) / sum_w
+                epi_lon = sum(n["lon"] * w for n, w in zip(unique_nodes.values(), weights)) / sum_w
+                pga_max = max(n["pga"] for n in unique_nodes.values())
+
+                # Estimación de Magnitud preliminar empírica M_L basada en PGA y número de nodos
+                est_mag = round(min(7.8, max(3.0, 2.7 + 1.25 * math.log10(max(1.0, pga_max)) + 0.35 * math.log10(nodes_count))), 1)
+                country_code = reverse_geocode_country(epi_lat, epi_lon)
+                if country_code not in TARGET_COUNTRIES:
+                    country_code = "VE"
+                country_name = TARGET_COUNTRIES[country_code]["name"]
+                cluster_id = f"mesh-eew-{int(now * 1000)}"
+
+                # Construir evento GeoJSON unificado compatible con todo el sistema
+                quake_feature = {
+                    "type": "Feature",
+                    "id": cluster_id,
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [round(epi_lon, 4), round(epi_lat, 4), 10.0]
+                    },
+                    "properties": {
+                        "mag": est_mag,
+                        "place": f"Red Ciudadana KorshQuake ({nodes_count} nodos móviles)",
+                        "time": int(now * 1000),
+                        "updated": int(now * 1000),
+                        "status": "CROWDSOURCED_CONFIRMED",
+                        "net": "KORSH-MESH",
+                        "code": cluster_id,
+                        "country": country_name,
+                        "country_name": country_name,
+                        "country_code": country_code,
+                        "pga_max_gal": round(pga_max, 2),
+                        "nodes_count": nodes_count,
+                        "source": "KorshQuake Citizen Mesh Accelerometers",
+                        "predictions": calculate_seismic_predictions(epi_lat, epi_lon, 10.0, est_mag, int(now * 1000))
+                    }
+                }
+
+                # Payload de Alerta Temprana Temprana (EEW)
+                eew_alert = {
+                    "event_type": "MESH_EEW_TRIGGER",
+                    "cluster_id": cluster_id,
+                    "latitude": round(epi_lat, 4),
+                    "longitude": round(epi_lon, 4),
+                    "magnitude": est_mag,
+                    "depth_km": 10.0,
+                    "nodes_confirmed": nodes_count,
+                    "max_pga_gal": round(pga_max, 2),
+                    "target_country": country_name,
+                    "detection_epoch_ms": int(now * 1000),
+                    "p_velocity_kms": 6.0,
+                    "s_velocity_kms": 3.5,
+                    "alert_title": f"¡ALERTA SÍSMICA PRELIMINAR! Magnitud estimada M{est_mag}",
+                    "alert_level": "EMERGENCY" if est_mag >= 5.0 else "WARNING",
+                    "predictions": quake_feature["properties"]["predictions"]
+                }
+
+                # Guardar en memoria RAM para que se liste en /api/quakes y /api/quakes/latest
+                with _ram_cache_lock:
+                    if _ram_quake_cache is None:
+                        _ram_quake_cache = {
+                            "type": "FeatureCollection",
+                            "metadata": {
+                                "title": "Red Sísmica KorshQuake en Tiempo Real",
+                                "counts_by_country": {},
+                                "total_events": 0
+                            },
+                            "features": []
+                        }
+                    features = _ram_quake_cache.setdefault("features", [])
+                    existing_idx = next((i for i, f in enumerate(features) if f.get("id") == cluster_id), None)
+                    if existing_idx is not None:
+                        features[existing_idx] = quake_feature
+                    else:
+                        features.insert(0, quake_feature)
+                    _ram_quake_cache["metadata"]["total_events"] = len(features)
+                    _last_ram_update_time = time.time()
+
+                # Difusión en tiempo real por Server-Sent Events a todos los suscriptores
+                broadcast_sse_event("mesh_eew_alert", eew_alert)
+                broadcast_sse_event("earthquake", quake_feature)
+
+                _confirmed_mesh_clusters.append({
+                    "cluster_id": cluster_id,
+                    "alert": eew_alert,
+                    "timestamp": now
+                })
+
+                return {
+                    "cluster_detected": True,
+                    "status": "SEISMIC_CLUSTER_CONFIRMED",
+                    "cluster_id": cluster_id,
+                    "nodes_count": nodes_count,
+                    "estimated_magnitude": est_mag,
+                    "epicenter": {"lat": round(epi_lat, 4), "lon": round(epi_lon, 4)},
+                    "pga_max": round(pga_max, 2),
+                    "country": country_name,
+                    "eew_issued": True
+                }
+
+        return {
+            "cluster_detected": False,
+            "status": "awaiting_nearby_nodes_correlation",
+            "nodes_count": nodes_count,
+            "message": f"Disparo registrado ({nodes_count} nodo en radio de 50km). Se requiere coincidencia de múltiples teléfonos para confirmar sismo real y descartar falsos positivos."
+        }
+
+def simulate_mesh_test_cluster(lat=10.48, lon=-66.90, pga=32.5, nodes_count=3):
+    """Genera un cluster sintético de prueba para validar la predicción multi-nodo en tiempo real."""
+    now = time.time()
+    results = []
+    # Simular 3 nodos dispersos a 5-15 km de distancia
+    offsets = [(0.0, 0.0), (0.05, 0.04), (-0.04, 0.06)]
+    for i in range(min(len(offsets), nodes_count)):
+        d_lat, d_lon = offsets[i]
+        node_id = f"test-phone-node-{i+1}-{int(now*1000)%10000}"
+        res = process_mesh_trigger(
+            node_id=node_id,
+            lat=float(lat) + d_lat,
+            lon=float(lon) + d_lon,
+            pga=float(pga) + (i * 2.5),
+            sta_lta=4.5 + i,
+            device=f"Android Test Node #{i+1}",
+            force_cluster=True
+        )
+        results.append(res)
+    return results[-1] if results else {"status": "error"}
+
+
 class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=WEB_DIR, **kwargs)
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+        self.send_header("Access-Control-Max-Age", "86400")
+        self.end_headers()
+
+    def do_POST(self):
+        parsed_url = urllib.parse.urlparse(self.path)
+        path = parsed_url.path
+
+        # Helper para responder JSON limpio
+        def send_json(data, status=200):
+            payload = json.dumps(data, ensure_ascii=False).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.end_headers()
+            self.wfile.write(payload)
+
+        # Leer cuerpo de la solicitud JSON
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            post_body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+            body = json.loads(post_body.decode("utf-8")) if post_body else {}
+        except Exception as e:
+            send_json({"error": "Invalid JSON payload", "details": str(e)}, 400)
+            return
+
+        # 1. Telemetría / Ping periódico de nodo (APK / Web Móvil)
+        if path in ["/api/nodes/ping", "/api/nodes/telemetry"]:
+            node_id = str(body.get("node_id", f"node-{int(time.time()*1000)}"))
+            lat = float(body.get("lat", 0.0))
+            lon = float(body.get("lon", 0.0))
+            accuracy = float(body.get("accuracy", 15.0))
+            pga = float(body.get("pga", 0.0))
+            sta_lta = float(body.get("sta_lta", 1.0))
+            noise_floor = float(body.get("noise_floor", 0.02))
+            platform = str(body.get("platform", "mobile"))
+            device = str(body.get("device", "Phone Sensor"))
+            
+            result = register_mesh_node(node_id, lat, lon, accuracy, pga, sta_lta, noise_floor, platform, device)
+            send_json(result)
+            return
+
+        # 2. Disparo de acelerómetro anómalo (Seismic Trigger)
+        if path == "/api/nodes/trigger":
+            node_id = str(body.get("node_id", f"node-{int(time.time()*1000)}"))
+            lat = float(body.get("lat", 0.0))
+            lon = float(body.get("lon", 0.0))
+            pga = float(body.get("pga", 0.0))
+            sta_lta = float(body.get("sta_lta", 4.0))
+            device = str(body.get("device", "Phone Sensor"))
+            
+            result = process_mesh_trigger(node_id, lat, lon, pga, sta_lta, device)
+            send_json(result)
+            return
+
+        # 3. Disparo de prueba de cluster multi-nodo
+        if path == "/api/nodes/test_cluster":
+            lat = float(body.get("lat", 10.48))
+            lon = float(body.get("lon", -66.90))
+            pga = float(body.get("pga", 35.0))
+            nodes_count = int(body.get("nodes_count", 3))
+            
+            result = simulate_mesh_test_cluster(lat, lon, pga, nodes_count)
+            send_json(result)
+            return
+
+        send_json({"error": "Endpoint not found", "path": path}, 404)
+        return
+
 
     def do_GET(self):
         parsed_url = urllib.parse.urlparse(self.path)
@@ -989,6 +1362,24 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Length", str(len(payload)))
             self.end_headers()
             self.wfile.write(payload)
+
+        # API: Lista de Nodos Activos de la Red Ciudadana (/api/nodes/list)
+        if path == "/api/nodes/list":
+            send_json(get_mesh_nodes_list())
+            return
+
+        # API: Estadísticas de Nodos de la Red Ciudadana (/api/nodes/stats)
+        if path == "/api/nodes/stats":
+            with _mesh_nodes_lock:
+                stats = {
+                    "service": "KorshQuake Citizen Mesh Network",
+                    "active_nodes_count": len(_mesh_nodes),
+                    "recent_triggers_count": len(_recent_mesh_triggers),
+                    "confirmed_clusters_count": len(_confirmed_mesh_clusters),
+                    "clusters": list(_confirmed_mesh_clusters)
+                }
+            send_json(stats)
+            return
 
         # 1. API: Estado General del Sistema
         if path == "/api/status":

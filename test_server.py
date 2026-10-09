@@ -254,5 +254,118 @@ class TestKorshQuakeServer(unittest.TestCase):
         found_in_cache = any(f.get("id") == "emsc-live-test_eew_panama_999" for f in quakes.get("features", []))
         self.assertTrue(found_in_cache, "El sismo en vivo debe estar presente en el cache RAM del servidor")
 
+
+    def test_mesh_node_registration_and_list(self):
+        # 1. Registrar un nodo mvil va POST /api/nodes/ping
+        url_ping = f"http://127.0.0.1:{self.port}/api/nodes/ping"
+        payload = json.dumps({
+            "node_id": "test-phone-caracas-01",
+            "lat": 10.4806,
+            "lon": -66.9036,
+            "accuracy": 8.5,
+            "pga": 0.04,
+            "sta_lta": 1.1,
+            "noise_floor": 0.02,
+            "platform": "apk",
+            "device": "Samsung Galaxy S23"
+        }).encode("utf-8")
+
+        req = urllib.request.Request(url_ping, data=payload, headers={"Content-Type": "application/json"})
+        resp = urllib.request.urlopen(req, timeout=5)
+        self.assertEqual(resp.status, 200)
+        data = json.loads(resp.read().decode("utf-8"))
+        self.assertEqual(data["node_id"], "test-phone-caracas-01")
+        self.assertEqual(data["country"], "VE")
+        self.assertGreaterEqual(data["total_network_nodes"], 1)
+
+        # 2. Verificar que aparece listado en GET /api/nodes/list
+        url_list = f"http://127.0.0.1:{self.port}/api/nodes/list"
+        req_list = urllib.request.urlopen(url_list, timeout=5)
+        self.assertEqual(req_list.status, 200)
+        list_data = json.loads(req_list.read().decode("utf-8"))
+        self.assertIn("nodes", list_data)
+        found = any(n["node_id"] == "test-phone-caracas-01" for n in list_data["nodes"])
+        self.assertTrue(found, "El nodo registrado debe aparecer en la lista de nodos activos")
+
+    def test_mesh_single_node_trigger_avoids_false_alarm(self):
+        # Un solo telfono movindose (sacudida accidental) NO debe disparar alerta de sismo
+        url_trigger = f"http://127.0.0.1:{self.port}/api/nodes/trigger"
+        payload = json.dumps({
+            "node_id": "isolated-phone-99",
+            "lat": 8.9824,
+            "lon": -79.5199, # Panam
+            "pga": 28.0,
+            "sta_lta": 5.2,
+            "device": "Pixel 8"
+        }).encode("utf-8")
+
+        req = urllib.request.Request(url_trigger, data=payload, headers={"Content-Type": "application/json"})
+        resp = urllib.request.urlopen(req, timeout=5)
+        self.assertEqual(resp.status, 200)
+        data = json.loads(resp.read().decode("utf-8"))
+        self.assertFalse(data["cluster_detected"], "Un solo telfono no debe generar alerta ssmica (debe evitar falsos positivos)")
+        self.assertEqual(data["nodes_count"], 1)
+
+    def test_mesh_multi_node_coincidence_confirms_earthquake(self):
+        # Dos telfonos cercanos (< 50 km) disparando en la misma ventana temporal confirman el sismo
+        url_trigger = f"http://127.0.0.1:{self.port}/api/nodes/trigger"
+
+        # Telfono A en Caracas Este
+        payload_a = json.dumps({
+            "node_id": "coincidence-phone-alpha",
+            "lat": 10.4900,
+            "lon": -66.8500,
+            "pga": 45.2,
+            "sta_lta": 5.8,
+            "device": "Galaxy S24"
+        }).encode("utf-8")
+        req_a = urllib.request.Request(url_trigger, data=payload_a, headers={"Content-Type": "application/json"})
+        resp_a = urllib.request.urlopen(req_a, timeout=5)
+        self.assertEqual(resp_a.status, 200)
+
+        # Telfono B en Caracas Oeste (~12 km de distancia) dentro de los siguientes 2 segundos
+        payload_b = json.dumps({
+            "node_id": "coincidence-phone-beta",
+            "lat": 10.5100,
+            "lon": -66.9500,
+            "pga": 48.6,
+            "sta_lta": 6.1,
+            "device": "Xiaomi 13"
+        }).encode("utf-8")
+        req_b = urllib.request.Request(url_trigger, data=payload_b, headers={"Content-Type": "application/json"})
+        resp_b = urllib.request.urlopen(req_b, timeout=5)
+        self.assertEqual(resp_b.status, 200)
+        data_b = json.loads(resp_b.read().decode("utf-8"))
+
+        self.assertTrue(data_b["cluster_detected"], "Mltiples telfonos cercanos deben confirmar el sismo de red")
+        self.assertGreaterEqual(data_b["nodes_count"], 2)
+        self.assertIn("estimated_magnitude", data_b)
+        self.assertGreaterEqual(data_b["estimated_magnitude"], 3.0)
+        self.assertTrue(data_b["eew_issued"], "Debe emitirse la alerta ssmica temprana (EEW)")
+
+    def test_mesh_test_cluster_and_stats(self):
+        # Probar endpoint de simulacin de cluster
+        url_test = f"http://127.0.0.1:{self.port}/api/nodes/test_cluster"
+        payload = json.dumps({
+            "lat": 40.4168,
+            "lon": -3.7038, # Madrid
+            "pga": 35.0,
+            "nodes_count": 3
+        }).encode("utf-8")
+
+        req = urllib.request.Request(url_test, data=payload, headers={"Content-Type": "application/json"})
+        resp = urllib.request.urlopen(req, timeout=5)
+        self.assertEqual(resp.status, 200)
+        data = json.loads(resp.read().decode("utf-8"))
+        self.assertTrue(data["cluster_detected"])
+
+        # Verificar estadsticas de nodos
+        url_stats = f"http://127.0.0.1:{self.port}/api/nodes/stats"
+        resp_stats = urllib.request.urlopen(url_stats, timeout=5)
+        self.assertEqual(resp_stats.status, 200)
+        stats = json.loads(resp_stats.read().decode("utf-8"))
+        self.assertIn("service", stats)
+        self.assertGreaterEqual(stats["confirmed_clusters_count"], 1)
+
 if __name__ == '__main__':
     unittest.main()

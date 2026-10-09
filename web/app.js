@@ -539,6 +539,18 @@ function initRealtimeStream() {
       }
     });
 
+    liveEventSource.addEventListener('mesh_eew_alert', (e) => {
+      try {
+        const alertData = JSON.parse(e.data);
+        console.warn('⚡ [KORSH-MESH] Alerta Sísmica Temprana de Red Ciudadana:', alertData);
+        if (typeof handleCitizenMeshAlert === 'function') {
+          handleCitizenMeshAlert(alertData);
+        }
+      } catch (err) {
+        console.warn('Error procesando alerta sísmica ciudadana:', err);
+      }
+    });
+
     liveEventSource.addEventListener('earthquake', (e) => {
       try {
         const feature = JSON.parse(e.data);
@@ -787,8 +799,306 @@ async function fetchLogs() {
   }
 }
 
-// Realtime Synthetic Seismograph Waveform Simulation
-function initSeismograph() {
+// ==============================================================================
+// KORSHQUAKE CITIZEN MESH NODE & REAL HARDWARE ACCELEROMETER ENGINE
+// ==============================================================================
+let meshNodeState = {
+  nodeId: null,
+  isHardwareAvailable: false,
+  isCalibrating: false,
+  lat: null,
+  lon: null,
+  accuracy: 15.0,
+  country: 'VE',
+  currentPga: 0.0,
+  maxPga: 0.0,
+  noiseFloor: 0.05,
+  gravityBaseline: { x: 0.0, y: 0.0, z: 9.81 },
+  sta: 0.05,
+  lta: 0.05,
+  staLtaRatio: 1.0,
+  lastTriggerTime: 0,
+  lastPingTime: 0,
+  activeNodesCount: 1,
+  sampleRateHz: 60,
+  motionDetected: false
+};
+
+let meshNodesLayerGroup = null;
+
+function getOrCreateNodeId() {
+  let id = localStorage.getItem('korshquake_node_id');
+  if (!id) {
+    id = 'korsh-node-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now().toString(36).slice(-4);
+    localStorage.setItem('korshquake_node_id', id);
+  }
+  meshNodeState.nodeId = id;
+  const nodeEl = document.getElementById('node-id-display');
+  if (nodeEl) nodeEl.textContent = 'Nodo: #' + id.slice(-6).toUpperCase();
+  return id;
+}
+
+function initNodeGeolocation() {
+  if ('geolocation' in navigator) {
+    navigator.geolocation.watchPosition(
+      (pos) => {
+        meshNodeState.lat = pos.coords.latitude;
+        meshNodeState.lon = pos.coords.longitude;
+        meshNodeState.accuracy = pos.coords.accuracy || 15.0;
+      },
+      (err) => {
+        console.warn('[KORSH-MESH] Geolocalización usando coordenadas regionales de fallback:', err.message);
+        if (meshNodeState.lat === null) {
+          meshNodeState.lat = 10.4806;
+          meshNodeState.lon = -66.9036;
+        }
+      },
+      { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 }
+    );
+  } else {
+    meshNodeState.lat = 10.4806;
+    meshNodeState.lon = -66.9036;
+  }
+}
+
+function calibrateAccelerometer() {
+  meshNodeState.isCalibrating = true;
+  meshNodeState.gravityBaseline = { x: 0.0, y: 0.0, z: 9.81 };
+  meshNodeState.sta = 0.05;
+  meshNodeState.lta = 0.05;
+  meshNodeState.maxPga = 0.0;
+  
+  const pgaEl = document.getElementById('seismo-peak');
+  if (pgaEl) pgaEl.textContent = 'PGA: 0.00 gal (Calibrado)';
+
+  const badge = document.getElementById('sensor-hardware-badge');
+  const text = document.getElementById('sensor-status-text');
+  if (badge && text) {
+    badge.className = 'sensor-badge active-sensor';
+    text.textContent = 'Calibrando Gravedad Base (1.5s)...';
+  }
+
+  setTimeout(() => {
+    meshNodeState.isCalibrating = false;
+    if (text) {
+      text.textContent = meshNodeState.isHardwareAvailable 
+        ? 'Acelerómetro Físico Móvil Calibrado (100 Hz)' 
+        : 'Estación Base Calibrada (Modo Estación)';
+    }
+  }, 1500);
+}
+
+function updateAxisDisplay(ax, ay, az, pgaGal) {
+  const elX = document.getElementById('axis-x');
+  const elY = document.getElementById('axis-y');
+  const elZ = document.getElementById('axis-z');
+  const elSta = document.getElementById('seismo-sta-lta');
+  const elPga = document.getElementById('seismo-peak');
+
+  if (elX) elX.textContent = ax.toFixed(2);
+  if (elY) elY.textContent = ay.toFixed(2);
+  if (elZ) elZ.textContent = az.toFixed(2);
+  if (elSta) {
+    elSta.textContent = meshNodeState.staLtaRatio.toFixed(1) + 'x';
+    elSta.className = meshNodeState.staLtaRatio > 3.5 ? 'text-red font-bold' : 'text-cyan';
+  }
+  if (elPga) elPga.textContent = `PGA: ${pgaGal.toFixed(2)} gal`;
+}
+
+function checkSeismicTrigger(pgaGal, staLtaRatio) {
+  const now = Date.now();
+  // Umbral sísmico: STA/LTA > 3.8 y aceleración > 15.0 gal (intensidad II-III MMI)
+  // Cooldown de 4.5 segundos entre disparos locales para no inundar el cluster
+  if (staLtaRatio > 3.8 && pgaGal > 15.0 && (now - meshNodeState.lastTriggerTime) > 4500) {
+    meshNodeState.lastTriggerTime = now;
+    
+    // Indicador visual en el contenedor del sismógrafo
+    const container = document.getElementById('seismograph-container');
+    if (container) {
+      container.classList.add('seismo-trigger-active');
+      setTimeout(() => container.classList.remove('seismo-trigger-active'), 4000);
+    }
+
+    // Vibración háptica en teléfonos móviles
+    if (navigator.vibrate) {
+      navigator.vibrate([120, 80, 180]);
+    }
+
+    // Enviar trigger al nodo servidor para correlación con otros teléfonos cercanos
+    sendSeismicTriggerToNetwork(pgaGal, staLtaRatio);
+  }
+}
+
+async function sendSeismicTriggerToNetwork(pgaGal, staLta) {
+  try {
+    const payload = {
+      node_id: meshNodeState.nodeId,
+      lat: meshNodeState.lat || 10.4806,
+      lon: meshNodeState.lon || -66.9036,
+      pga: Math.round(pgaGal * 100) / 100,
+      sta_lta: Math.round(staLta * 10) / 10,
+      device: navigator.userAgent.includes('Mobile') ? 'Android/iOS Smartphone' : 'Web Node'
+    };
+
+    const resp = await fetch('/api/nodes/trigger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await resp.json();
+    if (data.cluster_detected) {
+      console.warn('🚨 [KORSH-MESH] ¡SISMO CONFIRMADO POR LA RED DE NODOS CERCANOS!', data);
+      handleCitizenMeshAlert({
+        alert_title: `¡ALERTA SÍSMICA PRELIMINAR! Magnitud M${data.estimated_magnitude}`,
+        magnitude: data.estimated_magnitude,
+        nodes_confirmed: data.nodes_count,
+        max_pga_gal: data.pga_max,
+        target_country: data.country,
+        latitude: data.epicenter.lat,
+        longitude: data.epicenter.lon,
+        alert_level: data.estimated_magnitude >= 5.0 ? 'EMERGENCY' : 'WARNING'
+      });
+    } else {
+      console.log('📡 [KORSH-MESH] Disparo registrado. Esperando coincidencia con teléfonos cercanos...');
+    }
+  } catch (err) {
+    console.error('[KORSH-MESH] Error enviando trigger:', err);
+  }
+}
+
+async function sendNodeTelemetryPing() {
+  if (!meshNodeState.nodeId) return;
+  try {
+    const payload = {
+      node_id: meshNodeState.nodeId,
+      lat: meshNodeState.lat || 10.4806,
+      lon: meshNodeState.lon || -66.9036,
+      accuracy: meshNodeState.accuracy,
+      pga: Math.round(meshNodeState.currentPga * 100) / 100,
+      sta_lta: Math.round(meshNodeState.staLtaRatio * 10) / 10,
+      noise_floor: Math.round(meshNodeState.lta * 100) / 100,
+      platform: navigator.userAgent.includes('KorshQuake') ? 'apk' : 'web',
+      device: navigator.userAgent.includes('Android') ? 'Android Phone' : (navigator.userAgent.includes('iPhone') ? 'iPhone' : 'Web Browser')
+    };
+
+    const resp = await fetch('/api/nodes/ping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await resp.json();
+    if (data && data.total_network_nodes !== undefined) {
+      meshNodeState.activeNodesCount = data.total_network_nodes;
+      updateMeshNodesCounter(data.total_network_nodes, data.nearby_nodes_count);
+    }
+  } catch (err) {
+    // Silencioso en desconexiones
+  }
+}
+
+function updateMeshNodesCounter(total, nearby) {
+  const headerCountEl = document.getElementById('mesh-header-nodes');
+  const panelStatusEl = document.getElementById('mesh-nodes-status');
+
+  if (headerCountEl) headerCountEl.textContent = total;
+  if (panelStatusEl) {
+    panelStatusEl.textContent = `${total} nodos (${nearby || 0} cercanos)`;
+  }
+}
+
+async function updateMeshNodesMapLayer() {
+  if (typeof map === 'undefined' || !map) return;
+  if (!meshNodesLayerGroup) {
+    meshNodesLayerGroup = L.layerGroup().addTo(map);
+  }
+
+  try {
+    const resp = await fetch('/api/nodes/list');
+    const data = await resp.json();
+    if (data && data.nodes) {
+      meshNodesLayerGroup.clearLayers();
+      data.nodes.forEach(node => {
+        const isSpike = node.status === 'trigger_spike';
+        const marker = L.circleMarker([node.lat, node.lon], {
+          radius: isSpike ? 11 : 6,
+          color: isSpike ? '#ff3d00' : '#00e5ff',
+          fillColor: isSpike ? '#ff1744' : '#00e5ff',
+          fillOpacity: 0.85,
+          weight: isSpike ? 3 : 1.5
+        });
+        marker.bindTooltip(
+          `<strong>📡 Nodo KorshQuake #${node.node_id.slice(-6).toUpperCase()}</strong><br>` +
+          `Estado: ${isSpike ? '⚠️ Disparo Sísmico Activo' : '🟢 Monitoreo en Tiempo Real'}<br>` +
+          `PGA: ${node.pga.toFixed(2)} gal | País: ${node.country}`,
+          { direction: 'top', className: 'node-tooltip' }
+        );
+        meshNodesLayerGroup.addLayer(marker);
+      });
+    }
+  } catch (err) {
+    // Silencioso
+  }
+}
+
+function handleCitizenMeshAlert(alertData) {
+  // 1. Mostrar banner de Alerta Temprana en UI
+  const eewBanner = document.getElementById('eew-banner');
+  const eewTitle = document.getElementById('eew-title');
+  const eewMeta = document.getElementById('eew-meta');
+  const eewEta = document.getElementById('eew-eta');
+
+  if (eewBanner && eewTitle) {
+    eewTitle.textContent = `🚨 ALERTA SÍSMICA CIUDADANA - M${alertData.magnitude || 4.5}`;
+    if (eewMeta) {
+      eewMeta.textContent = `Detectado por ${alertData.nodes_confirmed || 2} teléfonos cercanos en ${alertData.target_country || 'Región'} • PGA: ${alertData.max_pga_gal || 25} gal`;
+    }
+    if (eewEta) {
+      eewEta.textContent = `ONDAS PROPAGÁNDOSE (P: 6.0 km/s | S: 3.5 km/s)`;
+    }
+    eewBanner.style.display = 'block';
+    eewBanner.classList.add('pulse-alert');
+  }
+
+  // 2. Sirena auditiva y vibración háptica
+  if (typeof playAlarmAudio === 'function') {
+    playAlarmAudio();
+  }
+  if (navigator.vibrate) {
+    navigator.vibrate([400, 200, 400, 200, 600]);
+  }
+
+  // 3. Enfocar mapa en el epicentro si Leaflet está activo
+  if (typeof map !== 'undefined' && map && alertData.latitude && alertData.longitude) {
+    map.flyTo([alertData.latitude, alertData.longitude], 8, { duration: 1.5 });
+    
+    // Dibujar onda sísmica expansiva en el mapa
+    const epicCircle = L.circle([alertData.latitude, alertData.longitude], {
+      radius: 12000,
+      color: '#ff1744',
+      fillColor: '#ff5252',
+      fillOpacity: 0.35,
+      weight: 3
+    }).addTo(map);
+
+    let expandRadius = 12000;
+    const waveInterval = setInterval(() => {
+      expandRadius += 15000;
+      epicCircle.setRadius(expandRadius);
+      if (expandRadius > 180000) {
+        clearInterval(waveInterval);
+        map.removeLayer(epicCircle);
+      }
+    }, 400);
+  }
+}
+
+// Inicialización del Motor de Nodo y Acelerómetro
+function initCitizenSeismographNode() {
+  getOrCreateNodeId();
+  initNodeGeolocation();
+
   const canvas = document.getElementById('seismograph-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -797,41 +1107,178 @@ function initSeismograph() {
   const midY = height / 2;
 
   let points = new Array(width).fill(midY);
-  let phase = 0;
-  let pgaEl = document.getElementById('seismo-peak');
+  let synthPhase = 0;
 
-  function renderWave() {
-    points.shift();
-    phase += 0.07;
-    
-    // Waveform simulation
-    let noise = (Math.random() - 0.5) * 4.5;
-    let wave1 = Math.sin(phase * 1.8) * 6.5;
-    let wave2 = Math.sin(phase * 4.2) * 3.5;
-    let wave3 = Math.cos(phase * 0.4) * 8.0;
+  const statusBadge = document.getElementById('sensor-hardware-badge');
+  const statusText = document.getElementById('sensor-status-text');
+  const modeTag = document.getElementById('sensor-mode-tag');
 
-    let y = midY + noise + wave1 + wave2 + wave3;
-    points.push(y);
+  // Calibrar al arrancar
+  calibrateAccelerometer();
 
-    if (Math.random() < 0.05 && pgaEl) {
-      let currentPga = (0.05 + Math.random() * 0.28).toFixed(2);
-      pgaEl.textContent = `PGA: ${currentPga} cm/s²`;
+  // Escucha del sensor de acelerómetro físico
+  function onDeviceMotion(event) {
+    meshNodeState.isHardwareAvailable = true;
+
+    let ax = 0, ay = 0, az = 0;
+    if (event.acceleration && event.acceleration.x !== null) {
+      ax = event.acceleration.x || 0;
+      ay = event.acceleration.y || 0;
+      az = event.acceleration.z || 0;
+    } else if (event.accelerationIncludingGravity && event.accelerationIncludingGravity.x !== null) {
+      const rawX = event.accelerationIncludingGravity.x || 0;
+      const rawY = event.accelerationIncludingGravity.y || 0;
+      const rawZ = event.accelerationIncludingGravity.z || 0;
+
+      const alpha = 0.85;
+      meshNodeState.gravityBaseline.x = alpha * meshNodeState.gravityBaseline.x + (1 - alpha) * rawX;
+      meshNodeState.gravityBaseline.y = alpha * meshNodeState.gravityBaseline.y + (1 - alpha) * rawY;
+      meshNodeState.gravityBaseline.z = alpha * meshNodeState.gravityBaseline.z + (1 - alpha) * rawZ;
+
+      ax = rawX - meshNodeState.gravityBaseline.x;
+      ay = rawY - meshNodeState.gravityBaseline.y;
+      az = rawZ - meshNodeState.gravityBaseline.z;
     }
 
+    // Magnitud escalar en m/s² y conversión a gal (cm/s²)
+    const magMs2 = Math.sqrt(ax * ax + ay * ay + az * az);
+    const pgaGal = magMs2 * 100.0;
+
+    meshNodeState.currentPga = pgaGal;
+    if (pgaGal > meshNodeState.maxPga) {
+      meshNodeState.maxPga = pgaGal;
+    }
+
+    // Actualización de ejes en UI
+    updateAxisDisplay(ax, ay, az, pgaGal);
+
+    // Algoritmo STA/LTA
+    const staCoeff = 0.12;
+    const ltaCoeff = 0.006;
+    meshNodeState.sta = (1 - staCoeff) * meshNodeState.sta + staCoeff * pgaGal;
+    meshNodeState.lta = (1 - ltaCoeff) * meshNodeState.lta + ltaCoeff * pgaGal;
+    meshNodeState.staLtaRatio = meshNodeState.sta / Math.max(0.01, meshNodeState.lta);
+
+    // Verificación de disparo sísmico
+    checkSeismicTrigger(pgaGal, meshNodeState.staLtaRatio);
+
+    // Actualización de estado del sensor en UI
+    if (statusBadge && !statusBadge.classList.contains('active-sensor')) {
+      statusBadge.className = 'sensor-badge active-sensor';
+      if (statusText) statusText.textContent = 'Acelerómetro Físico Móvil Activo (100 Hz)';
+      if (modeTag) modeTag.textContent = 'Sensor Físico';
+    }
+  }
+
+  // Activar detector de acelerómetro
+  if (typeof DeviceMotionEvent !== 'undefined') {
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+      if (statusText) statusText.textContent = 'Tocar para habilitar acelerómetro móvil';
+      if (statusBadge) {
+        statusBadge.style.cursor = 'pointer';
+        statusBadge.onclick = () => {
+          DeviceMotionEvent.requestPermission().then(perm => {
+            if (perm === 'granted') {
+              window.addEventListener('devicemotion', onDeviceMotion, { passive: true });
+              if (statusText) statusText.textContent = 'Acelerómetro Físico Activo';
+              statusBadge.onclick = null;
+            }
+          }).catch(console.error);
+        };
+      }
+    } else {
+      window.addEventListener('devicemotion', onDeviceMotion, { passive: true });
+    }
+  }
+
+  // Fallback para PC / navegadores de escritorio
+  setTimeout(() => {
+    if (!meshNodeState.isHardwareAvailable) {
+      if (statusText) statusText.textContent = 'Modo Estación (PC / Sensor Sintético)';
+      if (modeTag) modeTag.textContent = 'Modo Estación PC';
+    }
+  }, 2200);
+
+  // Configuración de botones en el panel
+  const btnCalibrate = document.getElementById('btn-calibrate-sensor');
+  if (btnCalibrate) {
+    btnCalibrate.onclick = () => calibrateAccelerometer();
+  }
+
+  const btnTestCluster = document.getElementById('btn-test-cluster');
+  if (btnTestCluster) {
+    btnTestCluster.onclick = async () => {
+      btnTestCluster.disabled = true;
+      btnTestCluster.textContent = 'Simulando Red...';
+      try {
+        const resp = await fetch('/api/nodes/test_cluster', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lat: meshNodeState.lat || 10.4806,
+            lon: meshNodeState.lon || -66.9036,
+            pga: 36.8,
+            nodes_count: 3
+          })
+        });
+        const res = await resp.json();
+        console.log('Resultado simulación cluster:', res);
+      } catch (err) {
+        console.error('Error probando cluster:', err);
+      } finally {
+        setTimeout(() => {
+          btnTestCluster.disabled = false;
+          btnTestCluster.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg> Probar Alerta Multi-Nodo';
+        }, 3000);
+      }
+    };
+  }
+
+  // Bucle de renderizado de la forma de onda en Canvas a 60 FPS
+  function renderSeismographCanvas() {
+    points.shift();
+
+    let targetY = midY;
+    if (meshNodeState.isHardwareAvailable) {
+      // Escalar aceleración física: ±50 gal llena ~42% de la altura del canvas
+      const scale = (height * 0.42) / 50.0;
+      const dynOffset = (meshNodeState.currentPga * (Math.sin(Date.now() * 0.04) > 0 ? 1 : -1));
+      targetY = midY + Math.max(-midY * 0.88, Math.min(midY * 0.88, dynOffset * scale));
+    } else {
+      // Onda sintética para computadoras de escritorio
+      synthPhase += 0.07;
+      const noise = (Math.random() - 0.5) * 3.2;
+      const w1 = Math.sin(synthPhase * 1.8) * 4.5;
+      const w2 = Math.cos(synthPhase * 0.5) * 3.0;
+      targetY = midY + noise + w1 + w2;
+      
+      const pgaEl = document.getElementById('seismo-peak');
+      if (Math.random() < 0.05 && pgaEl) {
+        pgaEl.textContent = `PGA: ${(0.04 + Math.random() * 0.15).toFixed(2)} gal`;
+      }
+    }
+
+    points.push(targetY);
+
+    // Fondo del canvas con rastro suave
     ctx.fillStyle = 'rgba(5, 11, 20, 0.45)';
     ctx.fillRect(0, 0, width, height);
 
-    ctx.strokeStyle = 'rgba(0, 229, 255, 0.15)';
+    // Línea base central
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.12)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, midY);
     ctx.lineTo(width, midY);
     ctx.stroke();
 
-    ctx.strokeStyle = '#00e5ff';
-    ctx.lineWidth = 1.6;
-    ctx.shadowColor = 'rgba(0, 229, 255, 0.5)';
-    ctx.shadowBlur = 6;
+    // Línea de señal sísmica
+    const isSpike = meshNodeState.staLtaRatio > 3.5;
+    ctx.strokeStyle = isSpike ? '#ff3d00' : '#00e5ff';
+    ctx.lineWidth = isSpike ? 2.2 : 1.6;
+    ctx.shadowColor = isSpike ? 'rgba(255, 61, 0, 0.7)' : 'rgba(0, 229, 255, 0.5)';
+    ctx.shadowBlur = isSpike ? 10 : 5;
+
     ctx.beginPath();
     for (let x = 0; x < width; x++) {
       if (x === 0) ctx.moveTo(x, points[x]);
@@ -840,11 +1287,23 @@ function initSeismograph() {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    requestAnimationFrame(renderWave);
+    requestAnimationFrame(renderSeismographCanvas);
   }
 
-  requestAnimationFrame(renderWave);
+  requestAnimationFrame(renderSeismographCanvas);
+
+  // Intervalos de telemetría y mapa de nodos
+  sendNodeTelemetryPing();
+  setInterval(sendNodeTelemetryPing, 12000);
+
+  setTimeout(updateMeshNodesMapLayer, 1500);
+  setInterval(updateMeshNodesMapLayer, 10000);
 }
+
+function initSeismograph() {
+  initCitizenSeismographNode();
+}
+
 
 // Utility: Format Time Ago
 function formatTimeAgo(timeMs) {

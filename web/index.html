@@ -290,18 +290,50 @@
     <!-- Right Column: Sidebar Feed & Waveform Seismograph -->
     <aside class="sidebar-section">
       <!-- Live Station Waveform Monitor -->
-      <div class="seismograph-panel glass-panel">
+            <!-- Live Station Seismograph Feed & Citizen Mesh Node -->
+      <div class="seismograph-panel glass-panel" id="seismograph-container">
         <div class="panel-header">
           <div class="panel-title-wrap">
-            <span class="live-dot pulse-red"></span>
-            <h3>Monitor Sismográfico de Estación</h3>
+            <span class="live-dot pulse-red" id="seismo-live-dot"></span>
+            <h3 id="seismo-title">Nodo Sismográfico Móvil</h3>
           </div>
-          <span class="freq-tag font-mono">100 Hz / Z-Axis</span>
+          <span class="freq-tag font-mono" id="sensor-mode-tag">Acelerómetro Activo</span>
         </div>
+
+        <!-- Sensor Status & Node Info -->
+        <div class="sensor-status-bar font-mono">
+          <div class="sensor-badge" id="sensor-hardware-badge">
+            <span class="sensor-dot"></span>
+            <span id="sensor-status-text">Detectando Acelerómetro Físico...</span>
+          </div>
+          <div class="node-id-pill" id="node-id-display">Nodo: Inicializando...</div>
+        </div>
+
         <canvas id="seismograph-canvas" width="450" height="110"></canvas>
+
+        <!-- Live Physical 3-Axis & Energy Readout -->
+        <div class="seismo-axes-bar font-mono">
+          <span>X: <strong id="axis-x">0.00</strong></span>
+          <span>Y: <strong id="axis-y">0.00</strong></span>
+          <span>Z: <strong id="axis-z">0.00</strong></span>
+          <span>STA/LTA: <strong id="seismo-sta-lta" class="text-cyan">1.0x</strong></span>
+        </div>
+
         <div class="seismo-meta font-mono">
-          <span>Estación Primaria: <strong class="text-cyan">KORSH-NET-AK135</strong></span>
-          <span id="seismo-peak">PGA: 0.12 cm/s²</span>
+          <span id="seismo-station-label">Red Ciudadana: <strong class="text-cyan" id="mesh-nodes-status">0 nodos</strong></span>
+          <span id="seismo-peak">PGA: 0.00 gal</span>
+        </div>
+
+        <!-- Sensor & Network Cluster Controls -->
+        <div class="seismo-controls">
+          <button class="btn btn-sm btn-outline" id="btn-calibrate-sensor" title="Calibrar gravedad y nivel de ruido actual">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+            Calibrar Sensor
+          </button>
+          <button class="btn btn-sm btn-primary" id="btn-test-cluster" title="Simular sacudida multi-nodo para verificar predicción en vivo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+            Probar Alerta Multi-Nodo
+          </button>
         </div>
       </div>
 
