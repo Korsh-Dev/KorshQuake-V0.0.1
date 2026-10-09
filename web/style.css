@@ -271,6 +271,17 @@ body {
   filter: brightness(1.15);
 }
 
+.pulse-tag {
+  display: inline-block;
+  animation: pulseTagAnim 1.4s infinite ease-in-out;
+}
+
+@keyframes pulseTagAnim {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.04); filter: brightness(1.2); }
+  100% { transform: scale(1); }
+}
+
 .btn-secondary {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-main);

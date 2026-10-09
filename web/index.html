@@ -73,14 +73,13 @@
         </select>
       </div>
 
-      <!-- Botón God's Eye View 3D -->
-      <button class="btn btn-godseye desktop-only" id="btn-open-godseye" title="Abrir God's Eye View (Globo 3D en Tiempo Real)">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <!-- Botón Motor de Predicciones EEW en Tiempo Real -->
+      <button class="btn btn-secondary desktop-only" id="btn-open-predict-modal" title="Ver Predicciones de Ondas Sísmicas y Alerta Temprana en Tiempo Real (EEW)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2">
           <circle cx="12" cy="12" r="10"></circle>
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-          <path d="M2 12h20"></path>
+          <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
-        <span>🛰️ God's Eye 3D</span>
+        <span style="color: #00e5ff; font-weight: 600;">⚡ Predicciones EEW</span>
       </button>
 
       <!-- Botón Descargar APK (Desktop/Tablet) -->
@@ -244,7 +243,6 @@
               <option value="satellite">Satélite (Alta Resolución)</option>
               <option value="topo">Físico / Topográfico</option>
               <option value="vector">Vectorial Tectónico (Offline)</option>
-              <option value="godseye">🛰️ God's Eye 3D (Globo Satelital)</option>
             </select>
           </div>
           <div class="filter-group">
@@ -450,22 +448,19 @@
           </div>
         </div>
 
-        <!-- God's Eye View 3D (Globo Satelital en Tiempo Real) -->
-        <div class="settings-card" style="background: rgba(0, 180, 216, 0.1); border-color: rgba(0, 229, 255, 0.4);">
+        <!-- Predicciones y Alerta Temprana EEW -->
+        <div class="settings-card" style="background: rgba(0, 229, 255, 0.08); border-color: rgba(0, 229, 255, 0.4);">
           <div class="settings-card-header">
-            <span class="settings-icon">🛰️</span>
+            <span class="settings-icon">⚡</span>
             <div>
-              <div class="settings-title">God's Eye View 3D</div>
-              <div class="settings-desc">Simulador satelital táctico 3D con terremotos en vivo conectados al hub de KorshQuake</div>
+              <div class="settings-title">Predicciones Sísmicas en Tiempo Real (EEW)</div>
+              <div class="settings-desc">Modelado de arribo de ondas P y S con cuenta regresiva en segundos a ciudades vulnerables</div>
             </div>
           </div>
           <div style="margin-top: 10px; display: flex; gap: 8px;">
-            <button class="btn btn-godseye" id="btn-menu-open-godseye" style="flex: 1; justify-content: center;">
-              🛰️ Abrir Globo 3D
+            <button class="btn btn-primary" id="btn-menu-open-predict" style="flex: 1; justify-content: center;">
+              ⚡ Ver Predicciones de Ondas en Vivo
             </button>
-            <a href="/gods-eye" target="_blank" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center;" title="Abrir en pestaña nueva">
-              Pestaña ↗
-            </a>
           </div>
         </div>
 
@@ -571,23 +566,55 @@
     </button>
   </nav>
 
-  <!-- Modal: Visor Táctico God's Eye View 3D -->
-  <div class="modal-overlay" id="modal-godseye">
-    <div class="modal-content glass-panel" style="width: 96vw; max-width: 1400px; height: 90vh; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
-      <div class="modal-header" style="background: rgba(6, 13, 24, 0.95); padding: 12px 20px;">
+  <!-- Modal: Motor de Predicciones Sísmicas y Alerta Temprana EEW -->
+  <div class="modal-overlay" id="modal-predict">
+    <div class="modal-content glass-panel" style="width: 95vw; max-width: 950px; max-height: 88vh; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+      <div class="modal-header" style="background: rgba(6, 13, 24, 0.95); padding: 14px 22px;">
         <div class="modal-title-box">
           <span class="terminal-dot pulse-green"></span>
-          <h3>KorshQuake 🛰️ God's Eye View (Globo 3D en Tiempo Real)</h3>
+          <h3>⚡ KorshQuake: Motor de Predicción Sísmica y Alerta Temprana (EEW)</h3>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <a href="/gods-eye" target="_blank" class="btn btn-secondary btn-sm" title="Abrir en pestaña completa independiente">
-            <span>Pestaña Completa ↗</span>
-          </a>
-          <button class="modal-close" id="btn-close-godseye">&times;</button>
+        <button class="modal-close" id="btn-close-predict">&times;</button>
+      </div>
+      <div class="modal-body" style="flex: 1; padding: 20px; overflow-y: auto;">
+        <!-- Banner del Sismo Actual en Análisis -->
+        <div id="predict-event-banner" style="background: rgba(13, 27, 46, 0.85); border: 1px solid #1e3a5f; border-radius: 10px; padding: 16px 20px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: #00e5ff; font-weight: 700;">Sismo Bajo Análisis de Ondas</div>
+            <div id="predict-event-title" style="font-size: 1.25rem; font-weight: 700; color: #fff; margin-top: 2px;">Cargando último sismo...</div>
+            <div id="predict-event-meta" class="font-mono" style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">--</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase;">Modelo Cortical</div>
+            <div class="font-mono" style="font-size: 0.9rem; color: #00e5ff; font-weight: 600;">ak135 (Vp: 7.8 km/s | Vs: 4.1 km/s)</div>
+          </div>
+        </div>
+
+        <!-- Tabla de Ciudades y Tiempos Estimados de Arribo -->
+        <h4 style="margin: 0 0 12px 0; color: #f1f5f9; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Tiempos Estimados de Arribo (ETA) a Centros Urbanos</h4>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;" class="font-mono">
+            <thead>
+              <tr style="border-bottom: 2px solid #1e3a5f; color: #7dd3fc; text-align: left;">
+                <th style="padding: 10px 8px;">Ciudad</th>
+                <th style="padding: 10px 8px;">Distancia</th>
+                <th style="padding: 10px 8px;">Onda P (Primaria)</th>
+                <th style="padding: 10px 8px;">Onda S (Destructiva)</th>
+                <th style="padding: 10px 8px;">Intensidad Prevista (MMI)</th>
+                <th style="padding: 10px 8px;">PGA Estimado</th>
+              </tr>
+            </thead>
+            <tbody id="predict-cities-tbody">
+              <tr>
+                <td colspan="6" style="padding: 20px; text-align: center; color: #64748b;">Calculando frentes de onda en tiempo real...</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-      <div class="modal-body" style="flex: 1; padding: 0; overflow: hidden;">
-        <iframe id="godseye-iframe" src="about:blank" style="width: 100%; height: 100%; border: none; background: #000;" allow="geolocation; microphone"></iframe>
+      <div class="modal-footer" style="padding: 12px 20px; background: rgba(6, 13, 24, 0.95); border-top: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center;">
+        <span class="font-mono" style="font-size: 0.8rem; color: #64748b;">Refresco en tiempo real cada 1.0 s</span>
+        <button class="btn btn-secondary btn-sm" id="btn-close-predict-footer">Cerrar</button>
       </div>
     </div>
   </div>

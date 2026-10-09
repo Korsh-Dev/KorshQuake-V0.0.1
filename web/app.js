@@ -142,11 +142,6 @@ function initMap() {
   const selectLayer = document.getElementById('select-layer');
   if (selectLayer) {
     selectLayer.addEventListener('change', (e) => {
-      if (e.target.value === 'godseye') {
-        if (typeof openGodsEyeModal === 'function') openGodsEyeModal();
-        e.target.value = 'dark';
-        return;
-      }
       setTileLayer(e.target.value);
     });
   }
@@ -393,32 +388,8 @@ function renderQuakes() {
     marker.bindPopup(popupHtml);
     quakeLayerGroup.addLayer(marker);
 
-    // Ondas P y S para eventos mayores (< 45 min)
-    const ageSeconds = (nowMs - props.time) / 1000;
-    if (ageSeconds > 0 && ageSeconds < 2700 && mag >= 4.5 && idx < 6) {
-      const pWaveMeters = Math.min(1200000, ageSeconds * 7800);
-      const sWaveMeters = Math.min(650000, ageSeconds * 4200);
-
-      const pWave = L.circle([lat, lon], {
-        radius: pWaveMeters,
-        color: '#2979ff',
-        weight: 1.5,
-        opacity: 0.7,
-        fillColor: '#2979ff',
-        fillOpacity: 0.05,
-        dashArray: '4, 4'
-      });
-      const sWave = L.circle([lat, lon], {
-        radius: sWaveMeters,
-        color: '#ff1744',
-        weight: 2,
-        opacity: 0.85,
-        fillColor: '#ff1744',
-        fillOpacity: 0.08
-      });
-      waveLayerGroup.addLayer(pWave);
-      waveLayerGroup.addLayer(sWave);
-    }
+    // Ondas calculadas y animadas en tiempo real por el motor EEW
+    updateWavefronts();
 
     // Tarjeta en Sidebar
     if (quakeListEl) {
@@ -807,10 +778,167 @@ function escapeHtml(str) {
             .replace(/'/g, '&#039;');
 }
 
+// Realtime Seismic Wavefront Animation Loop (P-wave and S-wave)
+let waveAnimationTimer = null;
+
+function updateWavefronts() {
+  if (!map || !waveLayerGroup) return;
+  waveLayerGroup.clearLayers();
+
+  const nowMs = Date.now();
+  // Filtrar sismos ocurridos hace menos de 20 minutos (1200 segundos)
+  const candidateEvents = allQuakes.filter(f => {
+    if (!f || !f.properties || !f.geometry) return false;
+    const mag = f.properties.mag || 0;
+    const timeMs = f.properties.time || 0;
+    const ageSec = (nowMs - timeMs) / 1000;
+    return ageSec >= 0 && ageSec <= 1200 && mag >= 3.0;
+  }).slice(0, 5);
+
+  candidateEvents.forEach(feature => {
+    const coords = feature.geometry.coordinates;
+    const lon = coords[0];
+    const lat = coords[1];
+    const props = feature.properties;
+    const mag = props.mag || 0;
+    const ageSec = (nowMs - props.time) / 1000;
+
+    // Velocidades reales: Onda P = 7.8 km/s (7800 m/s), Onda S = 4.1 km/s (4100 m/s)
+    const pWaveMeters = Math.min(2500000, ageSec * 7800);
+    const sWaveMeters = Math.min(1500000, ageSec * 4100);
+
+    // Frente de Onda P (Compresional primaria, azul celeste con borde discontinuo)
+    const pWave = L.circle([lat, lon], {
+      radius: pWaveMeters,
+      color: '#00e5ff',
+      weight: 1.5,
+      opacity: Math.max(0.2, 0.85 - (ageSec / 1200)),
+      fillColor: '#00e5ff',
+      fillOpacity: 0.03,
+      dashArray: '5, 5'
+    });
+
+    // Frente de Onda S (Cizalla/destructiva, roja o naranja pulsante)
+    const sWave = L.circle([lat, lon], {
+      radius: sWaveMeters,
+      color: mag >= 5.0 ? '#ff1744' : '#ff9100',
+      weight: 2.2,
+      opacity: Math.max(0.25, 0.95 - (ageSec / 1200)),
+      fillColor: mag >= 5.0 ? '#ff1744' : '#ff9100',
+      fillOpacity: 0.07
+    });
+
+    waveLayerGroup.addLayer(pWave);
+    waveLayerGroup.addLayer(sWave);
+  });
+}
+
+function startWaveAnimation() {
+  if (waveAnimationTimer) clearInterval(waveAnimationTimer);
+  waveAnimationTimer = setInterval(updateWavefronts, 1000);
+}
+
+// Motor de Predicciones y Alerta Temprana (EEW)
+let predictPollInterval = null;
+
+async function fetchPredictions() {
+  try {
+    const res = await fetch('/api/predict');
+    const data = await res.json();
+    renderPredictionsModal(data);
+  } catch (err) {
+    console.error('Error al obtener predicciones:', err);
+  }
+}
+
+function renderPredictionsModal(data) {
+  const modal = document.getElementById('modal-predict');
+  if (!modal || !modal.classList.contains('active')) return;
+
+  const eventTitle = document.getElementById('predict-event-title');
+  const eventMeta = document.getElementById('predict-event-meta');
+  const tbody = document.getElementById('predict-cities-tbody');
+  if (!tbody) return;
+
+  if (!data || !data.predictions || data.predictions.length === 0) {
+    if (eventTitle) eventTitle.textContent = 'Sin eventos sísmicos recientes en rango';
+    if (eventMeta) eventMeta.textContent = 'Monitoreando Panamá, Venezuela, España y Argentina en tiempo real.';
+    tbody.innerHTML = `<tr><td colspan="6" style="padding: 24px; text-align: center; color: #64748b;">No hay sismos activos para calcular propagación de ondas.</td></tr>`;
+    return;
+  }
+
+  if (eventTitle) {
+    eventTitle.textContent = `${data.country_flag || ''} M ${(data.mag || 0).toFixed(1)} - ${data.place || 'Epicentro'}`;
+  }
+  if (eventMeta) {
+    eventMeta.textContent = `Profundidad: ${data.depth_km || 10} km | Ocurrido hace: ${data.age_seconds || 0}s | Coord: ${data.coords ? data.coords[1].toFixed(3) + '°, ' + data.coords[0].toFixed(3) + '°' : '--'}`;
+  }
+
+  tbody.innerHTML = data.predictions.map(pred => {
+    const sArrived = pred.arrived_s;
+    const pArrived = pred.arrived_p;
+    
+    // Status de Onda S (Destructiva)
+    let sStatusHtml = '';
+    if (sArrived) {
+      sStatusHtml = `<span style="color: #64748b; font-weight: 600;">✓ Onda Arribada</span>`;
+    } else {
+      const isUrgent = pred.eta_s_sec <= 30;
+      sStatusHtml = `<span class="pulse-tag" style="background: ${isUrgent ? 'rgba(255, 23, 68, 0.25)' : 'rgba(255, 145, 0, 0.25)'}; color: ${isUrgent ? '#ff1744' : '#ff9100'}; border: 1px solid ${isUrgent ? '#ff1744' : '#ff9100'}; padding: 3px 8px; border-radius: 4px; font-weight: 700;">🚨 IMPACTO EN ${pred.eta_s_sec}s</span>`;
+    }
+
+    // Status de Onda P
+    let pStatusHtml = pArrived 
+      ? `<span style="color: #64748b;">✓ Arribada</span>`
+      : `<span style="color: #00e5ff;">Arribo en ${pred.eta_p_sec}s</span>`;
+
+    // Color según MMI
+    let mmiColor = '#00e5ff';
+    if (pred.mmi_intensity >= 6.0) mmiColor = '#ff1744';
+    else if (pred.mmi_intensity >= 4.5) mmiColor = '#ff9100';
+    else if (pred.mmi_intensity >= 3.0) mmiColor = '#ffd600';
+
+    return `
+      <tr style="border-bottom: 1px solid rgba(30, 58, 95, 0.5); transition: background 0.2s;">
+        <td style="padding: 10px 8px; font-weight: 600; color: #f1f5f9;">${pred.country_flag || ''} ${escapeHtml(pred.city)}</td>
+        <td style="padding: 10px 8px; color: #94a3b8;">${pred.distance_km} km</td>
+        <td style="padding: 10px 8px;">${pStatusHtml}</td>
+        <td style="padding: 10px 8px;">${sStatusHtml}</td>
+        <td style="padding: 10px 8px; color: ${mmiColor}; font-weight: 700;">
+          MMI ${pred.mmi_intensity} <span style="font-size: 0.75rem; font-weight: normal; color: #94a3b8;">(${escapeHtml(pred.mmi_description)})</span>
+        </td>
+        <td style="padding: 10px 8px; color: #7dd3fc;">${pred.pga_gal} cm/s²</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openPredictModal() {
+  const modal = document.getElementById('modal-predict');
+  if (modal) {
+    modal.classList.add('active');
+    fetchPredictions();
+    if (predictPollInterval) clearInterval(predictPollInterval);
+    predictPollInterval = setInterval(fetchPredictions, 1000);
+  }
+}
+
+function closePredictModal() {
+  const modal = document.getElementById('modal-predict');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+  if (predictPollInterval) {
+    clearInterval(predictPollInterval);
+    predictPollInterval = null;
+  }
+}
+
 // Event Listeners & Boot
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
   initSeismograph();
+  startWaveAnimation();
 
   // Country Quick Tabs
   const countryTabs = document.querySelectorAll('.country-pill');
@@ -972,37 +1100,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // God's Eye View 3D Modal Handlers
-  const modalGodsEye = document.getElementById('modal-godseye');
-  const btnOpenGodsEye = document.getElementById('btn-open-godseye');
-  const btnMenuOpenGodsEye = document.getElementById('btn-menu-open-godseye');
-  const btnCloseGodsEye = document.getElementById('btn-close-godseye');
-  const godsEyeIframe = document.getElementById('godseye-iframe');
+  // Handlers del Modal de Predicciones Sísmicas y Alerta Temprana (EEW)
+  const modalPredict = document.getElementById('modal-predict');
+  const btnOpenPredict = document.getElementById('btn-open-predict-modal');
+  const btnMenuOpenPredict = document.getElementById('btn-menu-open-predict');
+  const btnClosePredict = document.getElementById('btn-close-predict');
+  const btnClosePredictFooter = document.getElementById('btn-close-predict-footer');
 
-  window.openGodsEyeModal = function() {
-    if (modalGodsEye) {
-      modalGodsEye.classList.add('active');
-      if (godsEyeIframe && (godsEyeIframe.src === 'about:blank' || !godsEyeIframe.src.includes('/gods-eye'))) {
-        godsEyeIframe.src = '/gods-eye';
-      }
-      showToast('🛰️ Iniciando God\'s Eye View 3D...');
-    }
-  };
-
-  window.closeGodsEyeModal = function() {
-    if (modalGodsEye) {
-      modalGodsEye.classList.remove('active');
-    }
-  };
-
-  if (btnOpenGodsEye) btnOpenGodsEye.addEventListener('click', openGodsEyeModal);
-  if (btnMenuOpenGodsEye) {
-    btnMenuOpenGodsEye.addEventListener('click', () => {
+  if (btnOpenPredict) btnOpenPredict.addEventListener('click', openPredictModal);
+  if (btnMenuOpenPredict) {
+    btnMenuOpenPredict.addEventListener('click', () => {
       closeMenuModal();
-      openGodsEyeModal();
+      openPredictModal();
     });
   }
-  if (btnCloseGodsEye) btnCloseGodsEye.addEventListener('click', closeGodsEyeModal);
+  if (btnClosePredict) btnClosePredict.addEventListener('click', closePredictModal);
+  if (btnClosePredictFooter) btnClosePredictFooter.addEventListener('click', closePredictModal);
 
   if (btnTestSound) {
     btnTestSound.addEventListener('click', () => {

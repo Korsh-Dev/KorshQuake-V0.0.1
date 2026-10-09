@@ -13,7 +13,6 @@ RUN if [ -s requirements.txt ]; then pip install --no-cache-dir -r requirements.
 
 COPY server.py test_server.py KorshQuake.apk ./
 COPY web ./web
-COPY gods-eye-view ./gods-eye-view
 
 EXPOSE 8080
 

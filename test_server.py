@@ -155,5 +155,43 @@ class TestKorshQuakeServer(unittest.TestCase):
         html = req.read().decode('utf-8')
         self.assertIn("God's Eye View", html)
 
+    def test_predict_endpoint_latest(self):
+        url = f"http://127.0.0.1:{self.port}/api/predict"
+        req = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(req.status, 200)
+        data = json.loads(req.read().decode('utf-8'))
+        self.assertIn("prediction_model", data)
+        self.assertIn("velocities", data)
+        self.assertEqual(data["velocities"]["vp_kms"], 7.8)
+        self.assertEqual(data["velocities"]["vs_kms"], 4.1)
+        self.assertIn("predictions", data)
+        self.assertIsInstance(data["predictions"], list)
+
+    def test_predict_custom_hypocenter(self):
+        # Prueba con hipocentro simulado cerca de Caracas
+        url = f"http://127.0.0.1:{self.port}/api/predict?lat=10.48&lon=-66.90&mag=5.5&depth=12.0"
+        req = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(req.status, 200)
+        data = json.loads(req.read().decode('utf-8'))
+        self.assertEqual(data["mode"], "custom_hypocenter")
+        self.assertGreater(len(data["predictions"]), 0)
+        closest = data["predictions"][0]
+        self.assertEqual(closest["city"], "Caracas")
+        self.assertLess(closest["distance_km"], 20.0)
+        self.assertIn("eta_s_sec", closest)
+        self.assertIn("mmi_intensity", closest)
+        self.assertIn("pga_gal", closest)
+
+    def test_predictions_embedded_in_features(self):
+        url = f"http://127.0.0.1:{self.port}/api/quakes"
+        req = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(req.status, 200)
+        data = json.loads(req.read().decode('utf-8'))
+        self.assertGreater(len(data["features"]), 0)
+        for f in data["features"][:3]:
+            props = f.get("properties", {})
+            self.assertIn("predictions", props)
+            self.assertIsInstance(props["predictions"], list)
+
 if __name__ == '__main__':
     unittest.main()
