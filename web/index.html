@@ -24,7 +24,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Header / Navigation Bar -->
+  <!-- Header / Navigation Bar Rediseñado -->
   <header class="app-header">
     <div class="header-left">
       <div class="logo-container">
@@ -34,54 +34,76 @@
           <path d="M2 12h5l2-4 4 8 2-4h7"></path>
         </svg>
       </div>
-      <div>
-        <h1 class="app-title">KorshQuake <span class="badge-version">v1.1.2 PRO</span></h1>
-        <p class="app-subtitle">Monitor Sísmico en Vivo: Panamá 🇵🇦 • Venezuela 🇻🇪 • España 🇪🇸 • Argentina 🇦🇷</p>
+      <div class="brand-text">
+        <div class="brand-title-row">
+          <h1 class="app-title">KorshQuake</h1>
+          <span class="badge-version">v1.1.2 PRO</span>
+          <span class="live-status-pill" title="Ingesta continua cada 2.8s">
+            <span class="stat-dot pulse-green"></span>
+            <span class="live-text">EN VIVO</span>
+          </span>
+        </div>
+        <p class="app-subtitle">Panamá 🇵🇦 • Venezuela 🇻🇪 • España 🇪🇸 • Argentina 🇦🇷</p>
       </div>
     </div>
 
-    <!-- Live Telemetry Stats -->
+    <!-- Telemetry Stats (Visibles en Desktop / Tablet) -->
     <div class="header-stats">
-      <div class="stat-pill" title="Streaming Continuo en Tiempo Real">
-        <span class="stat-dot pulse-green"></span>
-        <span class="stat-label">Streaming:</span>
-        <span class="stat-val font-mono text-cyan">EN VIVO (2.5s)</span>
-      </div>
       <div class="stat-pill" id="cluster-pill" style="cursor: pointer;" title="Ver Clúster de Redes Sísmicas">
         <span class="stat-dot pulse-green"></span>
-        <span class="stat-label">Redes Regionales:</span>
-        <span class="stat-val font-mono" id="cluster-count">7 Servidores ONLINE</span>
+        <span class="stat-label">Redes:</span>
+        <span class="stat-val font-mono" id="cluster-count">7 Servidores</span>
       </div>
-      <div class="stat-pill">
+      <div class="stat-pill" title="Algoritmo Sísmico de Precisión ak135">
         <span class="stat-dot" id="gq-app-dot"></span>
         <span class="stat-label">Engine:</span>
-        <span class="stat-val font-mono" id="gq-app-status">KorshQuake Core</span>
+        <span class="stat-val font-mono" id="gq-app-status">Korsh Core</span>
       </div>
     </div>
 
-    <!-- Actions -->
+    <!-- Actions Bar -->
     <div class="header-actions">
-      <!-- Selector de Umbral de Alertas en Vivo -->
-      <div class="alert-selector-wrap" title="Configura cuándo debe sonar la alarma sísmica">
+      <!-- Selector de Umbral de Alertas en Vivo (Desktop) -->
+      <div class="alert-selector-wrap desktop-only" title="Configura el umbral para las alertas sonoras en vivo">
         <select id="select-audio-threshold" class="select-dark select-sm font-mono">
-          <option value="3.5" selected>🔊 Alerta: M 3.5+ (Solo en Vivo)</option>
-          <option value="4.5">⚠️ Alerta: M 4.5+ (Solo Fuertes)</option>
-          <option value="6.0">🚨 Alerta: M 6.0+ (Solo Mayores)</option>
+          <option value="3.5" selected>🔊 Alerta: M 3.5+ (En Vivo)</option>
+          <option value="4.5">⚠️ Alerta: M 4.5+ (Fuertes)</option>
+          <option value="6.0">🚨 Alerta: M 6.0+ (Mayores)</option>
           <option value="off">🔇 Silencio Total (Mudo)</option>
         </select>
       </div>
 
-      <!-- Botón Descargar APK / App Móvil -->
-      <button class="btn btn-primary" id="btn-open-apk-modal" title="Descargar KorshQuake APK para Android">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <!-- Botón God's Eye View 3D -->
+      <button class="btn btn-godseye desktop-only" id="btn-open-godseye" title="Abrir God's Eye View (Globo 3D en Tiempo Real)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          <path d="M2 12h20"></path>
+        </svg>
+        <span>🛰️ God's Eye 3D</span>
+      </button>
+
+      <!-- Botón Descargar APK (Desktop/Tablet) -->
+      <button class="btn btn-primary desktop-only" id="btn-open-apk-modal" title="Descargar KorshQuake APK para Android">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
           <line x1="12" y1="18" x2="12.01" y2="18"></line>
         </svg>
-        <span>📲 KorshQuake APK</span>
+        <span>📲 APK</span>
       </button>
 
-      <button class="btn btn-secondary" id="btn-open-servers" title="Ver estado y latencia de las redes sísmicas de los 4 países">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <!-- Botón Rápido de Audio (Mute/Unmute) -->
+      <button class="btn btn-secondary btn-icon-round" id="btn-toggle-sound" title="Alternar Sonido">
+        <svg id="icon-sound" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+        <span class="desktop-only" id="sound-label">Audio: ON</span>
+      </button>
+
+      <!-- Botón Redes (Desktop) -->
+      <button class="btn btn-secondary desktop-only" id="btn-open-servers" title="Redes Sísmicas">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
           <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
           <line x1="6" y1="6" x2="6.01" y2="6"></line>
@@ -89,19 +111,23 @@
         </svg>
         <span>Redes</span>
       </button>
-      <button class="btn btn-secondary" id="btn-toggle-sound" title="Alternar Sonido Rápido">
-        <svg id="icon-sound" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-        </svg>
-        <span id="sound-label">Audio: ON</span>
-      </button>
-      <button class="btn btn-secondary" id="btn-open-logs" title="Ver logs en vivo de KorshQuake">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+      <!-- Botón Logs (Desktop) -->
+      <button class="btn btn-secondary desktop-only" id="btn-open-logs" title="Consola de Logs">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="4 17 10 11 4 5"></polyline>
           <line x1="12" y1="19" x2="20" y2="19"></line>
         </svg>
         <span>Logs</span>
+      </button>
+
+      <!-- Botón Menú / Ajustes (Siempre visible) -->
+      <button class="btn btn-secondary btn-icon-round" id="btn-open-menu-modal" title="Ajustes y Más Opciones">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="1.5"></circle>
+          <circle cx="12" cy="5" r="1.5"></circle>
+          <circle cx="12" cy="19" r="1.5"></circle>
+        </svg>
       </button>
     </div>
   </header>
@@ -218,6 +244,7 @@
               <option value="satellite">Satélite (Alta Resolución)</option>
               <option value="topo">Físico / Topográfico</option>
               <option value="vector">Vectorial Tectónico (Offline)</option>
+              <option value="godseye">🛰️ God's Eye 3D (Globo Satelital)</option>
             </select>
           </div>
           <div class="filter-group">
@@ -238,7 +265,15 @@
       </div>
 
       <!-- Leaflet Map Container -->
-      <div id="map"></div>
+      <div class="map-wrapper">
+        <div class="mobile-latest-pill" id="mobile-latest-pill" style="display: none;" title="Pulsar para centrar en este sismo">
+          <span class="live-dot pulse-red"></span>
+          <span class="mlp-mag font-mono" id="mlp-mag">M --</span>
+          <span class="mlp-place" id="mlp-place">Último sismo</span>
+          <span class="mlp-time font-mono" id="mlp-time">--</span>
+        </div>
+        <div id="map"></div>
+      </div>
 
       <!-- Wave Propagation Overlay Legend -->
       <div class="map-legend">
@@ -376,6 +411,183 @@
       <div class="modal-footer">
         <button class="btn btn-secondary btn-sm" id="btn-copy-logs">Copiar Logs</button>
         <button class="btn btn-primary btn-sm" id="btn-refresh-logs">Actualizar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Ajustes y Opciones Rápidas (Mobile & Desktop) -->
+  <div class="modal-overlay" id="modal-menu">
+    <div class="modal-content glass-panel" style="max-width: 480px; height: auto;">
+      <div class="modal-header">
+        <div class="modal-title-box">
+          <span class="terminal-dot pulse-green"></span>
+          <h3>KorshQuake • Menú & Ajustes</h3>
+        </div>
+        <button class="modal-close" id="btn-close-menu">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <!-- Configuración de Alertas Sonoras -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <span class="settings-icon">🔊</span>
+            <div>
+              <div class="settings-title">Alertas Sísmicas en Vivo</div>
+              <div class="settings-desc">Sonar únicamente cuando el sismo ocurra en tiempo real (&lt;10 min)</div>
+            </div>
+          </div>
+          <div style="margin-top: 10px;">
+            <select id="select-audio-threshold-menu" class="select-dark font-mono" style="width: 100%; padding: 10px;">
+              <option value="3.5" selected>🔊 M 3.5+ Moderados y Mayores (Recomendado)</option>
+              <option value="4.5">⚠️ M 4.5+ Solo Sismos Fuertes</option>
+              <option value="6.0">🚨 M 6.0+ Solo Terremotos Mayores</option>
+              <option value="off">🔇 Silencio Total (Mudo)</option>
+            </select>
+          </div>
+          <div style="margin-top: 8px; display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" id="btn-test-sound" style="flex: 1;">
+              🔔 Probar Alarma Sonora
+            </button>
+          </div>
+        </div>
+
+        <!-- God's Eye View 3D (Globo Satelital en Tiempo Real) -->
+        <div class="settings-card" style="background: rgba(0, 180, 216, 0.1); border-color: rgba(0, 229, 255, 0.4);">
+          <div class="settings-card-header">
+            <span class="settings-icon">🛰️</span>
+            <div>
+              <div class="settings-title">God's Eye View 3D</div>
+              <div class="settings-desc">Simulador satelital táctico 3D con terremotos en vivo conectados al hub de KorshQuake</div>
+            </div>
+          </div>
+          <div style="margin-top: 10px; display: flex; gap: 8px;">
+            <button class="btn btn-godseye" id="btn-menu-open-godseye" style="flex: 1; justify-content: center;">
+              🛰️ Abrir Globo 3D
+            </button>
+            <a href="/gods-eye" target="_blank" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center;" title="Abrir en pestaña nueva">
+              Pestaña ↗
+            </a>
+          </div>
+        </div>
+
+        <!-- Descargar App APK -->
+        <div class="settings-card highlight-card">
+          <div class="settings-card-header">
+            <span class="settings-icon">📲</span>
+            <div>
+              <div class="settings-title">Instalar App en Android</div>
+              <div class="settings-desc">Descarga KorshQuake.apk o instala la WebAPK</div>
+            </div>
+          </div>
+          <div style="margin-top: 10px;">
+            <button class="btn btn-primary" id="btn-menu-open-apk" style="width: 100%; justify-content: center;">
+              📲 Abrir Instalador de App (APK / PWA)
+            </button>
+          </div>
+        </div>
+
+        <!-- Redes y Servidores de los 4 Países -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <span class="settings-icon">🌐</span>
+            <div>
+              <div class="settings-title">Redes Sísmicas Regionales</div>
+              <div class="settings-desc">Panamá (OSOP), Venezuela (FUNVISIS), España (IGN), Argentina (INPRES)</div>
+            </div>
+          </div>
+          <div style="margin-top: 10px;">
+            <button class="btn btn-secondary btn-sm" id="btn-menu-open-servers" style="width: 100%;">
+              Ver 7 Redes y Latencias
+            </button>
+          </div>
+        </div>
+
+        <!-- Consola de Logs y Diagnóstico -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <span class="settings-icon">💻</span>
+            <div>
+              <div class="settings-title">Consola de Diagnóstico</div>
+              <div class="settings-desc">Telemetría interna y trazas del motor sísmico</div>
+            </div>
+          </div>
+          <div style="margin-top: 10px;">
+            <button class="btn btn-secondary btn-sm" id="btn-menu-open-logs" style="width: 100%;">
+              Abrir Consola de Logs
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" id="btn-close-menu-footer">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation Bar (Fija estilo App Nativa Android / PWA) -->
+  <nav class="bottom-nav-bar" id="bottom-nav">
+    <button class="nav-tab active" data-tab="map" id="tab-nav-map" aria-label="Ver Mapa">
+      <div class="nav-icon-wrap">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+          <line x1="8" y1="2" x2="8" y2="18"></line>
+          <line x1="16" y1="6" x2="16" y2="22"></line>
+        </svg>
+      </div>
+      <span class="nav-label">Mapa</span>
+    </button>
+
+    <button class="nav-tab" data-tab="feed" id="tab-nav-feed" aria-label="Ver Sismos">
+      <div class="nav-icon-wrap">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+        <span class="nav-badge" id="nav-badge-count">0</span>
+      </div>
+      <span class="nav-label">Sismos</span>
+    </button>
+
+    <button class="nav-tab" data-tab="waves" id="tab-nav-waves" aria-label="Ver Sismógrafo">
+      <div class="nav-icon-wrap">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+        </svg>
+      </div>
+      <span class="nav-label">Ondas</span>
+    </button>
+
+    <button class="nav-tab" data-tab="settings" id="tab-nav-settings" aria-label="Ajustes">
+      <div class="nav-icon-wrap">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </div>
+      <span class="nav-label">Ajustes</span>
+    </button>
+  </nav>
+
+  <!-- Modal: Visor Táctico God's Eye View 3D -->
+  <div class="modal-overlay" id="modal-godseye">
+    <div class="modal-content glass-panel" style="width: 96vw; max-width: 1400px; height: 90vh; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+      <div class="modal-header" style="background: rgba(6, 13, 24, 0.95); padding: 12px 20px;">
+        <div class="modal-title-box">
+          <span class="terminal-dot pulse-green"></span>
+          <h3>KorshQuake 🛰️ God's Eye View (Globo 3D en Tiempo Real)</h3>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <a href="/gods-eye" target="_blank" class="btn btn-secondary btn-sm" title="Abrir en pestaña completa independiente">
+            <span>Pestaña Completa ↗</span>
+          </a>
+          <button class="modal-close" id="btn-close-godseye">&times;</button>
+        </div>
+      </div>
+      <div class="modal-body" style="flex: 1; padding: 0; overflow: hidden;">
+        <iframe id="godseye-iframe" src="about:blank" style="width: 100%; height: 100%; border: none; background: #000;" allow="geolocation; microphone"></iframe>
       </div>
     </div>
   </div>

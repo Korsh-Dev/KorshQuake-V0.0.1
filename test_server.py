@@ -91,12 +91,69 @@ class TestKorshQuakeServer(unittest.TestCase):
         self.assertIn("logs", data)
         self.assertIsInstance(data["logs"], list)
 
-    def test_index_page(self):
-        url = f"http://127.0.0.1:{self.port}/"
+    def test_stats_endpoint(self):
+        url = f"http://127.0.0.1:{self.port}/api/stats"
         req = urllib.request.urlopen(url, timeout=5)
         self.assertEqual(req.status, 200)
+        data = json.loads(req.read().decode('utf-8'))
+        self.assertEqual(data["status"], "ONLINE")
+        self.assertIn("counts_by_country", data)
+        self.assertIn("total_events", data)
+        self.assertIn("max_magnitude", data)
+        self.assertIn("uptime_seconds", data)
+        self.assertEqual(set(data["counts_by_country"].keys()), {"PA", "VE", "ES", "AR"})
+
+    def test_health_endpoint(self):
+        url = f"http://127.0.0.1:{self.port}/api/health"
+        req = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(req.status, 200)
+        data = json.loads(req.read().decode('utf-8'))
+        self.assertEqual(data["status"], "healthy")
+        self.assertTrue(data["worker_thread_alive"])
+        self.assertIn("memory_events_count", data)
+
+    def test_quakes_query_parameters(self):
+        # Filtro de país específico
+        url = f"http://127.0.0.1:{self.port}/api/quakes?country=ES"
+        req = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(req.status, 200)
+        data = json.loads(req.read().decode('utf-8'))
+        for f in data["features"]:
+            self.assertEqual(f["properties"]["country_code"], "ES")
+
+        # Filtro de límite
+        url_limit = f"http://127.0.0.1:{self.port}/api/quakes?limit=3"
+        req_lim = urllib.request.urlopen(url_limit, timeout=5)
+        data_lim = json.loads(req_lim.read().decode('utf-8'))
+        self.assertLessEqual(len(data_lim["features"]), 3)
+
+        # Filtro de magnitud mínima
+        url_mag = f"http://127.0.0.1:{self.port}/api/quakes?min_mag=3.0"
+        req_mag = urllib.request.urlopen(url_mag, timeout=5)
+        data_mag = json.loads(req_mag.read().decode('utf-8'))
+        for f in data_mag["features"]:
+            self.assertGreaterEqual(float(f["properties"]["mag"]), 3.0)
+
+    def test_latest_quake_endpoint(self):
+        url = f"http://127.0.0.1:{self.port}/api/quakes/latest"
+        req = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(req.status, 200)
+        data = json.loads(req.read().decode('utf-8'))
+        self.assertIn("found", data)
+        if data["found"]:
+            self.assertIn("event", data)
+            self.assertIn("age_seconds", data)
+            self.assertIn("is_live_alert", data)
+            self.assertIn("alert_level", data)
+
+    def test_gods_eye_view_route(self):
+        url = f"http://127.0.0.1:{self.port}/gods-eye"
+        req = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(req.status, 200)
+        content_type = req.headers.get("Content-Type")
+        self.assertIn("text/html", content_type)
         html = req.read().decode('utf-8')
-        self.assertIn("KorshQuake", html)
+        self.assertIn("God's Eye View", html)
 
 if __name__ == '__main__':
     unittest.main()

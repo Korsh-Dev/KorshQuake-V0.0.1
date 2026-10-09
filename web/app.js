@@ -142,6 +142,11 @@ function initMap() {
   const selectLayer = document.getElementById('select-layer');
   if (selectLayer) {
     selectLayer.addEventListener('change', (e) => {
+      if (e.target.value === 'godseye') {
+        if (typeof openGodsEyeModal === 'function') openGodsEyeModal();
+        e.target.value = 'dark';
+        return;
+      }
       setTileLayer(e.target.value);
     });
   }
@@ -308,6 +313,37 @@ function renderQuakes() {
   if (feedCountEl) {
     feedCountEl.textContent = filtered.length;
   }
+  const navBadgeEl = document.getElementById('nav-badge-count');
+  if (navBadgeEl) {
+    navBadgeEl.textContent = filtered.length;
+  }
+
+  // Actualizar tarjeta flotante de último sismo en móvil
+  const mlpEl = document.getElementById('mobile-latest-pill');
+  if (mlpEl) {
+    if (filtered.length > 0) {
+      const topEvent = filtered[0];
+      const topProps = topEvent.properties;
+      const topCoords = topEvent.geometry.coordinates;
+      const topMag = topProps.mag || 0;
+      
+      const mlpMag = document.getElementById('mlp-mag');
+      const mlpPlace = document.getElementById('mlp-place');
+      const mlpTime = document.getElementById('mlp-time');
+
+      if (mlpMag) mlpMag.textContent = `M ${topMag.toFixed(1)}`;
+      if (mlpPlace) mlpPlace.textContent = `${topProps.country_flag || ''} ${topProps.place || 'Sismo'}`;
+      if (mlpTime) mlpTime.textContent = formatTimeAgo(topProps.time);
+      
+      mlpEl.style.display = 'flex';
+      mlpEl.onclick = () => {
+        if (typeof setMobileView === 'function') setMobileView('map');
+        map.flyTo([topCoords[1], topCoords[0]], 7.0, { duration: 1.0 });
+      };
+    } else {
+      mlpEl.style.display = 'none';
+    }
+  }
 
   if (filtered.length === 0) {
     if (quakeListEl) {
@@ -412,6 +448,9 @@ function renderQuakes() {
       `;
 
       card.addEventListener('click', () => {
+        if (window.innerWidth <= 768 && typeof setMobileView === 'function') {
+          setMobileView('map');
+        }
         map.flyTo([lat, lon], 6.5, { duration: 1.2 });
         marker.openPopup();
       });
@@ -886,21 +925,157 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCloseApkFooter.addEventListener('click', () => modalApk.classList.remove('active'));
   }
 
-  // Audio Threshold Selector
-  const selectAudioThreshold = document.getElementById('select-audio-threshold');
-  if (selectAudioThreshold) {
-    const savedThresh = localStorage.getItem('korshquake_audio_threshold');
-    if (savedThresh) selectAudioThreshold.value = savedThresh;
-    selectAudioThreshold.addEventListener('change', (e) => {
-      localStorage.setItem('korshquake_audio_threshold', e.target.value);
-      if (e.target.value === 'off') {
-        showToast('🔇 Alertas sonoras silenciadas completamente');
-      } else {
-        showToast(`🔔 Alerta configurada: Solo sismos en vivo M ${e.target.value}+`);
-        playAlertSound('moderate');
+  // Menu & Settings Modal Handlers
+  const modalMenu = document.getElementById('modal-menu');
+  const btnOpenMenu = document.getElementById('btn-open-menu-modal');
+  const btnCloseMenu = document.getElementById('btn-close-menu');
+  const btnCloseMenuFooter = document.getElementById('btn-close-menu-footer');
+  const btnMenuOpenApk = document.getElementById('btn-menu-open-apk');
+  const btnMenuOpenServers = document.getElementById('btn-menu-open-servers');
+  const btnMenuOpenLogs = document.getElementById('btn-menu-open-logs');
+  const btnTestSound = document.getElementById('btn-test-sound');
+  const selectAudioThresholdMenu = document.getElementById('select-audio-threshold-menu');
+
+  const openMenuModal = () => {
+    if (modalMenu) modalMenu.classList.add('active');
+  };
+
+  const closeMenuModal = () => {
+    if (modalMenu) modalMenu.classList.remove('active');
+  };
+
+  if (btnOpenMenu) btnOpenMenu.addEventListener('click', openMenuModal);
+  if (btnCloseMenu) btnCloseMenu.addEventListener('click', closeMenuModal);
+  if (btnCloseMenuFooter) btnCloseMenuFooter.addEventListener('click', closeMenuModal);
+
+  if (btnMenuOpenApk) {
+    btnMenuOpenApk.addEventListener('click', () => {
+      closeMenuModal();
+      if (modalApk) modalApk.classList.add('active');
+    });
+  }
+
+  if (btnMenuOpenServers) {
+    btnMenuOpenServers.addEventListener('click', () => {
+      closeMenuModal();
+      openServersModal();
+    });
+  }
+
+  if (btnMenuOpenLogs) {
+    btnMenuOpenLogs.addEventListener('click', () => {
+      closeMenuModal();
+      if (modalLogs) {
+        modalLogs.classList.add('active');
+        fetchLogs();
       }
     });
   }
+
+  // God's Eye View 3D Modal Handlers
+  const modalGodsEye = document.getElementById('modal-godseye');
+  const btnOpenGodsEye = document.getElementById('btn-open-godseye');
+  const btnMenuOpenGodsEye = document.getElementById('btn-menu-open-godseye');
+  const btnCloseGodsEye = document.getElementById('btn-close-godseye');
+  const godsEyeIframe = document.getElementById('godseye-iframe');
+
+  window.openGodsEyeModal = function() {
+    if (modalGodsEye) {
+      modalGodsEye.classList.add('active');
+      if (godsEyeIframe && (godsEyeIframe.src === 'about:blank' || !godsEyeIframe.src.includes('/gods-eye'))) {
+        godsEyeIframe.src = '/gods-eye';
+      }
+      showToast('🛰️ Iniciando God\'s Eye View 3D...');
+    }
+  };
+
+  window.closeGodsEyeModal = function() {
+    if (modalGodsEye) {
+      modalGodsEye.classList.remove('active');
+    }
+  };
+
+  if (btnOpenGodsEye) btnOpenGodsEye.addEventListener('click', openGodsEyeModal);
+  if (btnMenuOpenGodsEye) {
+    btnMenuOpenGodsEye.addEventListener('click', () => {
+      closeMenuModal();
+      openGodsEyeModal();
+    });
+  }
+  if (btnCloseGodsEye) btnCloseGodsEye.addEventListener('click', closeGodsEyeModal);
+
+  if (btnTestSound) {
+    btnTestSound.addEventListener('click', () => {
+      playAlertSound('major');
+      showToast('🔊 Sirena de alerta sísmica de prueba emitida');
+    });
+  }
+
+  // Audio Threshold Selectors Synchronization
+  const selectAudioThreshold = document.getElementById('select-audio-threshold');
+  const updateThreshold = (val) => {
+    localStorage.setItem('korshquake_audio_threshold', val);
+    if (selectAudioThreshold) selectAudioThreshold.value = val;
+    if (selectAudioThresholdMenu) selectAudioThresholdMenu.value = val;
+    if (val === 'off') {
+      showToast('🔇 Alertas sonoras silenciadas completamente');
+    } else {
+      showToast(`🔔 Alerta configurada: Solo sismos en vivo M ${val}+`);
+      playAlertSound('moderate');
+    }
+  };
+
+  const savedThresh = localStorage.getItem('korshquake_audio_threshold') || '3.5';
+  if (selectAudioThreshold) {
+    selectAudioThreshold.value = savedThresh;
+    selectAudioThreshold.addEventListener('change', (e) => updateThreshold(e.target.value));
+  }
+  if (selectAudioThresholdMenu) {
+    selectAudioThresholdMenu.value = savedThresh;
+    selectAudioThresholdMenu.addEventListener('change', (e) => updateThreshold(e.target.value));
+  }
+
+  // Bottom Navigation Bar Handlers (Mobile-First Experience)
+  window.setMobileView = function(tab) {
+    const mainLayout = document.querySelector('.main-layout');
+    if (mainLayout) {
+      mainLayout.setAttribute('data-mobile-view', tab);
+    }
+    
+    const tabs = document.querySelectorAll('.bottom-nav-bar .nav-tab');
+    tabs.forEach(t => {
+      if (t.dataset.tab === tab) {
+        t.classList.add('active');
+      } else {
+        t.classList.remove('active');
+      }
+    });
+
+    if (tab === 'map' && map) {
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 120);
+    }
+  };
+
+  const tabNavMap = document.getElementById('tab-nav-map');
+  const tabNavFeed = document.getElementById('tab-nav-feed');
+  const tabNavWaves = document.getElementById('tab-nav-waves');
+  const tabNavSettings = document.getElementById('tab-nav-settings');
+
+  if (tabNavMap) tabNavMap.addEventListener('click', () => setMobileView('map'));
+  if (tabNavFeed) tabNavFeed.addEventListener('click', () => setMobileView('feed'));
+  if (tabNavWaves) tabNavWaves.addEventListener('click', () => setMobileView('waves'));
+  if (tabNavSettings) tabNavSettings.addEventListener('click', openMenuModal);
+
+  // Inicializar en vista de mapa para móvil
+  if (window.innerWidth <= 768) {
+    setMobileView('map');
+  }
+
+  window.addEventListener('resize', () => {
+    if (map) map.invalidateSize();
+  });
 
   // Service Worker Registration for Android PWA / WebAPK
   if ('serviceWorker' in navigator) {

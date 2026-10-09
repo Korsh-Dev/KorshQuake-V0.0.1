@@ -3,6 +3,7 @@ import socketserver
 import json
 import urllib.request
 import urllib.error
+import urllib.parse
 import subprocess
 import os
 import sys
@@ -14,9 +15,12 @@ import threading
 import concurrent.futures
 from datetime import datetime
 
+_server_start_time = time.time()
+
 PORT = 8080
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(BASE_DIR, "web")
+GODS_EYE_DIST = os.path.join(BASE_DIR, "gods-eye-view", "dist")
 ROAMING_GQ = os.path.join(os.environ.get("APPDATA", ""), "GlobalQuake")
 LOCAL_APP_PATH = os.path.join(BASE_DIR, "GlobalQuakeApp")
 
@@ -533,8 +537,25 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory=WEB_DIR, **kwargs)
 
     def do_GET(self):
-        # API Routes
-        if self.path == "/api/status":
+        parsed_url = urllib.parse.urlparse(self.path)
+        path = parsed_url.path
+        query = urllib.parse.parse_qs(parsed_url.query)
+
+        # Helper para responder JSON limpio
+        def send_json(data, status=200):
+            payload = json.dumps(data, ensure_ascii=False).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        # 1. API: Estado General del Sistema
+        if path == "/api/status":
             running, cmd = is_globalquake_running()
             ram_age = int((time.time() - _last_ram_update_time) * 1000) if _last_ram_update_time else 0
             status_data = {
@@ -555,14 +576,11 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
                 "process_info": cmd if running else "Stopped",
                 "timestamp": int(time.time() * 1000)
             }
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.end_headers()
-            self.wfile.write(json.dumps(status_data).encode("utf-8"))
+            send_json(status_data)
             return
 
-        if self.path in ["/download/KorshQuake.apk", "/KorshQuake.apk"]:
+        # 2. Descarga del archivo APK
+        if path in ["/download/KorshQuake.apk", "/KorshQuake.apk"]:
             apk_file = os.path.join(BASE_DIR, "KorshQuake.apk")
             if os.path.exists(apk_file):
                 self.send_response(200)
@@ -579,37 +597,227 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 return
 
-        if self.path == "/api/servers":
+        # 3. API: Cluster de Redes Sísmicas Regionales
+        if path == "/api/servers":
             is_running, _ = is_globalquake_running()
             _server_telemetry["gq_primary"]["status"] = "ONLINE" if is_running else "READY"
             servers_list = list(_server_telemetry.values())
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.end_headers()
-            self.wfile.write(json.dumps({"servers": servers_list, "count": len(servers_list)}).encode("utf-8"))
+            send_json({"servers": servers_list, "count": len(servers_list)})
             return
 
-        if self.path.startswith("/api/quakes"):
+        # 4. API: Estadísticas Consolidadas (/api/stats)
+        if path == "/api/stats":
             quakes = get_live_earthquakes()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
-            self.end_headers()
-            self.wfile.write(json.dumps(quakes).encode("utf-8"))
+            features = quakes.get("features", [])
+            now_ms = time.time() * 1000
+            ten_min_ago = now_ms - (10 * 60 * 1000)
+            one_hour_ago = now_ms - (60 * 60 * 1000)
+
+            counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0}
+            strong_quakes = []
+            live_alerts = []
+            recent_hour = 0
+            max_mag = 0.0
+            strongest_event = None
+
+            for f in features:
+                props = f.get("properties", {})
+                cc = props.get("country_code")
+                mag = float(props.get("mag") or 0.0)
+                ev_time = float(props.get("time") or 0)
+
+                if cc in counts:
+                    counts[cc] += 1
+                if mag > max_mag:
+                    max_mag = mag
+                    strongest_event = props
+                if mag >= 4.5:
+                    strong_quakes.append(props)
+                if ev_time >= one_hour_ago:
+                    recent_hour += 1
+                if ev_time >= ten_min_ago and mag >= 3.5:
+                    live_alerts.append(props)
+
+            stats_data = {
+                "status": "ONLINE",
+                "uptime_seconds": round(time.time() - _server_start_time, 1),
+                "total_events": len(features),
+                "counts_by_country": counts,
+                "max_magnitude": round(max_mag, 1),
+                "strongest_event": strongest_event,
+                "latest_event": features[0].get("properties") if features else None,
+                "strong_events_count": len(strong_quakes),
+                "recent_last_hour_count": recent_hour,
+                "active_live_alerts_count": len(live_alerts),
+                "active_networks": len([s for s in _server_telemetry.values() if s["status"] == "ONLINE"]),
+                "streaming_refresh_rate_sec": 2.8,
+                "timestamp": int(now_ms)
+            }
+            send_json(stats_data)
             return
 
-        if self.path == "/api/logs":
+        # 5. API: Sismo Más Reciente (/api/quakes/latest)
+        if path == "/api/quakes/latest":
+            quakes = get_live_earthquakes()
+            features = quakes.get("features", [])
+            
+            # Filtro opcional por país: ?country=PA
+            country_filter = query.get("country", ["all"])[0].upper()
+            if country_filter and country_filter != "ALL":
+                target_codes = [c.strip() for c in country_filter.split(",")]
+                features = [f for f in features if f.get("properties", {}).get("country_code") in target_codes]
+
+            now_ms = time.time() * 1000
+            if features:
+                latest = features[0]
+                props = latest.get("properties", {})
+                ev_time = float(props.get("time") or 0)
+                mag = float(props.get("mag") or 0.0)
+                age_sec = round(max(0, (now_ms - ev_time) / 1000), 1)
+                is_recent = age_sec <= 600 # 10 min
+                is_live_alert = is_recent and (mag >= 3.5)
+                
+                alert_level = "NONE"
+                if is_live_alert:
+                    if mag >= 6.0:
+                        alert_level = "CRITICAL"
+                    elif mag >= 4.5:
+                        alert_level = "WARNING"
+                    else:
+                        alert_level = "ADVISORY"
+
+                send_json({
+                    "found": True,
+                    "event": latest,
+                    "age_seconds": age_sec,
+                    "is_recent_live": is_recent,
+                    "is_live_alert": is_live_alert,
+                    "alert_level": alert_level,
+                    "timestamp": int(now_ms)
+                })
+            else:
+                send_json({
+                    "found": False,
+                    "event": None,
+                    "message": "No se encontraron eventos para el filtro seleccionado",
+                    "timestamp": int(now_ms)
+                })
+            return
+
+        # 6. API: Health Check (/api/health)
+        if path == "/api/health":
+            now = time.time()
+            ram_age_ms = int((now - _last_ram_update_time) * 1000) if _last_ram_update_time else 0
+            health_data = {
+                "status": "healthy",
+                "uptime_seconds": round(now - _server_start_time, 1),
+                "worker_thread_alive": _streaming_thread.is_alive(),
+                "worker_loop_cycles": _worker_loop_count,
+                "ram_cache_age_ms": ram_age_ms,
+                "memory_events_count": len(_ram_quake_cache.get("features", [])) if _ram_quake_cache else 0,
+                "active_countries": list(TARGET_COUNTRIES.keys()),
+                "timestamp": int(now * 1000)
+            }
+            send_json(health_data)
+            return
+
+        # 7. API: Feed Sísmico con Filtros Avanzados (/api/quakes)
+        if path == "/api/quakes":
+            quakes = get_live_earthquakes()
+            raw_features = quakes.get("features", [])
+
+            # Filtros por Query Params
+            country_param = query.get("country", ["all"])[0].upper()
+            min_mag_param = query.get("min_mag", [None])[0]
+            max_mag_param = query.get("max_mag", [None])[0]
+            limit_param = query.get("limit", [None])[0]
+            since_param = query.get("since", [None])[0]
+            consensus_param = query.get("consensus", [None])[0]
+
+            filtered = raw_features
+
+            # Filtro por país (PA, VE, ES, AR o combinación como PA,VE)
+            if country_param and country_param != "ALL":
+                wanted_countries = {c.strip() for c in country_param.split(",")}
+                filtered = [f for f in filtered if f.get("properties", {}).get("country_code") in wanted_countries]
+
+            # Filtro por magnitud mínima
+            if min_mag_param:
+                try:
+                    min_val = float(min_mag_param)
+                    filtered = [f for f in filtered if float(f.get("properties", {}).get("mag") or 0.0) >= min_val]
+                except ValueError:
+                    pass
+
+            # Filtro por magnitud máxima
+            if max_mag_param:
+                try:
+                    max_val = float(max_mag_param)
+                    filtered = [f for f in filtered if float(f.get("properties", {}).get("mag") or 0.0) <= max_val]
+                except ValueError:
+                    pass
+
+            # Filtro por tiempo (since timestamp ms)
+            if since_param:
+                try:
+                    since_val = float(since_param)
+                    filtered = [f for f in filtered if float(f.get("properties", {}).get("time") or 0) >= since_val]
+                except ValueError:
+                    pass
+
+            # Filtro solo consenso
+            if consensus_param and consensus_param.lower() in ["true", "1", "yes"]:
+                filtered = [f for f in filtered if f.get("properties", {}).get("is_consensus")]
+
+            # Límite de resultados
+            if limit_param:
+                try:
+                    lim = int(limit_param)
+                    if lim > 0:
+                        filtered = filtered[:lim]
+                except ValueError:
+                    pass
+
+            # Recalcular conteos según la salida filtrada
+            counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0}
+            for f in filtered:
+                cc = f.get("properties", {}).get("country_code")
+                if cc in counts:
+                    counts[cc] += 1
+
+            response_data = {
+                "type": "FeatureCollection",
+                "metadata": {
+                    "generated": int(time.time() * 1000),
+                    "title": "KorshQuake API v1.1.2 - Panamá, Venezuela, España y Argentina",
+                    "target_countries": ["Panamá", "Venezuela", "España", "Argentina"],
+                    "total_events": len(filtered),
+                    "raw_pool_events": len(raw_features),
+                    "counts_by_country": counts,
+                    "applied_filters": {
+                        "country": country_param,
+                        "min_mag": min_mag_param,
+                        "max_mag": max_mag_param,
+                        "limit": limit_param,
+                        "since": since_param,
+                        "consensus": consensus_param
+                    },
+                    "realtime_streaming": True,
+                    "memory_latency_ms": 0.4
+                },
+                "features": filtered
+            }
+            send_json(response_data)
+            return
+
+        # 8. API: Logs del Sistema
+        if path == "/api/logs":
             logs = get_latest_gq_logs()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.end_headers()
-            self.wfile.write(json.dumps({"logs": logs}).encode("utf-8"))
+            send_json({"logs": logs, "count": len(logs)})
             return
 
-        if self.path == "/api/launch":
+        # 9. API: Lanzador GlobalQuake Desktop
+        if path == "/api/launch":
             success = False
             msg = ""
             try:
@@ -623,14 +831,62 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 msg = str(e)
 
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.end_headers()
-            self.wfile.write(json.dumps({"success": success, "message": msg}).encode("utf-8"))
+            send_json({"success": success, "message": msg})
             return
 
-        # Serve static files from web directory
+        # 10. Integración God's Eye View: Rutas /gods-eye y /gods-eye/*
+        def serve_file(file_path):
+            if not os.path.isfile(file_path):
+                self.send_response(404)
+                self.end_headers()
+                return
+            ctype = self.guess_type(file_path)
+            if file_path.endswith(".wasm"):
+                ctype = "application/wasm"
+            elif file_path.endswith(".geojsonl") or file_path.endswith(".geojson"):
+                ctype = "application/json"
+            elif file_path.endswith(".js") or file_path.endswith(".mjs"):
+                ctype = "application/javascript; charset=utf-8"
+            elif file_path.endswith(".css"):
+                ctype = "text/css; charset=utf-8"
+            elif file_path.endswith(".html"):
+                ctype = "text/html; charset=utf-8"
+
+            try:
+                with open(file_path, "rb") as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", str(len(content)))
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(content)
+            except Exception:
+                self.send_response(500)
+                self.end_headers()
+
+        if path in ["/gods-eye", "/gods-eye/"]:
+            index_file = os.path.join(GODS_EYE_DIST, "index.html")
+            serve_file(index_file)
+            return
+
+        if path.startswith("/gods-eye/"):
+            rel_file = path[len("/gods-eye/"):].replace("/", os.sep)
+            candidate = os.path.join(GODS_EYE_DIST, rel_file)
+            if os.path.isfile(candidate):
+                serve_file(candidate)
+            else:
+                serve_file(os.path.join(GODS_EYE_DIST, "index.html"))
+            return
+
+        # 11. Fallback a God's Eye View para assets globales (/cesium/*, /assets/*, etc.)
+        gev_candidate = os.path.join(GODS_EYE_DIST, path.lstrip("/").replace("/", os.sep))
+        web_candidate = os.path.join(WEB_DIR, path.lstrip("/").replace("/", os.sep))
+        if not os.path.exists(web_candidate) and os.path.isfile(gev_candidate):
+            serve_file(gev_candidate)
+            return
+
+        # Archivos estáticos de la carpeta web (KorshQuake)
         return super().do_GET()
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):

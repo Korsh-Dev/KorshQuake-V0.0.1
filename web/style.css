@@ -63,43 +63,60 @@ body {
 
 /* App Header */
 .app-header {
-  height: 72px;
+  height: 64px;
   background: var(--bg-header);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 20px;
   position: sticky;
   top: 0;
   z-index: 1000;
+  gap: 12px;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.brand-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
 }
 
 .logo-container {
   position: relative;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #00b4d8, #0077b6);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   box-shadow: 0 0 16px var(--cyan-glow);
+  flex-shrink: 0;
 }
 
 .logo-pulse {
   position: absolute;
   width: 100%;
   height: 100%;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 2px solid var(--cyan);
   animation: logo-ripple 2s infinite ease-out;
 }
@@ -110,39 +127,57 @@ body {
 }
 
 .logo-icon {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .app-title {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  white-space: nowrap;
 }
 
 .badge-version {
-  font-size: 0.65rem;
-  padding: 2px 7px;
+  font-size: 0.62rem;
+  padding: 2px 6px;
   background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(0, 119, 182, 0.4));
   border: 1px solid var(--cyan);
   color: var(--cyan);
-  border-radius: 20px;
+  border-radius: 12px;
   font-weight: 700;
   letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.live-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  background: rgba(0, 230, 118, 0.12);
+  border: 1px solid rgba(0, 230, 118, 0.35);
+  border-radius: 12px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--green);
+  font-family: var(--font-mono);
+  white-space: nowrap;
 }
 
 .app-subtitle {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Header Telemetry stats */
 .header-stats {
   display: flex;
-  gap: 16px;
+  gap: 12px;
+  align-items: center;
 }
 
 .stat-pill {
@@ -189,24 +224,26 @@ body {
   50% { opacity: 0.4; transform: scale(0.85); }
 }
 
-/* Buttons */
+/* Buttons & Controls */
 .header-actions {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  font-size: 0.82rem;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 0.8rem;
   font-weight: 600;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.2s ease;
   border: none;
   font-family: var(--font-main);
+  white-space: nowrap;
 }
 
 .btn-primary {
@@ -221,6 +258,19 @@ body {
   filter: brightness(1.1);
 }
 
+.btn-godseye {
+  background: linear-gradient(135deg, #0284c7, #1d4ed8);
+  color: #fff;
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  box-shadow: 0 0 14px rgba(2, 132, 199, 0.45);
+}
+
+.btn-godseye:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.65);
+  filter: brightness(1.15);
+}
+
 .btn-secondary {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-main);
@@ -230,6 +280,17 @@ body {
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-icon-round {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .btn-sm {
@@ -1120,6 +1181,447 @@ body {
   outline: none;
   border-color: var(--cyan);
   box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+}
+
+/* Map Wrapper & Mobile Quick Pill */
+.map-wrapper {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+#map {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 380px;
+}
+
+.mobile-latest-pill {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  background: rgba(6, 14, 26, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  border-radius: 30px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+  max-width: 90%;
+  cursor: pointer;
+  white-space: nowrap;
+  animation: bounce-in 0.3s ease-out;
+}
+
+@keyframes bounce-in {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.mlp-mag {
+  font-weight: 800;
+  color: var(--red);
+  background: rgba(255, 23, 68, 0.15);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.mlp-place {
+  color: #fff;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 170px;
+}
+
+.mlp-time {
+  color: var(--text-dim);
+  font-size: 0.68rem;
+}
+
+/* Settings Cards (Menu Modal) */
+.settings-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  transition: all 0.2s ease;
+}
+
+.settings-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.settings-card.highlight-card {
+  background: rgba(0, 229, 255, 0.06);
+  border-color: rgba(0, 229, 255, 0.3);
+}
+
+.settings-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.settings-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.settings-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.settings-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+/* Bottom Navigation Bar (App Nativa Android / Móvil) */
+.bottom-nav-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: rgba(5, 11, 20, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+  z-index: 1200;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0 10px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.nav-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  flex: 1;
+  max-width: 90px;
+  gap: 2px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-tab:hover {
+  color: var(--text-muted);
+}
+
+.nav-tab.active {
+  color: var(--cyan);
+}
+
+.nav-tab.active .nav-icon-wrap svg {
+  stroke: var(--cyan);
+  filter: drop-shadow(0 0 8px var(--cyan-glow));
+}
+
+.nav-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  background: var(--red);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  box-shadow: 0 0 6px rgba(255, 23, 68, 0.6);
+}
+
+.nav-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ==========================================================
+   RESPONSIVE DESIGN (Tablets, Celulares y Layout Móvil Nativo)
+   ========================================================== */
+
+/* 1. Tablets y Pantallas Medianas (<= 1024px) */
+@media (max-width: 1024px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    gap: 16px;
+  }
+
+  .map-section {
+    height: 520px;
+    min-height: 480px;
+  }
+
+  .metrics-bar {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 12px 18px;
+  }
+
+  .sidebar-section {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* 2. Smartphones y Pantallas Móviles (<= 768px) */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: 64px; /* Espacio para el Bottom Nav Bar */
+  }
+
+  /* Header ultra-limpio para móvil */
+  .app-header {
+    height: 54px;
+    padding: 0 12px;
+  }
+
+  .logo-container {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  .logo-icon {
+    width: 17px;
+    height: 17px;
+  }
+
+  .app-title {
+    font-size: 1.05rem;
+  }
+
+  .app-subtitle {
+    display: none; /* Ocultar subtítulo largo en móvil para no saturar */
+  }
+
+  .header-stats {
+    display: none !important; /* Ocultar píldoras de telemetría en header móvil */
+  }
+
+  .desktop-only {
+    display: none !important; /* Ocultar elementos exclusivos de desktop */
+  }
+
+  .btn-icon-round {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Bottom Navigation visible en móvil */
+  .bottom-nav-bar {
+    display: flex;
+  }
+
+  /* Country Navigation Bar deslizable con el pulgar */
+  .country-nav-bar {
+    padding: 8px 12px;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .country-nav-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .country-tabs-label {
+    display: none; /* Ocultar etiqueta fija para dar 100% de espacio a las banderas */
+  }
+
+  .country-tabs-group {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .country-pill {
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+
+  /* Métricas compactas */
+  .metrics-bar {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .metric-card {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .metric-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+  }
+
+  .metric-num {
+    font-size: 1.15rem;
+  }
+
+  .metric-title {
+    font-size: 0.65rem;
+  }
+
+  /* Main Layout & Pestañas Móviles */
+  .main-layout {
+    padding: 0 10px;
+    display: block;
+  }
+
+  /* Vistas móviles controladas por atributo data-mobile-view en main.main-layout */
+  .main-layout[data-mobile-view="map"] .map-section {
+    display: flex;
+    height: calc(100vh - 195px);
+    min-height: 420px;
+  }
+  .main-layout[data-mobile-view="map"] .sidebar-section {
+    display: none !important;
+  }
+
+  .main-layout[data-mobile-view="feed"] .map-section {
+    display: none !important;
+  }
+  .main-layout[data-mobile-view="feed"] .sidebar-section {
+    display: flex !important;
+    flex-direction: column;
+  }
+  .main-layout[data-mobile-view="feed"] .seismograph-panel {
+    display: none !important;
+  }
+  .main-layout[data-mobile-view="feed"] .feed-panel {
+    display: flex !important;
+    height: calc(100vh - 195px);
+    min-height: 420px;
+  }
+
+  .main-layout[data-mobile-view="waves"] .map-section {
+    display: none !important;
+  }
+  .main-layout[data-mobile-view="waves"] .sidebar-section {
+    display: flex !important;
+    flex-direction: column;
+  }
+  .main-layout[data-mobile-view="waves"] .feed-panel {
+    display: none !important;
+  }
+  .main-layout[data-mobile-view="waves"] .seismograph-panel {
+    display: flex !important;
+    height: calc(100vh - 195px);
+    min-height: 420px;
+  }
+
+  /* Map Header y Controles en móvil */
+  .map-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .map-controls {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: space-between;
+  }
+
+  .map-controls .filter-group {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .map-controls select {
+    width: 100%;
+    font-size: 0.72rem;
+    padding: 4px 6px;
+  }
+
+  .map-legend {
+    display: none; /* En móvil se oculta la leyenda flotante para dejar el mapa totalmente despejado */
+  }
+
+  /* Modales en Móvil */
+  .modal-content {
+    width: 94% !important;
+    max-height: 85vh !important;
+    margin: auto;
+    border-radius: 14px;
+  }
+
+  .modal-header {
+    padding: 14px 18px;
+  }
+
+  .modal-body {
+    padding: 16px !important;
+  }
+}
+
+/* 3. Pantallas Ultra-Estrechas (<= 480px) */
+@media (max-width: 480px) {
+  .app-title {
+    font-size: 0.95rem;
+  }
+
+  .badge-version {
+    display: none; /* Ocultar versión en pantallas ultrapequeñas para no empujar botones */
+  }
+
+  .live-status-pill .live-text {
+    display: none; /* Dejar solo el punto verde pulsante */
+  }
+
+  .country-pill {
+    padding: 4px 10px;
+    font-size: 0.72rem;
+  }
 }
 
 

@@ -10,6 +10,11 @@ __pycache__/
 GlobalQuakeApp/
 *.bat
 
+# Node.js
+node_modules/
+gods-eye-view/node_modules/
+gods-eye-view/.git/
+
 # IDEs y sistemas operativos
 .vscode/
 .idea/
