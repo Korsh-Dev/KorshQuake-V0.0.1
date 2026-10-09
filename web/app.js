@@ -1776,8 +1776,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Bottom Navigation Bar Handlers (Mobile-First Experience)
   window.setMobileView = function(tab) {
     const mainLayout = document.querySelector('.main-layout');
+    const metricsBar = document.getElementById('metrics-bar');
     if (mainLayout) {
       mainLayout.setAttribute('data-mobile-view', tab);
+    }
+
+    if (metricsBar) {
+      if (window.innerWidth <= 768) {
+        metricsBar.style.display = (tab === 'feed') ? 'flex' : 'none';
+      } else {
+        metricsBar.style.display = 'grid';
+      }
     }
     
     const tabs = document.querySelectorAll('.bottom-nav-bar .nav-tab');
@@ -1792,7 +1801,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tab === 'map' && map) {
       setTimeout(() => {
         map.invalidateSize();
-      }, 120);
+      }, 60);
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 250);
     }
   };
 

@@ -1413,205 +1413,369 @@ body {
   }
 }
 
-/* 2. Smartphones y Pantallas Móviles (<= 768px) */
+/* 2. Smartphones y Pantallas Móviles (<= 768px) - Full App-Shell Nativo */
 @media (max-width: 768px) {
-  body {
-    padding-bottom: 64px; /* Espacio para el Bottom Nav Bar */
+  html, body {
+    height: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    position: fixed !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    touch-action: manipulation;
   }
 
-  /* Header ultra-limpio para móvil */
+  body {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* Header ultra-limpio y compacto */
   .app-header {
-    height: 54px;
-    padding: 0 12px;
+    height: 48px !important;
+    min-height: 48px !important;
+    padding: 0 10px !important;
+    flex-shrink: 0 !important;
+    z-index: 1000;
   }
 
   .logo-container {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     border-radius: 8px;
   }
 
   .logo-icon {
-    width: 17px;
-    height: 17px;
+    width: 16px;
+    height: 16px;
   }
 
   .app-title {
-    font-size: 1.05rem;
+    font-size: 1.0rem;
+    font-weight: 700;
   }
 
-  .app-subtitle {
-    display: none; /* Ocultar subtítulo largo en móvil para no saturar */
-  }
-
-  .header-stats {
-    display: none !important; /* Ocultar píldoras de telemetría en header móvil */
-  }
-
-  .desktop-only {
-    display: none !important; /* Ocultar elementos exclusivos de desktop */
+  .app-subtitle,
+  .header-stats,
+  .desktop-only,
+  .badge-version {
+    display: none !important;
   }
 
   .btn-icon-round {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
   }
 
-  /* Bottom Navigation visible en móvil */
-  .bottom-nav-bar {
-    display: flex;
-  }
-
-  /* Country Navigation Bar deslizable con el pulgar */
+  /* Selector de Regiones Compacto Deslizable */
   .country-nav-bar {
-    padding: 8px 12px;
-    gap: 8px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 4px 8px !important;
+    gap: 6px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scroll-snap-type: x mandatory !important;
+    scrollbar-width: none !important;
+    flex-shrink: 0 !important;
+    background: rgba(5, 11, 20, 0.95);
+    border-bottom: 1px solid var(--border-subtle);
+    z-index: 990;
   }
 
   .country-nav-bar::-webkit-scrollbar {
-    display: none;
+    display: none !important;
   }
 
   .country-tabs-label {
-    display: none; /* Ocultar etiqueta fija para dar 100% de espacio a las banderas */
+    display: none !important;
   }
 
   .country-tabs-group {
     display: flex;
-    gap: 8px;
-    width: 100%;
+    gap: 6px;
+    width: auto;
   }
 
   .country-pill {
-    padding: 5px 12px;
-    font-size: 0.78rem;
+    padding: 4px 10px !important;
+    font-size: 0.74rem !important;
     scroll-snap-align: start;
     flex-shrink: 0;
+    border-radius: 20px;
   }
 
-  /* Métricas compactas */
+  /* Barra de Métricas (Solo visible en Feed) */
   .metrics-bar {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    padding: 8px 12px;
+    display: none;
+    padding: 6px 10px !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scroll-snap-type: x mandatory !important;
+    flex-shrink: 0 !important;
+    background: rgba(8, 16, 28, 0.9);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .metrics-bar::-webkit-scrollbar {
+    display: none;
   }
 
   .metric-card {
-    padding: 10px 12px;
-    gap: 10px;
-  }
-
-  .metric-icon-box {
-    width: 36px;
-    height: 36px;
+    min-width: 130px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+    padding: 6px 10px !important;
+    gap: 8px !important;
     border-radius: 8px;
   }
 
+  .metric-icon-box {
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 6px !important;
+  }
+
+  .metric-icon-box svg {
+    width: 14px;
+    height: 14px;
+  }
+
   .metric-num {
-    font-size: 1.15rem;
+    font-size: 1.0rem !important;
   }
 
   .metric-title {
-    font-size: 0.65rem;
+    font-size: 0.6rem !important;
   }
 
-  /* Main Layout & Pestañas Móviles */
+  /* Contenedor Principal: 100% del alto restante */
   .main-layout {
-    padding: 0 10px;
-    display: block;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    position: relative !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    display: block !important;
   }
 
-  /* Vistas móviles controladas por atributo data-mobile-view en main.main-layout */
+  /* 1. Vista MAPA: Ocupa todo el viewport sin ningún scroll */
   .main-layout[data-mobile-view="map"] .map-section {
-    display: flex;
-    height: calc(100vh - 195px);
-    min-height: 420px;
+    display: flex !important;
+    flex-direction: column !important;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
   }
+
   .main-layout[data-mobile-view="map"] .sidebar-section {
     display: none !important;
   }
 
-  .main-layout[data-mobile-view="feed"] .map-section {
-    display: none !important;
-  }
-  .main-layout[data-mobile-view="feed"] .sidebar-section {
-    display: flex !important;
-    flex-direction: column;
-  }
-  .main-layout[data-mobile-view="feed"] .seismograph-panel {
-    display: none !important;
-  }
-  .main-layout[data-mobile-view="feed"] .feed-panel {
-    display: flex !important;
-    height: calc(100vh - 195px);
-    min-height: 420px;
+  .map-wrapper {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    position: relative !important;
+    overflow: hidden !important;
   }
 
-  .main-layout[data-mobile-view="waves"] .map-section {
-    display: none !important;
-  }
-  .main-layout[data-mobile-view="waves"] .sidebar-section {
-    display: flex !important;
-    flex-direction: column;
-  }
-  .main-layout[data-mobile-view="waves"] .feed-panel {
-    display: none !important;
-  }
-  .main-layout[data-mobile-view="waves"] .seismograph-panel {
-    display: flex !important;
-    height: calc(100vh - 195px);
-    min-height: 420px;
+  #map {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
   }
 
-  /* Map Header y Controles en móvil */
   .map-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 10px 14px;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+    padding: 8px 10px !important;
+    flex-shrink: 0 !important;
+    background: rgba(5, 11, 20, 0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    z-index: 500;
+  }
+
+  .map-title-box {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .map-title-box h2 {
+    font-size: 0.82rem;
+    font-weight: 600;
   }
 
   .map-controls {
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    justify-content: space-between;
+    width: 100% !important;
+    display: flex !important;
+    gap: 6px !important;
   }
 
   .map-controls .filter-group {
     flex: 1;
-    min-width: 120px;
+    min-width: 0;
   }
 
   .map-controls select {
-    width: 100%;
-    font-size: 0.72rem;
-    padding: 4px 6px;
+    width: 100% !important;
+    font-size: 0.72rem !important;
+    padding: 4px 6px !important;
   }
 
   .map-legend {
-    display: none; /* En móvil se oculta la leyenda flotante para dejar el mapa totalmente despejado */
+    display: none !important;
   }
 
-  /* Modales en Móvil */
+  /* 2. Vista SISMOS (Feed): Scroll vertical natural y fluido */
+  .main-layout[data-mobile-view="feed"] .map-section {
+    display: none !important;
+  }
+
+  .main-layout[data-mobile-view="feed"] .sidebar-section {
+    display: flex !important;
+    flex-direction: column !important;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .main-layout[data-mobile-view="feed"] .seismograph-panel {
+    display: none !important;
+  }
+
+  .main-layout[data-mobile-view="feed"] .feed-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .feed-panel .panel-header {
+    padding: 8px 12px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .quake-list {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 8px 10px !important;
+    gap: 8px !important;
+  }
+
+  .quake-item {
+    padding: 10px 12px !important;
+    border-radius: 10px !important;
+  }
+
+  /* 3. Vista ONDAS (Sismógrafo): Panel amplio de monitoreo */
+  .main-layout[data-mobile-view="waves"] .map-section {
+    display: none !important;
+  }
+
+  .main-layout[data-mobile-view="waves"] .sidebar-section {
+    display: flex !important;
+    flex-direction: column !important;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+
+  .main-layout[data-mobile-view="waves"] .feed-panel {
+    display: none !important;
+  }
+
+  .main-layout[data-mobile-view="waves"] .seismograph-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 12px !important;
+    gap: 10px !important;
+  }
+
+  #seismograph-canvas {
+    width: 100% !important;
+    height: 110px !important;
+    border-radius: 8px !important;
+  }
+
+  /* Barra de Navegación Inferior (Bottom Nav Bar Fija y Táctil) */
+  .bottom-nav-bar {
+    display: flex !important;
+    position: relative !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    flex-shrink: 0 !important;
+    background: rgba(5, 11, 20, 0.98) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6) !important;
+    z-index: 1000 !important;
+    padding: 0 4px !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+  }
+
+  .nav-tab {
+    flex: 1 !important;
+    height: 100% !important;
+    max-width: 80px !important;
+    padding: 4px 2px !important;
+    gap: 2px !important;
+  }
+
+  .nav-label {
+    font-size: 0.65rem !important;
+  }
+
+  /* Modales en móvil */
   .modal-content {
-    width: 94% !important;
-    max-height: 85vh !important;
-    margin: auto;
-    border-radius: 14px;
-  }
-
-  .modal-header {
-    padding: 14px 18px;
+    width: 95% !important;
+    max-height: 88vh !important;
+    margin: auto !important;
+    border-radius: 14px !important;
   }
 
   .modal-body {
-    padding: 16px !important;
+    padding: 14px !important;
+    max-height: calc(88vh - 60px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 }
 
@@ -1620,18 +1784,12 @@ body {
   .app-title {
     font-size: 0.95rem;
   }
-
-  .badge-version {
-    display: none; /* Ocultar versión en pantallas ultrapequeñas para no empujar botones */
-  }
-
   .live-status-pill .live-text {
-    display: none; /* Dejar solo el punto verde pulsante */
+    display: none;
   }
-
   .country-pill {
-    padding: 4px 10px;
-    font-size: 0.72rem;
+    padding: 3px 8px !important;
+    font-size: 0.70rem !important;
   }
 }
 
