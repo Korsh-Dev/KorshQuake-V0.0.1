@@ -215,21 +215,36 @@ const TILE_LAYERS = {
     ref: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
     options: {
       maxZoom: 16,
-      attribution: 'Tiles &copy; Esri &mdash; Dark Gray Canvas'
+      attribution: 'Tiles &copy; Esri &mdash; Dark Gray Canvas',
+      keepBuffer: 12,
+      updateWhenZooming: false,
+      updateWhenIdle: true,
+      updateInterval: 100,
+      crossOrigin: true
     }
   },
   satellite: {
     base: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     options: {
       maxZoom: 18,
-      attribution: 'Tiles &copy; Esri &mdash; World Imagery'
+      attribution: 'Tiles &copy; Esri &mdash; World Imagery',
+      keepBuffer: 10,
+      updateWhenZooming: false,
+      updateWhenIdle: true,
+      updateInterval: 100,
+      crossOrigin: true
     }
   },
   topo: {
     base: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}',
     options: {
       maxZoom: 12,
-      attribution: 'Tiles &copy; Esri &mdash; Physical World Map'
+      attribution: 'Tiles &copy; Esri &mdash; Physical World Map',
+      keepBuffer: 10,
+      updateWhenZooming: false,
+      updateWhenIdle: true,
+      updateInterval: 100,
+      crossOrigin: true
     }
   }
 };
@@ -307,9 +322,16 @@ function initMap() {
     center: [15.0, -40.0],
     zoom: 3,
     minZoom: 1.5,
-    maxZoom: 16,
+    maxZoom: 18,
     zoomControl: false,
-    preferCanvas: true
+    preferCanvas: true,
+    fadeAnimation: true,
+    zoomAnimation: true,
+    zoomAnimationThreshold: 4,
+    inertia: true,
+    inertiaDeceleration: 3000,
+    wheelDebounceTime: 40,
+    wheelPxPerZoomLevel: 90
   });
 
   worldVectorLayer = L.layerGroup().addTo(map);
@@ -358,16 +380,24 @@ function setTileLayer(layerKey) {
   }
 
   const def = TILE_LAYERS[layerKey] || TILE_LAYERS.dark;
-  const baseLyr = L.tileLayer(def.base, def.options);
+  const tileOpts = Object.assign({
+    keepBuffer: 12,
+    updateWhenZooming: false,
+    updateWhenIdle: true,
+    updateInterval: 80,
+    crossOrigin: true
+  }, def.options || {});
+
+  const baseLyr = L.tileLayer(def.base, tileOpts);
   baseLyr.addTo(map);
   currentTileLayers.push(baseLyr);
 
   if (def.ref) {
-    const refLyr = L.tileLayer(def.ref, {
-      maxZoom: def.options.maxZoom,
+    const refOpts = Object.assign({}, tileOpts, {
       opacity: 0.9,
       pane: 'shadowPane'
     });
+    const refLyr = L.tileLayer(def.ref, refOpts);
     refLyr.addTo(map);
     currentTileLayers.push(refLyr);
   }
@@ -376,37 +406,22 @@ function setTileLayer(layerKey) {
 // Load Local Vector Layers
 async function loadVectorLayers() {
   try {
-    const res = await fetch('vendor/plates.json');
-    if (res.ok) {
-      const data = await res.json();
-      L.geoJSON(data, {
-        style: {
-          color: '#ff2d55',
-          weight: 1.6,
-          opacity: 0.82
-        }
-      }).addTo(platesLayer);
-    }
+    fetch('vendor/plates.json')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!data || !platesLayer) return;
+        L.geoJSON(data, {
+          smoothFactor: 1.5,
+          style: {
+            color: '#ff2d55',
+            weight: 1.4,
+            opacity: 0.75
+          }
+        }).addTo(platesLayer);
+      })
+      .catch(err => console.warn('Could not load plates:', err));
   } catch (err) {
-    console.warn('Could not load plates:', err);
-  }
-
-  try {
-    const res = await fetch('vendor/world.json');
-    if (res.ok) {
-      const data = await res.json();
-      L.geoJSON(data, {
-        style: {
-          fillColor: '#07080c',
-          fillOpacity: 0.25,
-          color: 'rgba(255, 30, 66, 0.3)',
-          weight: 1,
-          opacity: 0.7
-        }
-      }).addTo(worldVectorLayer);
-    }
-  } catch (err) {
-    console.warn('Could not load world outlines:', err);
+    console.warn('Could not load plates layer:', err);
   }
 }
 
@@ -2010,7 +2025,7 @@ function escapeHtml(str) {
 let waveAnimationTimer = null;
 
 function updateWavefronts() {
-  if (!map || !waveLayerGroup) return;
+  if (!map || !waveLayerGroup || map._animatingZoom) return;
   waveLayerGroup.clearLayers();
 
   const nowMs = Date.now();
