@@ -1933,7 +1933,7 @@ body {
   transform: translateX(-50%);
   width: calc(100% - 24px);
   max-width: 620px;
-  z-index: 10000;
+  z-index: 9990;
   background: rgba(8, 20, 36, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -2533,7 +2533,7 @@ body {
 }
 
 /* 3. iPhone Glass Bottom Sheet Modal (#modal-quake-detail) */
-.ios-sheet {
+.ios-sheet-legacy-disabled {
   position: fixed;
   bottom: 0;
   left: 0;
@@ -3743,7 +3743,7 @@ body {
   background: rgba(4, 6, 12, 0.78) !important;
   backdrop-filter: blur(18px) !important;
   -webkit-backdrop-filter: blur(18px) !important;
-  z-index: 9999 !important;
+  z-index: 10500 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -4666,4 +4666,129 @@ body {
 
 .protocol-card {
   padding: 8px 10px !important;
+}
+
+/* ==========================================================================
+   ADAPTABILIDAD RESPONSIVE MÓVIL PARA POPUPS TÁCTICOS
+   ========================================================================== */
+@media (max-width: 768px) {
+  .tactical-modal-overlay {
+    z-index: 10500 !important;
+    padding: 10px !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .tactical-popup-dialog {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    max-height: 88vh !important;
+    border-radius: 20px !important;
+    margin: auto !important;
+  }
+
+  .eew-predict-dialog {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    max-height: 88vh !important;
+    border-radius: 20px !important;
+    margin: auto !important;
+  }
+
+  .tactical-popup-header {
+    padding: 12px 14px !important;
+  }
+
+  .tactical-popup-title {
+    font-size: 0.95rem !important;
+  }
+
+  .tactical-popup-body {
+    padding: 12px 14px !important;
+    gap: 10px !important;
+  }
+
+  .tactical-hero-card {
+    padding: 12px !important;
+    gap: 12px !important;
+  }
+
+  .tactical-mag-circle {
+    width: 60px !important;
+    height: 60px !important;
+    min-width: 60px !important;
+  }
+
+  .tactical-mag-circle .mag-num {
+    font-size: 1.18rem !important;
+  }
+
+  .tactical-metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .tactical-metric-box {
+    padding: 8px 10px !important;
+  }
+
+  .tactical-actions-row {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .tactical-btn-report,
+  .tactical-btn-map {
+    width: 100% !important;
+    height: 44px !important;
+  }
+
+  /* EEW Móvil */
+  .eew-selector-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 8px 10px !important;
+  }
+
+  .eew-selector-left {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+
+  .eew-event-dropdown {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .eew-event-banner {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 10px 12px !important;
+  }
+
+  .eew-banner-left {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .eew-velocity-card {
+    min-width: 0 !important;
+    width: 100% !important;
+    padding: 8px 12px !important;
+  }
+
+  .eew-table-scroll {
+    max-height: 160px !important;
+  }
+
+  .eew-protocol-strip {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+
+  .protocol-card {
+    padding: 6px 8px !important;
+  }
 }

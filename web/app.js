@@ -2643,6 +2643,26 @@ document.addEventListener('DOMContentLoaded', () => {
   if (tabNavPredict) tabNavPredict.addEventListener('click', () => openPredictModal());
   if (tabNavSettings) tabNavSettings.addEventListener('click', openMenuModal);
 
+
+  // Cierre al hacer clic en el backdrop de los popups tácticos
+  const modalQD = document.getElementById('modal-quake-detail');
+  if (modalQD) {
+    modalQD.addEventListener('click', (e) => {
+      if (e.target === modalQD) {
+        closeQuakeDetailModal();
+      }
+    });
+  }
+
+  const modalPred = document.getElementById('modal-predict');
+  if (modalPred) {
+    modalPred.addEventListener('click', (e) => {
+      if (e.target === modalPred) {
+        closePredictModal();
+      }
+    });
+  }
+
   // Soporte para deep-links: ?country=PA / VE / ES / AR o ?view=predict
   const urlParams = new URLSearchParams(window.location.search);
   const cp = urlParams.get('country');

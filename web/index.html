@@ -595,66 +595,6 @@
     </div>
   </div>
 
-        <!-- 4 Casillas Glass de Métricas Físicas Reales -->
-        <div class="ios-grid-metrics">
-          <div class="ios-metric-tile">
-            <div class="ios-tile-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg></div>
-            <div class="ios-tile-val font-mono" id="qd-depth">-- km</div>
-            <div class="ios-tile-lbl">Profundidad</div>
-          </div>
-          <div class="ios-metric-tile">
-            <div class="ios-tile-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div>
-            <div class="ios-tile-val font-mono" id="qd-mmi">--</div>
-            <div class="ios-tile-lbl">Intensidad MMI</div>
-          </div>
-          <div class="ios-metric-tile">
-            <div class="ios-tile-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
-            <div class="ios-tile-val font-mono" id="qd-pga">-- gal</div>
-            <div class="ios-tile-lbl">Aceleración (PGA)</div>
-          </div>
-          <div class="ios-metric-tile">
-            <div class="ios-tile-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg></div>
-            <div class="ios-tile-val font-mono" id="qd-consensus">--</div>
-            <div class="ios-tile-lbl">Red Sísmica</div>
-          </div>
-        </div>
-
-        <!-- Botones de Acción Táctil -->
-        <div class="ios-sheet-actions">
-          <button class="btn btn-primary ios-action-btn" id="btn-report-felt">
-            <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 5px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>¿Sentiste este sismo? Reportar vibración</span>
-          </button>
-          <button class="btn btn-secondary ios-action-btn" id="btn-focus-map">
-            <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 5px;"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Centrar y Ver en Mapa Tectónico</span>
-          </button>
-        </div>
-
-        <!-- Tabla Glass de Llegada a Ciudades Cercanas -->
-        <div class="ios-predictions-card">
-          <div class="ios-card-title font-mono"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 5px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Tiempos de Arribo de Onda (ETA a Centros Urbanos)</div>
-          <div class="ios-table-wrap">
-            <table class="ios-eta-table font-mono">
-              <thead>
-                <tr>
-                  <th>Ciudad</th>
-                  <th>Distancia</th>
-                  <th>Onda P</th>
-                  <th>Onda S (Fuerte)</th>
-                </tr>
-              </thead>
-              <tbody id="qd-cities-tbody">
-                <tr><td colspan="4" style="text-align: center; color: #64748b; padding: 14px;">Calculando arribo...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer ios-sheet-footer">
-        <button class="btn btn-secondary btn-sm" id="btn-close-qd-footer">Cerrar Ficha</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Modal: Descargar e Instalar KorshQuake en Android (APK / PWA) -->
   <div class="modal-overlay" id="modal-apk">
     <div class="modal-content glass-panel" style="max-width: 540px; height: auto;">
@@ -1157,80 +1097,7 @@
       </div>
     </div>
   </div>
-        </div>
 
-        <!-- Tabla de Ciudades y Tiempos Estimados de Arribo -->
-        <div class="eew-table-card">
-          <div class="eew-table-header">
-            <div class="eew-table-title font-mono">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              <span>Tiempos Estimados de Arribo (ETA) a Centros Urbanos</span>
-            </div>
-            <span class="eew-status-pill font-mono">REFRESCO EN VIVO 1.0s</span>
-          </div>
-
-          <div class="eew-table-scroll">
-            <table class="eew-table font-mono">
-              <thead>
-                <tr>
-                  <th>Centro Urbano</th>
-                  <th>Distancia</th>
-                  <th>Onda P (Primaria)</th>
-                  <th>Onda S (Destructiva)</th>
-                  <th>Intensidad Prevista (MMI)</th>
-                  <th>PGA Estimado</th>
-                </tr>
-              </thead>
-              <tbody id="predict-cities-tbody">
-                <tr>
-                  <td colspan="6" style="padding: 24px; text-align: center; color: #64748b;">
-                    Calculando frentes de onda en tiempo real...
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Footer del Popup -->
-      <div class="tactical-popup-footer">
-        <span class="footer-meta font-mono">Refresco geofísico en tiempo real cada 1.0s • Modelo ak135</span>
-        <button class="btn btn-secondary btn-sm" id="btn-close-predict-footer">Cerrar Predicciones</button>
-      </div>
-    </div>
-  </div>
-
-        <!-- Tabla de Ciudades y Tiempos Estimados de Arribo -->
-        <h4 style="margin: 0 0 12px 0; color: #f1f5f9; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Tiempos Estimados de Arribo (ETA) a Centros Urbanos</h4>
-        <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;" class="font-mono">
-            <thead>
-              <tr style="border-bottom: 2px solid #1e3a5f; color: #7dd3fc; text-align: left;">
-                <th style="padding: 10px 8px;">Ciudad</th>
-                <th style="padding: 10px 8px;">Distancia</th>
-                <th style="padding: 10px 8px;">Onda P (Primaria)</th>
-                <th style="padding: 10px 8px;">Onda S (Destructiva)</th>
-                <th style="padding: 10px 8px;">Intensidad Prevista (MMI)</th>
-                <th style="padding: 10px 8px;">PGA Estimado</th>
-              </tr>
-            </thead>
-            <tbody id="predict-cities-tbody">
-              <tr>
-                <td colspan="6" style="padding: 20px; text-align: center; color: #64748b;">Calculando frentes de onda en tiempo real...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="modal-footer" style="padding: 12px 20px; background: rgba(6, 13, 24, 0.95); border-top: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center;">
-        <span class="font-mono" style="font-size: 0.8rem; color: #64748b;">Refresco en tiempo real cada 1.0 s</span>
-        <button class="btn btn-secondary btn-sm" id="btn-close-predict-footer">Cerrar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Local Leaflet JS (No CDN dependency) -->
