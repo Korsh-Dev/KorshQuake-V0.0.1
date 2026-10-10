@@ -1670,11 +1670,13 @@ body {
     overflow: hidden !important;
   }
 
-  .main-layout[data-mobile-view="feed"] .seismograph-panel {
+  .main-layout[data-mobile-view="feed"] .seismograph-panel,
+  .main-layout[data-mobile-view="feed"] .oscilloscope-widget {
     display: none !important;
   }
 
-  .main-layout[data-mobile-view="feed"] .feed-panel {
+  .main-layout[data-mobile-view="feed"] .feed-panel,
+  .main-layout[data-mobile-view="feed"] .live-quakes-widget {
     display: flex !important;
     flex-direction: column !important;
     flex: 1 1 auto !important;
@@ -1720,11 +1722,13 @@ body {
     padding: 0 !important;
   }
 
-  .main-layout[data-mobile-view="waves"] .feed-panel {
+  .main-layout[data-mobile-view="waves"] .feed-panel,
+  .main-layout[data-mobile-view="waves"] .live-quakes-widget {
     display: none !important;
   }
 
-  .main-layout[data-mobile-view="waves"] .seismograph-panel {
+  .main-layout[data-mobile-view="waves"] .seismograph-panel,
+  .main-layout[data-mobile-view="waves"] .oscilloscope-widget {
     display: flex !important;
     flex-direction: column !important;
     flex: 1 1 auto !important;
@@ -1735,7 +1739,7 @@ body {
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     padding: 12px !important;
-    gap: 10px !important;
+    gap: 12px !important;
   }
 
   #seismograph-canvas {
@@ -4835,5 +4839,273 @@ body {
     right: 12px;
     padding: 7px 12px;
     font-size: 0.74rem;
+  }
+}
+
+/* ==========================================================================
+   ESTILOS TÁCTICOS MÓVILES AVANZADOS (MOCKUPS 1 Y 3)
+   ========================================================================== */
+
+/* Boton Dismiss GPS */
+.btn-dismiss-gps {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  margin-right: 6px;
+}
+.btn-dismiss-gps:hover {
+  color: #ffffff;
+}
+
+/* 1. Tarjeta Flotante Inferior en Mapa (Mockup 1) */
+.mobile-floating-quake-card {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 800;
+  background: rgba(6, 14, 26, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 30, 66, 0.35);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.75), 0 0 18px rgba(255, 30, 66, 0.18);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  animation: slideUpMobileCard 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mobile-floating-quake-card:active {
+  transform: scale(0.985);
+  border-color: rgba(255, 30, 66, 0.65);
+}
+
+@keyframes slideUpMobileCard {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mfqc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mfqc-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mfqc-mag {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ff1e42;
+  background: rgba(255, 30, 66, 0.14);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 30, 66, 0.3);
+}
+
+.mfqc-place {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: -0.2px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mfqc-chevron {
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.mobile-floating-quake-card:hover .mfqc-chevron {
+  color: #ff1e42;
+  transform: translateX(3px);
+}
+
+.mfqc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  text-align: center;
+}
+
+.mfqc-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.mfqc-label {
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.mfqc-val {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+/* 2. Tarjeta de Instrumento EEW Móvil (Mockup 3) */
+.mobile-eew-instrument-card {
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 18, 32, 0.94);
+  border: 1px solid rgba(255, 23, 68, 0.4);
+  border-radius: 14px;
+  padding: 12px 14px;
+  gap: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 23, 68, 0.15);
+  margin-top: 4px;
+}
+
+.meew-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.meew-badge-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meew-title {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #ff1e42;
+  letter-spacing: 0.8px;
+}
+
+.meew-mode {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #00e676;
+  background: rgba(0, 230, 118, 0.12);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 230, 118, 0.25);
+}
+
+.meew-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.meew-countdown-box {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.meew-timer {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 1px;
+  text-shadow: 0 0 16px rgba(255, 30, 66, 0.6);
+  line-height: 1;
+}
+
+.meew-timer-desc {
+  font-size: 0.62rem;
+  color: #94a3b8;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.meew-mmi-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: #cbd5e1;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.meew-guides {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.meew-guide-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 4px;
+  color: #e2e8f0;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.meew-guide-item:hover {
+  background: rgba(255, 30, 66, 0.08);
+  border-color: rgba(255, 30, 66, 0.35);
+}
+
+.meew-guide-item svg {
+  color: #ff3b5c;
+  filter: drop-shadow(0 0 6px rgba(255, 59, 92, 0.5));
+}
+
+.meew-guide-item span {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.meew-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: #64748b;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* En Desktop, ocultar elementos específicos de app móvil */
+@media (min-width: 769px) {
+  .mobile-floating-quake-card,
+  .mobile-eew-instrument-card {
+    display: none !important;
   }
 }

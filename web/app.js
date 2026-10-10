@@ -929,6 +929,49 @@ function renderQuakes() {
     }
   }
 
+  
+  // Actualizar tarjeta táctica flotante inferior en móvil (Mockup 1)
+  const mfqcEl = document.getElementById('mobile-floating-quake-card');
+  if (mfqcEl) {
+    if (filtered.length > 0) {
+      const topEvent = filtered[0];
+      const topProps = topEvent.properties;
+      const topCoords = topEvent.geometry.coordinates;
+      const topMag = topProps.mag || 0;
+      
+      const mfqcMag = document.getElementById('mfqc-mag');
+      const mfqcPlace = document.getElementById('mfqc-place');
+      const mfqcDepth = document.getElementById('mfqc-depth');
+      const mfqcPga = document.getElementById('mfqc-pga');
+      const mfqcPArr = document.getElementById('mfqc-p-arr');
+      const mfqcSArr = document.getElementById('mfqc-s-arr');
+
+      if (mfqcMag) mfqcMag.textContent = `M ${topMag.toFixed(1)}`;
+      if (mfqcPlace) mfqcPlace.textContent = topProps.place || 'Sismo Detectado';
+      if (mfqcDepth) mfqcDepth.textContent = `${(topCoords[2] || 10).toFixed(0)}km`;
+      
+      // Estimación PGA y arribos ak135
+      const pgaVal = Math.min(99.9, Math.pow(10, (topMag * 0.43) - 1.2)).toFixed(1);
+      if (mfqcPga) mfqcPga.textContent = `${pgaVal} gal`;
+      if (mfqcPArr) mfqcPArr.textContent = 'PASÓ';
+      if (mfqcSArr) mfqcSArr.textContent = 'PASÓ';
+
+      if (window.innerWidth <= 768) {
+        const mainLayout = document.querySelector('.main-layout');
+        const curView = mainLayout ? mainLayout.getAttribute('data-mobile-view') : 'map';
+        mfqcEl.style.display = (curView === 'map') ? 'block' : 'none';
+      } else {
+        mfqcEl.style.display = 'none';
+      }
+
+      mfqcEl.onclick = () => {
+        openQuakeDetailModal(topEvent);
+      };
+    } else {
+      mfqcEl.style.display = 'none';
+    }
+  }
+
   if (filtered.length === 0) {
     if (quakeListEl) {
       quakeListEl.innerHTML = '<div class="loading-state"><p>No hay sismos registrados para este filtro en este momento.</p></div>';
@@ -2730,6 +2773,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+        if (tab === 'map') {
+      const mfqcEl = document.getElementById('mobile-floating-quake-card');
+      if (mfqcEl && allQuakes && allQuakes.length > 0) mfqcEl.style.display = 'block';
+    } else {
+      const mfqcEl = document.getElementById('mobile-floating-quake-card');
+      if (mfqcEl) mfqcEl.style.display = 'none';
+    }
+
     if (tab === 'map' && map) {
       setTimeout(() => {
         map.invalidateSize();
@@ -2879,6 +2930,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // VINCULACIÓN DE LISTENERS PARA GPS Y ACTUALIZACIONES PUSH OTA
   // =========================================================================
   const btnEnableGps = document.getElementById('btn-enable-gps');
+
+  // Manejo de descarte del banner GPS en sesión
+  const btnDismissGps = document.getElementById('btn-dismiss-gps');
+  if (btnDismissGps) {
+    btnDismissGps.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const gpsBanner = document.getElementById('gps-status-banner');
+      if (gpsBanner) gpsBanner.style.display = 'none';
+      sessionStorage.setItem('korshquake_gps_dismissed', 'true');
+    });
+  }
+  if (sessionStorage.getItem('korshquake_gps_dismissed') === 'true') {
+    const gpsBanner = document.getElementById('gps-status-banner');
+    if (gpsBanner) gpsBanner.style.display = 'none';
+  }
+
   const topGpsPill = document.getElementById('top-gps-pill');
   const btnModalGps = document.getElementById('btn-modal-request-gps');
 

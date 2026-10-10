@@ -167,6 +167,7 @@
         <p class="gps-banner-desc" id="gps-banner-desc">Tu teléfono debe tener la ubicación activada para actuar como nodo sismográfico y recibir alertas tempranas en tu ciudad.</p>
       </div>
       <div class="gps-actions">
+        <button class="btn-dismiss-gps" id="btn-dismiss-gps" title="Cerrar aviso" aria-label="Cerrar">&times;</button>
         <button class="btn-enable-gps" id="btn-enable-gps" title="Activar y Conceder Ubicación GPS">
           <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Activar GPS</span>
         </button>
@@ -371,6 +372,35 @@
         </div>
 
         <!-- Mobile Floating Pill for Latest Quake -->
+        <!-- Floating Tactical Card for Selected / Latest Quake (Mobile Mockup 1) -->
+        <div class="mobile-floating-quake-card" id="mobile-floating-quake-card" style="display: none;" title="Tocar para abrir Ficha Técnica">
+          <div class="mfqc-header">
+            <div class="mfqc-title-wrap">
+              <span class="mfqc-mag font-mono" id="mfqc-mag">M --</span>
+              <span class="mfqc-place font-title" id="mfqc-place">Sismo Detectado</span>
+            </div>
+            <span class="mfqc-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+          </div>
+          <div class="mfqc-grid font-mono">
+            <div class="mfqc-col">
+              <span class="mfqc-label">PROFUNDIDAD</span>
+              <span class="mfqc-val" id="mfqc-depth">-- km</span>
+            </div>
+            <div class="mfqc-col">
+              <span class="mfqc-label">PGA EST.</span>
+              <span class="mfqc-val text-amber" id="mfqc-pga">-- gal</span>
+            </div>
+            <div class="mfqc-col">
+              <span class="mfqc-label">ONDA P</span>
+              <span class="mfqc-val text-cyan" id="mfqc-p-arr">--</span>
+            </div>
+            <div class="mfqc-col">
+              <span class="mfqc-label">ONDA S</span>
+              <span class="mfqc-val text-crimson" id="mfqc-s-arr">--</span>
+            </div>
+          </div>
+        </div>
+
         <div class="mobile-latest-pill" id="mobile-latest-pill" style="display: none;" title="Pulsar para centrar en este sismo">
           <span class="live-dot pulse-red"></span>
           <span class="mlp-mag font-mono" id="mlp-mag">M --</span>
@@ -415,6 +445,45 @@
           <div class="readout-block text-right">
             <span class="readout-label font-mono">STA/LTA Energy</span>
             <span class="readout-val font-mono text-cyan" id="seismo-sta-lta">0.37</span>
+          </div>
+        </div>
+
+        <!-- Mobile EEW Quick Status Card (Matching Mockup 3) -->
+        <div class="mobile-eew-instrument-card" id="mobile-eew-instrument-card">
+          <div class="meew-header">
+            <div class="meew-badge-alert">
+              <span class="live-dot pulse-red"></span>
+              <span class="meew-title font-mono">EARLY WARNING! SEISMIC ALERT</span>
+            </div>
+            <span class="meew-mode font-mono">IOT 100Hz</span>
+          </div>
+          <div class="meew-body">
+            <div class="meew-countdown-box">
+              <span class="meew-timer font-mono" id="meew-timer">08.4s</span>
+              <span class="meew-timer-desc font-mono">TIEMPO ESTIMADO ARRIBO ONDA S</span>
+              <div class="meew-mmi-row font-mono">
+                <span>INTENSIDAD ESTIMADA:</span>
+                <strong class="text-amber" id="meew-mmi-val">V · MODERADO</strong>
+              </div>
+            </div>
+            <div class="meew-guides">
+              <div class="meew-guide-item" title="Agáchate">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><path d="M7 21l3-6 2 2 3-5"/><path d="M5 11l4 2 3-2"/></svg>
+                <span>AGÁCHATE</span>
+              </div>
+              <div class="meew-guide-item" title="Cúbrete">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span>CÚBRETE</span>
+              </div>
+              <div class="meew-guide-item" title="Sujétate">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v5"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.83L7 15"/></svg>
+                <span>SUJÉTATE</span>
+              </div>
+            </div>
+          </div>
+          <div class="meew-footer font-mono">
+            <span>Estación: <strong id="meew-station">Nodo Local IoT #048</strong></span>
+            <span>Latencia: <strong class="text-emerald" id="meew-ping">18ms</strong></span>
           </div>
         </div>
       </div>
