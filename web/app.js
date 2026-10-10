@@ -186,7 +186,7 @@ async function applyOtaUpdate() {
   }, 400);
 }
 
-// GlobalQuake v1.1.2 Web Hub Engine - Edición Focalizada: Panamá, Venezuela, España y Argentina
+// GlobalQuake v1.1.2 Web Hub Engine - Edición Focalizada: Panamá, Venezuela, España, Argentina y Honduras
 let map;
 let currentTileLayers = [];
 let worldVectorLayer;
@@ -203,11 +203,12 @@ let currentCountryFilter = 'all';
 
 // Coordenadas y vistas por país
 const REGION_VIEWPORTS = {
-  all: { center: [15.0, -40.0], zoom: 3, title: "Mapa Sísmico: Panamá, Venezuela, España y Argentina" },
+  all: { center: [15.0, -40.0], zoom: 3, title: "Mapa Sísmico: Panamá, Venezuela, España, Argentina y Honduras" },
   PA: { center: [8.538, -80.782], zoom: 7.5, title: "Panamá - Monitoreo Sísmico Nacional" },
   VE: { center: [8.000, -66.100], zoom: 6.5, title: "Venezuela - Monitoreo Sísmico Nacional" },
   ES: { center: [40.200, -3.750], zoom: 6.0, title: "España - Monitoreo Peninsular e Insular" },
-  AR: { center: [-38.416, -63.616], zoom: 5.0, title: "Argentina - Monitoreo Sísmico Nacional" }
+  AR: { center: [-38.416, -63.616], zoom: 5.0, title: "Argentina - Monitoreo Sísmico Nacional" },
+  HN: { center: [15.200, -86.241], zoom: 7.2, title: "Honduras - Monitoreo Sísmico Nacional" },
 };
 
 // Tile Layer Definitions (100% Públicas, Sin Clave de API, Sin Marcas de Agua)
@@ -2439,7 +2440,7 @@ function renderPredictionsModal(data) {
 
   if (!data || (!data.predictions && !data.event)) {
     if (eventTitle) eventTitle.textContent = 'Sin eventos sísmicos activos en rango';
-    if (eventMeta) eventMeta.textContent = 'Monitoreando Panamá, Venezuela, España y Argentina en tiempo real.';
+    if (eventMeta) eventMeta.textContent = 'Monitoreando Panamá, Venezuela, España, Argentina y Honduras en tiempo real.';
     if (tbody) {
       tbody.innerHTML = `<tr><td colspan="6" style="padding: 24px; text-align: center; color: #64748b;">No hay sismos activos para calcular propagación de ondas.</td></tr>`;
     }

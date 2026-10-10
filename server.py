@@ -360,7 +360,8 @@ TARGET_COUNTRIES = {
     "PA": {"name": "Panamá", "flag": "", "center": [8.538, -80.782], "zoom": 7.5},
     "VE": {"name": "Venezuela", "flag": "", "center": [8.000, -66.100], "zoom": 6.5},
     "ES": {"name": "España", "flag": "", "center": [40.200, -3.750], "zoom": 6.0},
-    "AR": {"name": "Argentina", "flag": "", "center": [-38.416, -63.616], "zoom": 5.0}
+    "AR": {"name": "Argentina", "flag": "", "center": [-38.416, -63.616], "zoom": 5.0},
+    "HN": {"name": "Honduras", "flag": "", "center": [15.200, -86.241], "zoom": 7.2}
 }
 
 # Regional Bounding Boxes to query focused data feeds
@@ -369,11 +370,23 @@ QUERY_REGIONS = [
     {"code": "VE", "name": "Venezuela", "minlat": 0.5, "maxlat": 13.5, "minlon": -73.6, "maxlon": -59.5},
     {"code": "ES", "name": "España Península", "minlat": 35.0, "maxlat": 44.5, "minlon": -10.5, "maxlon": 5.0},
     {"code": "ES", "name": "España Canarias", "minlat": 26.5, "maxlat": 30.5, "minlon": -19.0, "maxlon": -12.5},
-    {"code": "AR", "name": "Argentina", "minlat": -55.5, "maxlat": -21.5, "minlon": -73.6, "maxlon": -53.5}
+    {"code": "AR", "name": "Argentina", "minlat": -55.5, "maxlat": -21.5, "minlon": -73.6, "maxlon": -53.5},
+    {"code": "HN", "name": "Honduras", "minlat": 12.8, "maxlat": 17.5, "minlon": -89.5, "maxlon": -83.0}
 ]
 
 # Telemetry tracking for connected seismic networks
 _server_telemetry = {
+    "copeco_hn": {
+        "id": "copeco_hn",
+        "name": "COPECO Honduras / Red Sísmica Centroamericana",
+        "host": "copeco.gob.hn / sismicidad",
+        "region": "Honduras, Depresión Central, Falla del Motagua e Islas de la Bahía",
+        "status": "ONLINE",
+        "latency_ms": 195,
+        "events_count": 0,
+        "last_sync": 0
+    },
+
     "gq_primary": {
         "id": "gq_primary",
         "name": "GlobalQuake Primary Cluster",
@@ -508,6 +521,15 @@ SEISMIC_PREDICTION_TARGETS = [
     {"city": "San Salvador de Jujuy", "country_code": "AR", "lat": -24.185, "lon": -65.299, "flag": ""},
     {"city": "Córdoba", "country_code": "AR", "lat": -31.420, "lon": -64.188, "flag": ""},
     {"city": "Buenos Aires", "country_code": "AR", "lat": -34.603, "lon": -58.381, "flag": ""},
+
+    # Honduras 🇭🇳
+    {"city": "Tegucigalpa (Distrito Central)", "country_code": "HN", "lat": 14.072, "lon": -87.192, "flag": ""},
+    {"city": "San Pedro Sula (Valle de Sula)", "country_code": "HN", "lat": 15.505, "lon": -88.025, "flag": ""},
+    {"city": "La Ceiba (Atlántida)", "country_code": "HN", "lat": 15.783, "lon": -86.792, "flag": ""},
+    {"city": "Choluteca (Golfo de Fonseca)", "country_code": "HN", "lat": 13.300, "lon": -87.183, "flag": ""},
+    {"city": "Roatán (Islas de la Bahía)", "country_code": "HN", "lat": 16.328, "lon": -86.536, "flag": ""},
+    {"city": "Santa Rosa de Copán", "country_code": "HN", "lat": 14.767, "lon": -88.779, "flag": ""},
+    {"city": "Comayagua", "country_code": "HN", "lat": 14.450, "lon": -87.633, "flag": ""},
 ]
 
 def calculate_seismic_predictions(lat, lon, depth_km, mag, origin_time_ms):
@@ -653,6 +675,30 @@ def identify_target_country(lat, lon, place, auth=""):
         if lon >= -68.2 and -54.0 <= lat <= -22.0:
             return "AR"
 
+    # 5. HONDURAS 🇭🇳
+    is_honduras_box = is_point_in_bbox(lat, lon, 12.8, 17.5, -89.5, -83.0)
+    if is_honduras_box:
+        hon_keywords = [
+            r'\bhonduras\b', r'\bcopeco\b', r'\btegucigalpa\b', r'\bsan pedro sula\b',
+            r'\bislas de la bahia\b', r'\broatan\b', r'\butila\b', r'\bguanaja\b',
+            r'\bcortes\b', r'\batlantida\b', r'\bcholuteca\b', r'\bcomayagua\b',
+            r'\bcopan\b', r'\bel paraiso\b', r'\bfrancisco morazan\b', r'\bintibuca\b',
+            r'\blempira\b', r'\bocotepeque\b', r'\bolancho\b', r'\bsanta barbara\b',
+            r'\bvalle\b', r'\byoro\b', r'\bgolfo de fonseca\b', r'\bgulf of fonseca\b',
+            r'\bswan islands\b', r'\bislas del cisne\b'
+        ]
+        has_hon_kw = any(re.search(pat, p) for pat in hon_keywords) or a in ["copeco", "ineter"]
+        if any(re.search(pat, p) for pat in [r'\bguatemala\b', r'\bel salvador\b', r'\bnicaragua\b']):
+            if has_hon_kw and 13.0 <= lat <= 16.5 and -89.0 <= lon <= -83.2:
+                return "HN"
+            if "honduras" in p or "golfo de fonseca" in p:
+                return "HN"
+            return None
+        if has_hon_kw:
+            return "HN"
+        if 13.0 <= lat <= 16.3 and -88.8 <= lon <= -83.5:
+            return "HN"
+
     return None
 
 # --- SSE & Realtime Push Alert Subscriptions ---
@@ -751,9 +797,9 @@ def process_emsc_ws_message(msg_text):
                     "type": "FeatureCollection",
                     "metadata": {
                         "title": "Red Sísmica Focalizada",
-                        "target_countries": ["Panamá", "Venezuela", "España", "Argentina"],
+                        "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras"],
                         "total_events": 0,
-                        "counts_by_country": {"PA": 0, "VE": 0, "ES": 0, "AR": 0},
+                        "counts_by_country": {"PA": 0, "VE": 0, "ES": 0, "AR": 0, "HN": 0},
                         "realtime_streaming": True
                     },
                     "features": []
@@ -781,7 +827,7 @@ def process_emsc_ws_message(msg_text):
             if len(features) > 200:
                 features[:] = features[:200]
 
-            counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0}
+            counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0, "HN": 0}
             for f in features:
                 c_code = f.get("properties", {}).get("country_code")
                 if c_code in counts:
@@ -1194,7 +1240,7 @@ def _execute_full_fetch():
                         fused_features.insert(0, feat)
         except Exception:
             pass
-        counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0}
+        counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0, "HN": 0}
         for f in fused_features:
             cc = f["properties"].get("country_code")
             if cc in counts:
@@ -1224,7 +1270,7 @@ def _execute_full_fetch():
             "metadata": {
                 "generated": int(time.time() * 1000),
                 "title": "Red Sísmica Focalizada en Tiempo Real: Panamá, Venezuela, España y Argentina",
-                "target_countries": ["Panamá", "Venezuela", "España", "Argentina"],
+                "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras"],
                 "total_events": len(fused_features),
                 "counts_by_country": counts,
                 "consensus_events": len([f for f in fused_features if f["properties"]["is_consensus"]]),
@@ -1240,9 +1286,9 @@ def _execute_full_fetch():
         "type": "FeatureCollection",
         "metadata": {
             "title": "Red Sísmica Focalizada",
-            "target_countries": ["Panamá", "Venezuela", "España", "Argentina"],
+            "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras"],
             "total_events": 0,
-            "counts_by_country": {"PA": 0, "VE": 0, "ES": 0, "AR": 0},
+            "counts_by_country": {"PA": 0, "VE": 0, "ES": 0, "AR": 0, "HN": 0},
             "realtime_streaming": True
         },
         "features": []
@@ -2046,7 +2092,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
                 "status": "connected",
                 "service": "KorshQuake EEW Realtime Stream",
                 "engine": "EMSC-WebSocket-P/S-Predictor",
-                "target_countries": ["Panamá", "Venezuela", "España", "Argentina"],
+                "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras"],
                 "timestamp": int(time.time() * 1000)
             })
             try:
@@ -2138,7 +2184,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             status_data = {
                 "version": CURRENT_VERSION,
                 "software_name": "KorshQuake",
-                "target_countries": ["Panamá", "Venezuela", "España", "Argentina"],
+                "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras"],
                 "streaming_mode": "ACTIVE_RAM_STREAMING",
                 "refresh_interval_ms": 2800,
                 "ram_cache_age_ms": ram_age,
@@ -2190,7 +2236,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             ten_min_ago = now_ms - (10 * 60 * 1000)
             one_hour_ago = now_ms - (60 * 60 * 1000)
 
-            counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0}
+            counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0, "HN": 0}
             strong_quakes = []
             live_alerts = []
             recent_hour = 0
@@ -2356,7 +2402,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
                     pass
 
             # Recalcular conteos según la salida filtrada
-            counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0}
+            counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0, "HN": 0}
             for f in filtered:
                 cc = f.get("properties", {}).get("country_code")
                 if cc in counts:
@@ -2367,7 +2413,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
                 "metadata": {
                     "generated": int(time.time() * 1000),
                     "title": "KorshQuake API v1.1.2 - Panamá, Venezuela, España y Argentina",
-                    "target_countries": ["Panamá", "Venezuela", "España", "Argentina"],
+                    "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras"],
                     "total_events": len(filtered),
                     "raw_pool_events": len(raw_features),
                     "counts_by_country": counts,
@@ -2568,7 +2614,7 @@ def run_server(port=PORT):
     with ThreadedTCPServer(("0.0.0.0", port), GlobalQuakeHandler) as httpd:
         print("[OK] GlobalQuake Realtime Streaming Hub activo.")
         print("[OK] Frecuencia de sincronizacion continua: cada 2.8 segundos.")
-        print("[OK] Regiones exclusivas: Panama, Venezuela, Espana y Argentina.")
+        print("[OK] Regiones exclusivas: Panama, Venezuela, Espana, Argentina y Honduras.")
         print(f"[OK] Servidor escuchando en: http://localhost:{port}")
         try:
             httpd.serve_forever()

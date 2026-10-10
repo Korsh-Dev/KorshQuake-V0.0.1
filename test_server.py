@@ -39,7 +39,7 @@ class TestKorshQuakeServer(unittest.TestCase):
         self.assertEqual(data["software_name"], "KorshQuake")
         self.assertIn("apk_url", data)
         self.assertIn("target_countries", data)
-        self.assertEqual(set(data["target_countries"]), {"Panamá", "Venezuela", "España", "Argentina"})
+        self.assertEqual(set(data["target_countries"]), {"Panamá", "Venezuela", "España", "Argentina", "Honduras"})
 
     def test_quakes_strictly_target_countries(self):
         url = f"http://127.0.0.1:{self.port}/api/quakes"
@@ -51,8 +51,8 @@ class TestKorshQuakeServer(unittest.TestCase):
         self.assertIsInstance(data["features"], list)
         self.assertGreater(len(data["features"]), 0, "Debe haber al menos un evento en el feed")
 
-        allowed_codes = {"PA", "VE", "ES", "AR"}
-        allowed_names = {"Panamá", "Venezuela", "España", "Argentina"}
+        allowed_codes = {"PA", "VE", "ES", "AR", "HN"}
+        allowed_names = {"Panamá", "Venezuela", "España", "Argentina", "Honduras"}
 
         # Verificar rigurosamente que el 100% de los sismos pertenezcan a los 4 países
         for f in data["features"]:
@@ -113,7 +113,7 @@ class TestKorshQuakeServer(unittest.TestCase):
         self.assertIn("total_events", data)
         self.assertIn("max_magnitude", data)
         self.assertIn("uptime_seconds", data)
-        self.assertEqual(set(data["counts_by_country"].keys()), {"PA", "VE", "ES", "AR"})
+        self.assertEqual(set(data["counts_by_country"].keys()), {"PA", "VE", "ES", "AR", "HN"})
 
     def test_health_endpoint(self):
         for ep in ["/api/health", "/health"]:
