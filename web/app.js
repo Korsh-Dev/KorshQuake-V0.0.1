@@ -746,7 +746,7 @@ function renderQuakes() {
     // Ondas calculadas y animadas en tiempo real por el motor EEW
     updateWavefronts();
 
-    // Tarjeta en Feed con Estilo iPhone Liquid Glass
+    // Tarjeta Pro de Sismos con Fidelidad Total a la Maqueta
     if (quakeListEl) {
       const userLat = meshNodeState.lat;
       const userLon = meshNodeState.lon;
@@ -754,35 +754,40 @@ function renderQuakes() {
       const distText = (distKm !== null && !isNaN(distKm)) ? `${distKm.toLocaleString()} km de ti` : null;
       const feltCount = Math.max(14, Math.round(Math.pow(10, Math.max(1.1, mag - 2.7)) * (isConsensus ? 18 : 8)));
 
+      let magLevel = 'slate';
+      let magClass = 'slate';
+      if (mag >= 6.0) { magLevel = 'red'; magClass = 'red'; }
+      else if (mag >= 4.5) { magLevel = 'orange'; magClass = 'orange'; }
+      else if (mag >= 3.0) { magLevel = 'yellow'; magClass = 'yellow'; }
+
       const card = document.createElement('div');
-      card.className = 'quake-item ios-glass-card';
+      card.className = 'quake-item pro-quake-card';
+      card.setAttribute('data-mag-level', magLevel);
       card.setAttribute('data-quake-id', feature.id);
       card.innerHTML = `
-        <div class="quake-item-header">
-          <div class="mag-pill ${getMagClass(mag)}" style="background: ${color};">
-            <span class="mag-num">${mag.toFixed(1)}</span>
-            <span class="mag-scale">MAG</span>
+        <div class="pro-mag-badge ${magClass}">
+          <span class="pro-mag-val">M ${mag.toFixed(1)}</span>
+        </div>
+        <div class="pro-quake-body">
+          <div class="pro-quake-top">
+            <span class="pro-quake-place" title="${escapeHtml(props.place || '')}">
+              ${escapeHtml(props.country_flag || '')} ${escapeHtml(props.place || 'Epicentro')}
+            </span>
+            <span class="pro-quake-time font-mono">${timeAgoStr}</span>
           </div>
-          <div class="quake-title-col">
-            <div class="quake-place" title="${escapeHtml(props.place)}">${escapeHtml(props.place)}</div>
-            <div class="quake-subline">
-              <span class="country-badge-tag">${escapeHtml(props.country_flag || '')} ${escapeHtml(props.country_name || '')}</span>
-              ${isConsensus ? `<span class="consensus-tag font-mono">🎯 CONSENSO</span>` : ''}
-              <span class="quake-time-badge font-mono">${timeAgoStr}</span>
-            </div>
-          </div>
-          <div class="quake-chevron">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          <div class="pro-quake-bottom font-mono">
+            <span class="pro-meta-tag">Prof: <strong>${depth ? depth.toFixed(0) : 10} km</strong></span>
+            ${distText ? `<span class="pro-meta-tag highlight">Dist: <strong>${distText}</strong></span>` : `<span class="pro-meta-tag">Red: <strong>${escapeHtml(props.source_feed || 'USGS')}</strong></span>`}
+            <span class="pro-meta-tag">Reportes: <strong>${feltCount.toLocaleString()}</strong></span>
+            ${isConsensus ? `<span class="pro-meta-tag consensus">🎯 Consenso</span>` : ''}
           </div>
         </div>
-
-        <div class="quake-item-chips font-mono">
-          <span class="qchip">📏 Prof: <strong>${depth ? depth.toFixed(0) : 10} km</strong></span>
-          ${distText ? `<span class="qchip highlight">📍 <strong>${distText}</strong></span>` : `<span class="qchip">🛰️ <strong>${escapeHtml(props.source_feed || 'USGS')}</strong></span>`}
-          <span class="qchip">👥 <strong>${feltCount.toLocaleString()} reportes</strong></span>
+        <div class="pro-quake-arrow">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
         </div>
       `;
-
       card.addEventListener('click', () => {
         openQuakeDetailModal(feature);
       });
