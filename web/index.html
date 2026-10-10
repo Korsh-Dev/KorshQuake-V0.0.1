@@ -454,27 +454,146 @@
     </aside>
   </main>
 
-    <!-- Modal: Ficha Detallada del Sismo (Estilo iPhone Glass) -->
-  <div class="modal-overlay" id="modal-quake-detail" style="display: none;">
-    <div class="modal-content ios-sheet" id="sheet-quake-detail">
-      <div class="sheet-handle"></div>
-      <div class="modal-header ios-sheet-header">
-        <div class="modal-title-box">
-          <span class="terminal-dot pulse-red"></span>
-          <h3 id="qd-modal-title">Ficha Técnica del Sismo</h3>
-        </div>
-        <button class="modal-close ios-btn-close" id="btn-close-quake-detail">&times;</button>
-      </div>
-      <div class="modal-body ios-sheet-body">
-        <!-- Banner del Sismo Seleccionado -->
-        <div class="ios-quake-hero">
-          <div class="ios-mag-badge" id="qd-mag-badge">M --</div>
-          <div class="ios-hero-info">
-            <h2 id="qd-place">Cargando evento...</h2>
-            <div class="ios-hero-meta font-mono" id="qd-time">--</div>
-            <div class="ios-hero-coords font-mono" id="qd-coords">--</div>
+      <!-- Modal: Ficha Técnica del Sismo (Popup Profesional de Alto Detalle) -->
+  <div class="modal-overlay tactical-modal-overlay" id="modal-quake-detail" style="display: none;">
+    <div class="tactical-popup-dialog" id="sheet-quake-detail">
+      <!-- Header del Popup -->
+      <div class="tactical-popup-header">
+        <div class="tactical-header-left">
+          <span class="status-radar-dot pulse-red"></span>
+          <div class="tactical-header-titles">
+            <h3 class="tactical-popup-title" id="qd-modal-title">Ficha Técnica del Sismo</h3>
+            <span class="tactical-popup-subtitle font-mono">Telemetría Geofísica & Reportes Comunitarios</span>
           </div>
         </div>
+        <button class="tactical-popup-close" id="btn-close-quake-detail" title="Cerrar Ficha">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Cuerpo del Popup -->
+      <div class="tactical-popup-body">
+        <!-- Hero Card del Epicentro -->
+        <div class="tactical-hero-card" id="qd-hero-card">
+          <div class="tactical-mag-circle" id="qd-mag-badge">
+            <span class="mag-num font-mono" id="qd-mag-num">M --</span>
+            <span class="mag-sub font-mono" id="qd-mag-sub">MAGNITUD</span>
+          </div>
+          <div class="tactical-hero-content">
+            <h2 class="tactical-epicenter-title" id="qd-place">Cargando epicentro...</h2>
+            <div class="tactical-hero-row font-mono" id="qd-time">--</div>
+            <div class="tactical-hero-coords font-mono" id="qd-coords">--</div>
+            <!-- Micro Sismograma Vectorial -->
+            <div class="tactical-hero-waveform">
+              <svg class="hero-waveform-svg" viewBox="0 0 280 24" fill="none" preserveAspectRatio="none">
+                <path d="M0 12 L35 12 L40 10 L45 14 L55 12 L70 12 L76 7 L82 17 L88 3 L94 21 L100 0 L106 24 L112 5 L118 19 L124 9 L130 15 L140 12 L280 12" stroke="#ff1e42" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 Casillas de Métricas Físicas Reales (Grid 2x2 Glass) -->
+        <div class="tactical-metrics-grid">
+          <!-- Profundidad -->
+          <div class="tactical-metric-box">
+            <div class="metric-box-top">
+              <span class="metric-box-icon text-cyan">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>
+              </span>
+              <span class="metric-box-tag font-mono">HIPOCENTRO</span>
+            </div>
+            <div class="metric-box-value font-mono" id="qd-depth">-- km</div>
+            <div class="metric-box-lbl">Profundidad Focal</div>
+          </div>
+
+          <!-- Intensidad MMI -->
+          <div class="tactical-metric-box">
+            <div class="metric-box-top">
+              <span class="metric-box-icon text-orange">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+              </span>
+              <span class="metric-box-tag font-mono">MERCALLI</span>
+            </div>
+            <div class="metric-box-value font-mono text-orange" id="qd-mmi">--</div>
+            <div class="metric-box-lbl">Intensidad Percibida (MMI)</div>
+          </div>
+
+          <!-- PGA Aceleración -->
+          <div class="tactical-metric-box">
+            <div class="metric-box-top">
+              <span class="metric-box-icon text-red">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </span>
+              <span class="metric-box-tag font-mono">ACELERACIÓN</span>
+            </div>
+            <div class="metric-box-value font-mono text-red" id="qd-pga">-- gal</div>
+            <div class="metric-box-lbl">Aceleración Suelo (PGA)</div>
+          </div>
+
+          <!-- Red Sísmica / Consenso -->
+          <div class="tactical-metric-box">
+            <div class="metric-box-top">
+              <span class="metric-box-icon text-green">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+              </span>
+              <span class="metric-box-tag font-mono">VALIDACIÓN</span>
+            </div>
+            <div class="metric-box-value font-mono text-green" id="qd-consensus">--</div>
+            <div class="metric-box-lbl">Redes Geofísicas</div>
+          </div>
+        </div>
+
+        <!-- Botones de Acción Táctica -->
+        <div class="tactical-actions-row">
+          <button class="tactical-btn-report" id="btn-report-felt">
+            <span class="btn-report-content">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span id="btn-report-text">¿Sentiste este sismo? Reportar vibración</span>
+            </span>
+          </button>
+          <button class="tactical-btn-map" id="btn-focus-map">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            <span>Centrar y Ver en Mapa</span>
+          </button>
+        </div>
+
+        <!-- Tabla Glass de Llegada de Ondas a Ciudades -->
+        <div class="tactical-eta-card">
+          <div class="tactical-eta-header">
+            <div class="eta-title-wrap font-mono">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span>Llegada de Ondas Sísmicas (ETA EEW)</span>
+            </div>
+            <span class="eta-badge font-mono">MODELO ak135</span>
+          </div>
+          <div class="tactical-table-scroll">
+            <table class="tactical-eta-table font-mono">
+              <thead>
+                <tr>
+                  <th>Ciudad / Región</th>
+                  <th>Distancia</th>
+                  <th>Onda P (7.8 km/s)</th>
+                  <th>Onda S (4.1 km/s)</th>
+                </tr>
+              </thead>
+              <tbody id="qd-cities-tbody">
+                <tr><td colspan="4" style="text-align: center; color: #64748b; padding: 14px;">Calculando propagación de ondas...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer del Popup -->
+      <div class="tactical-popup-footer">
+        <span class="footer-meta font-mono">Evento: <strong id="qd-event-id" style="color: #cbd5e1;">--</strong></span>
+        <button class="btn btn-secondary btn-sm" id="btn-close-qd-footer">Cerrar Ficha</button>
+      </div>
+    </div>
+  </div>
 
         <!-- 4 Casillas Glass de Métricas Físicas Reales -->
         <div class="ios-grid-metrics">
@@ -865,29 +984,222 @@
     </button>
   </nav>
 
-  <!-- Modal: Motor de Predicciones Sísmicas y Alerta Temprana EEW -->
-  <div class="modal-overlay" id="modal-predict">
-    <div class="modal-content glass-panel" style="width: 95vw; max-width: 950px; max-height: 88vh; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
-      <div class="modal-header" style="background: rgba(6, 13, 24, 0.95); padding: 14px 22px;">
-        <div class="modal-title-box">
-          <span class="terminal-dot pulse-green"></span>
-          <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -3px; margin-right: 6px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>KorshQuake: Motor de Predicción Sísmica y Alerta Temprana (EEW)</h3>
+      <!-- Modal: Motor de Predicciones Sísmicas y Alerta Temprana EEW (Popup Táctico de Alta Precisión) -->
+  <div class="modal-overlay tactical-modal-overlay" id="modal-predict">
+    <div class="tactical-popup-dialog eew-predict-dialog" id="dialog-predict">
+      <!-- Header Táctico del Popup -->
+      <div class="tactical-popup-header">
+        <div class="tactical-header-left">
+          <span class="status-radar-dot pulse-cyan"></span>
+          <div class="tactical-header-titles">
+            <h3 class="tactical-popup-title">Motor de Predicción Sísmica y Alerta Temprana (EEW)</h3>
+            <span class="tactical-popup-subtitle font-mono">Simulación Geofísica ak135 • Cálculo de Propagación de Frentes de Onda • Tiempos Estimados de Arribo</span>
+          </div>
         </div>
-        <button class="modal-close" id="btn-close-predict">&times;</button>
+        <button class="tactical-popup-close" id="btn-close-predict" title="Cerrar Monitor EEW">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
-      <div class="modal-body" style="flex: 1; padding: 20px; overflow-y: auto;">
-        <!-- Banner del Sismo Actual en Análisis -->
-        <div id="predict-event-banner" style="background: rgba(13, 27, 46, 0.85); border: 1px solid #1e3a5f; border-radius: 10px; padding: 16px 20px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div>
-            <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: #ff1e42; font-weight: 700;">Sismo Bajo Análisis de Ondas</div>
-            <div id="predict-event-title" style="font-size: 1.25rem; font-weight: 700; color: #fff; margin-top: 2px;">Cargando último sismo...</div>
-            <div id="predict-event-meta" class="font-mono" style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">--</div>
+
+      <!-- Cuerpo del Popup -->
+      <div class="tactical-popup-body eew-predict-body">
+        <!-- Barra de Selección de Evento y Estado de Monitoreo -->
+        <div class="eew-selector-bar">
+          <div class="eew-selector-left font-mono">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+            <span class="eew-selector-lbl">EVENTO ANALIZADO:</span>
+            <select id="predict-event-select" class="eew-event-dropdown font-mono" title="Seleccionar evento sísmico">
+              <option value="latest">Último Sismo en Vivo (Automático)</option>
+            </select>
           </div>
-          <div style="text-align: right;">
-            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase;">Modelo Cortical</div>
-            <div class="font-mono" style="font-size: 0.9rem; color: #ff1e42; font-weight: 600;">ak135 (Vp: 7.8 km/s | Vs: 4.1 km/s)</div>
+          <div class="eew-selector-right">
+            <span class="eew-model-badge font-mono">MODELO ak135 + GMPE ESTEVA</span>
+            <span class="eew-live-badge"><span class="stat-dot pulse-red"></span> VIGILANCIA EN VIVO</span>
           </div>
         </div>
+
+        <!-- Banner Principal del Sismo en Análisis -->
+        <div class="eew-event-banner" id="predict-event-banner">
+          <div class="eew-banner-left">
+            <div class="eew-banner-hero-row">
+              <div class="eew-mag-disc" id="predict-mag-disc">
+                <span class="eew-mag-val font-mono" id="predict-mag-val">M --</span>
+                <span class="eew-mag-tag font-mono">MAGNITUD</span>
+              </div>
+              <div class="eew-event-info">
+                <h2 class="eew-event-title font-mono" id="predict-event-title">Analizando sismo activo...</h2>
+                <div class="eew-event-meta font-mono" id="predict-event-meta">
+                  <span>Profundidad: -- km</span> • <span>Origen: --</span> • <span>Coord: --</span>
+                </div>
+                <div class="eew-event-actions">
+                  <button class="eew-btn-action font-mono" id="btn-predict-view-detail">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <span>Ver Ficha Técnica</span>
+                  </button>
+                  <button class="eew-btn-action font-mono" id="btn-predict-fly-map">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                    <span>Centrar en Mapa</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cuadro de Parámetros Geofísicos ak135 -->
+          <div class="eew-banner-right">
+            <div class="eew-velocity-card">
+              <div class="eew-vel-head font-mono">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+                <span>CONSTANTES SÍSMICAS</span>
+              </div>
+              <div class="eew-vel-grid font-mono">
+                <div class="eew-vel-item">
+                  <span class="vel-lbl">Onda P (Compresional):</span>
+                  <span class="vel-num cyan">7.8 km/s</span>
+                </div>
+                <div class="eew-vel-item">
+                  <span class="vel-lbl">Onda S (Cizalla / Daño):</span>
+                  <span class="vel-num orange">4.1 km/s</span>
+                </div>
+                <div class="eew-vel-item">
+                  <span class="vel-lbl">Ratio Teórico Vp / Vs:</span>
+                  <span class="vel-num">1.73</span>
+                </div>
+                <div class="eew-vel-item">
+                  <span class="vel-lbl">Ventana Alerta Temprana:</span>
+                  <span class="vel-num green">Diferencial P - S</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla de Ciudades y Tiempos Estimados de Arribo -->
+        <div class="eew-table-card">
+          <div class="eew-table-header">
+            <div class="eew-table-title font-mono">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span>Tiempos Estimados de Arribo (ETA) a Centros Urbanos</span>
+            </div>
+            <div class="eew-table-controls">
+              <span class="eew-status-pill font-mono">REFRESCO EN VIVO 1.0s</span>
+            </div>
+          </div>
+
+          <div class="eew-table-scroll">
+            <table class="eew-table font-mono">
+              <thead>
+                <tr>
+                  <th>Centro Urbano</th>
+                  <th>Distancia Epicentral</th>
+                  <th>Onda P (Primaria)</th>
+                  <th>Onda S (Destructiva / Alerta)</th>
+                  <th>Intensidad Estimada (MMI)</th>
+                  <th>PGA Previsto</th>
+                </tr>
+              </thead>
+              <tbody id="predict-cities-tbody">
+                <tr>
+                  <td colspan="6" style="padding: 24px; text-align: center; color: #64748b;">
+                    Calculando frentes de onda sísmica en tiempo real...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Protocolo de Alerta Sísmica Temprana (Defensa Civil) -->
+        <div class="eew-protocol-strip">
+          <div class="protocol-card">
+            <div class="protocol-icon cyan">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            </div>
+            <div class="protocol-text">
+              <strong>1. Detección Temprana (Onda P)</strong>
+              <span>Los sensores registran la onda primaria segundos antes de la sacudida perceptible.</span>
+            </div>
+          </div>
+          <div class="protocol-card">
+            <div class="protocol-icon orange">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div class="protocol-text">
+              <strong>2. Ventana de Protección</strong>
+              <span>Aprovecha los segundos de anticipación para cortar gas, abrir puertas y apartarte de ventanas.</span>
+            </div>
+          </div>
+          <div class="protocol-card">
+            <div class="protocol-icon green">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="protocol-text">
+              <strong>3. Agacharse y Cubrirse</strong>
+              <span>Durante la onda S adopta la posición de seguridad bajo mobiliario resistente.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Táctico del Popup -->
+      <div class="tactical-popup-footer">
+        <div class="tactical-footer-meta font-mono">
+          <span>Latencia de Motor: <strong>16ms</strong></span> • 
+          <span>Modelo: <strong>ak135 Geophysics</strong></span> • 
+          <span>Red: <strong>KorshQuake EEW v2.4</strong></span>
+        </div>
+        <div class="tactical-footer-actions">
+          <button class="btn btn-secondary btn-sm" id="btn-close-predict-footer">Cerrar Monitor EEW</button>
+        </div>
+      </div>
+    </div>
+  </div>
+        </div>
+
+        <!-- Tabla de Ciudades y Tiempos Estimados de Arribo -->
+        <div class="eew-table-card">
+          <div class="eew-table-header">
+            <div class="eew-table-title font-mono">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span>Tiempos Estimados de Arribo (ETA) a Centros Urbanos</span>
+            </div>
+            <span class="eew-status-pill font-mono">REFRESCO EN VIVO 1.0s</span>
+          </div>
+
+          <div class="eew-table-scroll">
+            <table class="eew-table font-mono">
+              <thead>
+                <tr>
+                  <th>Centro Urbano</th>
+                  <th>Distancia</th>
+                  <th>Onda P (Primaria)</th>
+                  <th>Onda S (Destructiva)</th>
+                  <th>Intensidad Prevista (MMI)</th>
+                  <th>PGA Estimado</th>
+                </tr>
+              </thead>
+              <tbody id="predict-cities-tbody">
+                <tr>
+                  <td colspan="6" style="padding: 24px; text-align: center; color: #64748b;">
+                    Calculando frentes de onda en tiempo real...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer del Popup -->
+      <div class="tactical-popup-footer">
+        <span class="footer-meta font-mono">Refresco geofísico en tiempo real cada 1.0s • Modelo ak135</span>
+        <button class="btn btn-secondary btn-sm" id="btn-close-predict-footer">Cerrar Predicciones</button>
+      </div>
+    </div>
+  </div>
 
         <!-- Tabla de Ciudades y Tiempos Estimados de Arribo -->
         <h4 style="margin: 0 0 12px 0; color: #f1f5f9; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Tiempos Estimados de Arribo (ETA) a Centros Urbanos</h4>

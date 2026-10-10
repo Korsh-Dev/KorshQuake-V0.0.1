@@ -1,3 +1,8 @@
+window.openQuakeDetailById = function(featureId) {
+  if (!allQuakes) return;
+  const f = allQuakes.find(q => q && q.id === featureId);
+  if (f) openQuakeDetailModal(f);
+};
 
 // =========================================================================
 // GESTIÓN DE DISPOSITIVO: NODO MÓVIL (ACELERÓMETRO) O ESTACIÓN CENTINELA PC
@@ -495,25 +500,31 @@ function openQuakeDetailModal(feature) {
   const mag = props.mag || 0;
 
   // 1. Título y Hero
-  const qdMag = document.getElementById('qd-mag-badge');
+  const qdMagNum = document.getElementById('qd-mag-num');
+  const qdMagSub = document.getElementById('qd-mag-sub');
+  const qdMagBadge = document.getElementById('qd-mag-badge');
   const qdPlace = document.getElementById('qd-place');
   const qdTime = document.getElementById('qd-time');
   const qdCoords = document.getElementById('qd-coords');
+  const qdEventId = document.getElementById('qd-event-id');
 
-  if (qdMag) {
-    qdMag.textContent = `M ${mag.toFixed(1)}`;
-    qdMag.className = `ios-mag-badge ${getMagClass(mag)}`;
-    qdMag.style.background = getMagColor(mag);
+  if (qdMagNum) qdMagNum.textContent = `M ${mag.toFixed(1)}`;
+  if (qdMagSub) qdMagSub.textContent = `MAG. ${mag.toFixed(1)}`;
+  if (qdMagBadge) {
+    qdMagBadge.className = `tactical-mag-circle ${getMagClass(mag)}`;
   }
   if (qdPlace) {
-    qdPlace.textContent = `${props.country_flag || ''} ${props.place || 'Epicentro'}`;
+    qdPlace.textContent = `${props.place || 'Epicentro Sísmico'}`;
   }
   if (qdTime) {
     const d = new Date(props.time);
-    qdTime.textContent = `Ocurrido ${formatTimeAgo(props.time)} • ${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+    qdTime.textContent = `Ocurrido ${formatTimeAgo(props.time)} • ${d.toLocaleDateString()} ${d.toLocaleTimeString()} UTC`;
   }
   if (qdCoords) {
-    qdCoords.textContent = `Coordenadas: ${lat.toFixed(3)}°N, ${lon.toFixed(3)}°E • ${props.country_name || ''}`;
+    qdCoords.textContent = `Coord: ${lat.toFixed(3)}°, ${lon.toFixed(3)}° • Territorio: ${props.country_name || 'Internacional'}`;
+  }
+  if (qdEventId) {
+    qdEventId.textContent = feature.id || '--';
   }
 
   // 2. Cuadrícula de 4 Casillas Glass
@@ -544,7 +555,7 @@ function openQuakeDetailModal(feature) {
       : `${props.source_feed || 'Red Oficial'}`;
   }
 
-  // 3. Botón de reporte de vibración
+  // 3. Botón de reporte de vibración comunitario (100% real)
   const btnReport = document.getElementById('btn-report-felt');
   const reportedKey = `korsh_reported_${feature.id}`;
   const alreadyReported = localStorage.getItem(reportedKey) === 'true';
@@ -555,15 +566,27 @@ function openQuakeDetailModal(feature) {
   if (btnReport) {
     if (alreadyReported) {
       btnReport.disabled = true;
-      btnReport.innerHTML = `<span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>Ya reportaste este sismo (${modalRealFelt} reportes reales)</span>`;
+      btnReport.innerHTML = `
+        <span class="btn-report-content">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <span>Ya reportaste este sismo (${modalRealFelt} reportes reales)</span>
+        </span>`;
       btnReport.style.opacity = '0.7';
     } else {
       btnReport.disabled = false;
-      btnReport.innerHTML = `<span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>¿Sentiste este sismo? (${modalRealFelt} reportes reales)</span>`;
+      btnReport.innerHTML = `
+        <span class="btn-report-content">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>¿Sentiste este sismo? (${modalRealFelt} reportes reales)</span>
+        </span>`;
       btnReport.style.opacity = '1';
       btnReport.onclick = async () => {
         btnReport.disabled = true;
-        btnReport.innerHTML = `<span>⏳ Enviando reporte al servidor...</span>`;
+        btnReport.innerHTML = `
+          <span class="btn-report-content">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin-icon"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>Enviando reporte comunitario...</span>
+          </span>`;
         try {
           const uLat = meshNodeState.lat || null;
           const uLon = meshNodeState.lon || null;
@@ -581,7 +604,11 @@ function openQuakeDetailModal(feature) {
           props.felt_reports = newTotal;
           props.felt = newTotal;
           localStorage.setItem(reportedKey, 'true');
-          btnReport.innerHTML = `<span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>Reporte registrado exitosamente (${newTotal} reportes reales)</span>`;
+          btnReport.innerHTML = `
+            <span class="btn-report-content">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Reporte registrado con éxito (${newTotal} reportes reales)</span>
+            </span>`;
           if ('vibrate' in navigator) {
             try { navigator.vibrate([40, 30, 60]); } catch (e) {}
           }
@@ -589,7 +616,10 @@ function openQuakeDetailModal(feature) {
           renderQuakes();
         } catch (err) {
           btnReport.disabled = false;
-          btnReport.innerHTML = `<span>Reintentar reporte</span>`;
+          btnReport.innerHTML = `
+            <span class="btn-report-content">
+              <span>Reintentar reporte</span>
+            </span>`;
           showToast('Error de red al enviar reporte');
         }
       };
@@ -608,18 +638,21 @@ function openQuakeDetailModal(feature) {
     };
   }
 
-  // 5. Tabla de Ciudades (ETA)
+  // 5. Tabla de Ciudades (ETA ak135)
   const tbody = document.getElementById('qd-cities-tbody');
   if (tbody) {
     const preds = props.predictions || [];
     if (preds.length > 0) {
       tbody.innerHTML = preds.map(p => `
         <tr>
-          <td style="font-weight: 600;">${escapeHtml(p.city)} ${p.country_flag || ''}</td>
+          <td style="font-weight: 600; color: #f1f5f9;">${escapeHtml(p.city)}</td>
           <td style="color: #94a3b8;">${p.distance_km ? p.distance_km.toFixed(0) : '--'} km</td>
-          <td style="color: #cbd5e1;">${p.arrived_p ? 'Pasó' : (p.eta_p_sec > 0 ? p.eta_p_sec + 's' : '--')}</td>
-          <td style="color: ${p.arrived_s ? '#94a3b8' : '#ff1e42'}; font-weight: ${p.arrived_s ? 'normal' : '700'};">
-            ${p.arrived_s ? 'Pasó' : (p.eta_s_sec > 0 ? p.eta_s_sec + 's' : '--')}
+          <td style="color: #cbd5e1;">${p.arrived_p ? '<span class="eta-passed-chip">PASÓ</span>' : (p.eta_p_sec > 0 ? p.eta_p_sec + 's' : '--')}</td>
+          <td>
+            ${p.arrived_s 
+              ? '<span class="eta-passed-chip">PASÓ</span>' 
+              : `<span class="eta-countdown-chip ${p.eta_s_sec <= 30 ? 'urgent' : ''}">${p.eta_s_sec > 0 ? p.eta_s_sec + 's' : '--'}</span>`
+            }
           </td>
         </tr>
       `).join('');
@@ -835,9 +868,14 @@ function renderQuakes() {
           <span><strong>Redes Sísmicas:</strong> <strong style="color: #fff;">${escapeHtml(props.source_feed || 'USGS')}</strong></span>
           <span><strong>Hora UTC:</strong> ${new Date(props.time).toUTCString()}</span>
         </div>
-        <button class="btn btn-primary btn-sm" style="width: 100%; margin-top: 10px; justify-content: center; font-size: 0.82rem; padding: 6px 12px;" onclick="openPredictForEvent('${feature.id}')">
-          Predicción de Arribo EEW
-        </button>
+        <div style="display: flex; gap: 6px; margin-top: 10px;">
+          <button class="btn btn-primary btn-sm" style="flex: 1; justify-content: center; font-size: 0.82rem; padding: 6px 10px; font-weight: 700;" onclick="openQuakeDetailById('${feature.id}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Ver Ficha Técnica
+          </button>
+          <button class="btn btn-secondary btn-sm" style="justify-content: center; font-size: 0.82rem; padding: 6px 10px;" onclick="openPredictForEvent('${feature.id}')" title="Predicciones EEW">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </button>
+        </div>
       </div>
     `;
     marker.bindPopup(popupHtml);
@@ -2071,16 +2109,23 @@ function startWaveAnimation() {
 }
 
 // Motor de Predicciones y Alerta Temprana (EEW)
+// =========================================================================
+// EEW MOTOR DE PREDICCIÓN SÍSMICA Y ALERTA TEMPRANA (ak135 + GMPE ESTEVA)
+// =========================================================================
+
 let predictPollInterval = null;
 let currentPredictUrl = '/api/predict';
+let currentPredictEventId = null;
+let currentPredictCoords = null;
 
 async function fetchPredictions() {
   try {
     const res = await fetch(currentPredictUrl);
+    if (!res.ok) return;
     const data = await res.json();
     renderPredictionsModal(data);
   } catch (err) {
-    console.error('Error al obtener predicciones:', err);
+    console.error('Error fetching EEW predictions:', err);
   }
 }
 
@@ -2090,66 +2135,173 @@ function renderPredictionsModal(data) {
 
   const eventTitle = document.getElementById('predict-event-title');
   const eventMeta = document.getElementById('predict-event-meta');
+  const magVal = document.getElementById('predict-mag-val');
+  const magDisc = document.getElementById('predict-mag-disc');
   const tbody = document.getElementById('predict-cities-tbody');
-  if (!tbody) return;
+  const eventSelect = document.getElementById('predict-event-select');
+  const btnViewDetail = document.getElementById('btn-predict-view-detail');
+  const btnFlyMap = document.getElementById('btn-predict-fly-map');
 
-  if (!data || !data.predictions || data.predictions.length === 0) {
-    if (eventTitle) eventTitle.textContent = 'Sin eventos sísmicos recientes en rango';
+  if (!data || (!data.predictions && !data.event)) {
+    if (eventTitle) eventTitle.textContent = 'Sin eventos sísmicos activos en rango';
     if (eventMeta) eventMeta.textContent = 'Monitoreando Panamá, Venezuela, España y Argentina en tiempo real.';
-    tbody.innerHTML = `<tr><td colspan="6" style="padding: 24px; text-align: center; color: #64748b;">No hay sismos activos para calcular propagación de ondas.</td></tr>`;
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="6" style="padding: 24px; text-align: center; color: #64748b;">No hay sismos activos para calcular propagación de ondas.</td></tr>`;
+    }
     return;
   }
 
-  if (eventTitle) {
-    eventTitle.textContent = `${data.country_flag || ''} M ${(data.mag || 0).toFixed(1)} - ${data.place || 'Epicentro'}`;
+  // Extraer datos del sismo
+  const evMag = (data.mag !== undefined) ? data.mag : (data.event ? data.event.mag : 0);
+  let evPlace = data.place || (data.event ? data.event.place : 'Epicentro Sísmico');
+  if (currentPredictEventId && allQuakes) {
+    const matched = allQuakes.find(q => q.id === currentPredictEventId);
+    if (matched && matched.properties && matched.properties.place) {
+      evPlace = matched.properties.place;
+    }
   }
-  if (eventMeta) {
-    eventMeta.textContent = `Profundidad: ${data.depth_km || 10} km | Ocurrido hace: ${data.age_seconds || 0}s | Coord: ${data.coords ? data.coords[1].toFixed(3) + '°, ' + data.coords[0].toFixed(3) + '°' : '--'}`;
+  const evCoords = data.coords || (data.event ? data.event.coords : null);
+  const evDepth = (data.depth_km !== undefined) ? data.depth_km : (evCoords && evCoords.length > 2 ? evCoords[2] : 10);
+  const evAge = (data.age_seconds !== undefined) 
+    ? data.age_seconds 
+    : (data.event && data.event.time ? Math.round(Math.max(0, (Date.now() - data.event.time) / 1000)) : 0);
+  const evId = data.event_id || (data.event ? data.event.id : null);
+
+  if (evId) currentPredictEventId = evId;
+  if (evCoords) currentPredictCoords = [evCoords[1], evCoords[0]];
+
+  // 1. Disco de Magnitud
+  if (magVal) magVal.textContent = `M ${evMag.toFixed(1)}`;
+  if (magDisc) {
+    magDisc.classList.remove('moderate', 'minor');
+    if (evMag < 4.5) {
+      magDisc.classList.add('minor');
+    } else if (evMag < 6.0) {
+      magDisc.classList.add('moderate');
+    }
   }
 
-  tbody.innerHTML = data.predictions.map(pred => {
-    const sArrived = pred.arrived_s;
-    const pArrived = pred.arrived_p;
-    
-    // Status de Onda S (Destructiva)
-    let sStatusHtml = '';
-    if (sArrived) {
-      sStatusHtml = `<span style="color: #64748b; font-weight: 600;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px;margin-right:2px;"><polyline points="20 6 9 17 4 12"/></svg> Arribada</span>`;
-    } else {
-      const isUrgent = pred.eta_s_sec <= 30;
-      sStatusHtml = `<span class="pulse-tag" style="background: ${isUrgent ? 'rgba(255, 23, 68, 0.25)' : 'rgba(255, 145, 0, 0.25)'}; color: ${isUrgent ? '#ff1744' : '#ff9100'}; border: 1px solid ${isUrgent ? '#ff1744' : '#ff9100'}; padding: 3px 8px; border-radius: 4px; font-weight: 700;">IMPACTO EN ${pred.eta_s_sec}s</span>`;
+  // 2. Título y Metadatos
+  if (eventTitle) eventTitle.textContent = evPlace;
+  if (eventMeta) {
+    const latStr = evCoords ? evCoords[1].toFixed(3) + '°' : '--';
+    const lonStr = evCoords ? evCoords[0].toFixed(3) + '°' : '--';
+    const ageStr = evAge > 0 ? (evAge < 60 ? `${evAge}s` : `${Math.floor(evAge / 60)}m ${evAge % 60}s`) : '0s';
+    eventMeta.innerHTML = `<span>Profundidad: <strong>${evDepth.toFixed(1)} km</strong></span> • <span>Origen: <strong>hace ${ageStr}</strong></span> • <span>Coord: <strong>${latStr}, ${lonStr}</strong></span>`;
+  }
+
+  // 3. Botones de acción del banner
+  if (btnViewDetail) {
+    btnViewDetail.onclick = () => {
+      closePredictModal();
+      if (currentPredictEventId) {
+        openQuakeDetailById(currentPredictEventId);
+      } else if (allQuakes && allQuakes.length > 0) {
+        openQuakeDetailModal(allQuakes[0]);
+      }
+    };
+  }
+
+  if (btnFlyMap) {
+    btnFlyMap.onclick = () => {
+      closePredictModal();
+      if (typeof setMobileView === 'function') setMobileView('map');
+      if (map && currentPredictCoords) {
+        map.flyTo(currentPredictCoords, 7.5, { duration: 1.2 });
+      }
+    };
+  }
+
+  // 4. Sincronizar Dropdown de Sismos si está disponible
+  if (eventSelect && allQuakes && allQuakes.length > 0) {
+    const existingOptionsCount = eventSelect.options.length;
+    if (existingOptionsCount <= 1 || existingOptionsCount !== Math.min(allQuakes.length, 12)) {
+      eventSelect.innerHTML = allQuakes.slice(0, 12).map((q, idx) => {
+        const p = q.properties || {};
+        const qMag = (p.mag || 0).toFixed(1);
+        const qPlace = p.place || 'Sismo sin registrar';
+        const isSelected = (currentPredictEventId && q.id === currentPredictEventId) || (idx === 0 && !currentPredictEventId);
+        return `<option value="${q.id}" ${isSelected ? 'selected' : ''}>M ${qMag} - ${qPlace.substring(0, 36)}</option>`;
+      }).join('');
+
+      eventSelect.onchange = function() {
+        const selectedId = this.value;
+        if (selectedId) {
+          openPredictForEvent(selectedId);
+        }
+      };
+    }
+  }
+
+  // 5. Tabla de Ciudades y Tiempos Estimados de Arribo
+  if (tbody) {
+    const preds = data.predictions || [];
+    if (preds.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="padding: 24px; text-align: center; color: #64748b;">No hay frentes de onda en aproximación a centros urbanos monitoreados.</td></tr>`;
+      return;
     }
 
-    // Status de Onda P
-    let pStatusHtml = pArrived 
-      ? `<span style="color: #64748b;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px;margin-right:2px;"><polyline points="20 6 9 17 4 12"/></svg> Arribada</span>`
-      : `<span style="color: #ff1e42; font-weight: 700;">Arribo en ${pred.eta_p_sec}s</span>`;
+    tbody.innerHTML = preds.map(pred => {
+      const sArrived = pred.arrived_s;
+      const pArrived = pred.arrived_p;
 
-    // Color según MMI
-    let mmiColor = '#ff1e42';
-    if (pred.mmi_intensity >= 6.0) mmiColor = '#ff1744';
-    else if (pred.mmi_intensity >= 4.5) mmiColor = '#ff9100';
-    else if (pred.mmi_intensity >= 3.0) mmiColor = '#ffd600';
+      // Status de Onda S (Destructiva / Sacudida)
+      let sStatusHtml = '';
+      if (sArrived) {
+        sStatusHtml = `<span class="eew-status-chip arrived"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> PASÓ</span>`;
+      } else {
+        const isUrgent = pred.eta_s_sec <= 30;
+        sStatusHtml = `<span class="eew-status-chip ${isUrgent ? 'urgent' : 'warning'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> ${isUrgent ? 'IMPACTO EN' : 'ARRIBO EN'} ${pred.eta_s_sec}s</span>`;
+      }
 
-    return `
-      <tr style="border-bottom: 1px solid rgba(30, 58, 95, 0.5); transition: background 0.2s;">
-        <td style="padding: 10px 8px; font-weight: 600; color: #f1f5f9;">${pred.country_flag || ''} ${escapeHtml(pred.city)}</td>
-        <td style="padding: 10px 8px; color: #94a3b8;">${pred.distance_km} km</td>
-        <td style="padding: 10px 8px;">${pStatusHtml}</td>
-        <td style="padding: 10px 8px;">${sStatusHtml}</td>
-        <td style="padding: 10px 8px; color: ${mmiColor}; font-weight: 700;">
-          MMI ${pred.mmi_intensity} <span style="font-size: 0.75rem; font-weight: normal; color: #94a3b8;">(${escapeHtml(pred.mmi_description)})</span>
-        </td>
-        <td style="padding: 10px 8px; color: #ff8a9e;">${pred.pga_gal} cm/s²</td>
-      </tr>
-    `;
-  }).join('');
+      // Status de Onda P (Primaria)
+      let pStatusHtml = pArrived
+        ? `<span class="eew-status-chip arrived"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> PASÓ</span>`
+        : `<span class="eew-status-chip cyan">Arribo en ${pred.eta_p_sec}s</span>`;
+
+      // Color e Intensidad MMI (Mercalli Modificada - Escala Sísmica Oficial)
+      let mmiColor = '#00e5ff';
+      let mmiBg = 'rgba(0, 229, 255, 0.12)';
+      let mmiBorder = 'rgba(0, 229, 255, 0.3)';
+      if (pred.mmi_intensity >= 6.0) {
+        mmiColor = '#ff1744';
+        mmiBg = 'rgba(255, 23, 68, 0.15)';
+        mmiBorder = 'rgba(255, 23, 68, 0.4)';
+      } else if (pred.mmi_intensity >= 4.5) {
+        mmiColor = '#ff9100';
+        mmiBg = 'rgba(255, 145, 0, 0.15)';
+        mmiBorder = 'rgba(255, 145, 0, 0.35)';
+      } else if (pred.mmi_intensity >= 3.0) {
+        mmiColor = '#ffd600';
+        mmiBg = 'rgba(255, 214, 0, 0.12)';
+        mmiBorder = 'rgba(255, 214, 0, 0.3)';
+      }
+
+      const pgaVal = typeof pred.pga_gal === 'number' ? pred.pga_gal.toFixed(1) : pred.pga_gal;
+
+      return `
+        <tr>
+          <td style="font-weight: 600; color: #f1f5f9;">${escapeHtml(pred.city)}</td>
+          <td style="color: #94a3b8;">${pred.distance_km} km</td>
+          <td>${pStatusHtml}</td>
+          <td>${sStatusHtml}</td>
+          <td>
+            <span style="display: inline-block; padding: 2px 7px; border-radius: 4px; font-weight: 700; color: ${mmiColor}; background: ${mmiBg}; border: 1px solid ${mmiBorder};">
+              MMI ${pred.mmi_intensity} <span style="font-size: 0.72rem; font-weight: normal; opacity: 0.9;">(${escapeHtml(pred.mmi_description)})</span>
+            </span>
+          </td>
+          <td style="color: #ff8a9e; font-weight: 600;">${pgaVal} gal</td>
+        </tr>
+      `;
+    }).join('');
+  }
 }
 
 window.openPredictModal = function(customUrl = null) {
   const modal = document.getElementById('modal-predict');
   if (modal) {
     currentPredictUrl = customUrl || '/api/predict';
+    modal.style.display = 'flex';
     modal.classList.add('active');
     fetchPredictions();
     if (predictPollInterval) clearInterval(predictPollInterval);
@@ -2158,12 +2310,13 @@ window.openPredictModal = function(customUrl = null) {
 };
 
 window.openPredictForEvent = function(eventId) {
-  const ev = allQuakes.find(q => q.id === eventId);
+  currentPredictEventId = eventId;
+  const ev = (allQuakes || []).find(q => q.id === eventId);
   if (ev && ev.geometry && ev.properties) {
     const coords = ev.geometry.coordinates;
     const lat = coords[1];
     const lon = coords[0];
-    const depth = coords.length > 2 ? coords[2] : 10.0;
+    const depth = coords.length > 2 ? Math.abs(coords[2]) : 10.0;
     const mag = ev.properties.mag || 4.0;
     const time = ev.properties.time || Date.now();
     const url = `/api/predict?lat=${lat}&lon=${lon}&mag=${mag}&depth=${depth}&time=${time}`;
@@ -2177,6 +2330,7 @@ window.closePredictModal = function() {
   const modal = document.getElementById('modal-predict');
   if (modal) {
     modal.classList.remove('active');
+    setTimeout(() => { modal.style.display = 'none'; }, 250);
   }
   if (predictPollInterval) {
     clearInterval(predictPollInterval);

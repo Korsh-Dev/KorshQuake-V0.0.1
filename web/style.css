@@ -3731,3 +3731,939 @@ body {
   background: linear-gradient(90deg, rgba(56, 189, 248, 0.04) 0%, rgba(18, 22, 34, 0.8) 100%) !important;
   border-color: rgba(255, 255, 255, 0.06) !important;
 }
+
+
+/* ==========================================================================
+   FICHA TÉCNICA DEL SISMO - POPUP TÁCTICO PROFESIONAL
+   ========================================================================== */
+
+.tactical-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(4, 6, 12, 0.78) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px !important;
+  box-sizing: border-box !important;
+  animation: fadeInModal 0.25s ease-out !important;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.tactical-popup-dialog {
+  position: relative !important;
+  width: 100% !important;
+  max-width: 600px !important;
+  max-height: 90vh !important;
+  background: rgba(13, 16, 26, 0.96) !important;
+  backdrop-filter: blur(36px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(36px) saturate(210%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.9), 0 0 32px rgba(255, 30, 66, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  animation: popupCardZoom 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  margin: auto !important;
+}
+
+@keyframes popupCardZoom {
+  0% { transform: scale(0.92) translateY(14px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* Header del Popup */
+.tactical-popup-header {
+  padding: 18px 24px 14px 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(20, 24, 38, 0.6) !important;
+}
+
+.tactical-header-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.status-radar-dot {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+  background: #ff1e42 !important;
+  box-shadow: 0 0 12px #ff1e42 !important;
+  flex-shrink: 0 !important;
+}
+
+.tactical-popup-title {
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.2px !important;
+}
+
+.tactical-popup-subtitle {
+  font-size: 0.72rem !important;
+  color: #94a3b8 !important;
+  display: block !important;
+  margin-top: 2px !important;
+}
+
+.tactical-popup-close {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #94a3b8 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.tactical-popup-close:hover {
+  background: rgba(255, 30, 66, 0.2) !important;
+  border-color: #ff1e42 !important;
+  color: #ffffff !important;
+  transform: rotate(90deg) !important;
+}
+
+/* Cuerpo del Popup */
+.tactical-popup-body {
+  padding: 20px 24px !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+/* Hero Card del Epicentro */
+.tactical-hero-card {
+  display: flex !important;
+  align-items: center !important;
+  gap: 20px !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(20, 26, 42, 0.75) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 20px !important;
+  padding: 18px 20px !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.tactical-mag-circle {
+  width: 76px !important;
+  min-width: 76px !important;
+  height: 76px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+  flex-shrink: 0 !important;
+  border: 2px solid rgba(255, 255, 255, 0.25) !important;
+}
+
+.tactical-mag-circle.red {
+  background: radial-gradient(circle at 35% 35%, #ff2a51 0%, #b71c1c 100%) !important;
+  box-shadow: 0 0 24px rgba(255, 23, 68, 0.55), inset 0 2px 4px rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(255, 110, 130, 0.5) !important;
+}
+
+.tactical-mag-circle.orange {
+  background: radial-gradient(circle at 35% 35%, #ff7a00 0%, #b23b00 100%) !important;
+  box-shadow: 0 0 20px rgba(255, 109, 0, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(255, 170, 70, 0.5) !important;
+}
+
+.tactical-mag-circle.yellow {
+  background: radial-gradient(circle at 35% 35%, #f59e0b 0%, #92400e 100%) !important;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(255, 210, 80, 0.5) !important;
+}
+
+.tactical-mag-circle.slate {
+  background: radial-gradient(circle at 35% 35%, #475569 0%, #1e293b 100%) !important;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.tactical-mag-circle .mag-num {
+  font-size: 1.35rem !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+}
+
+.tactical-mag-circle .mag-sub {
+  font-size: 0.62rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+  opacity: 0.85 !important;
+  margin-top: 3px !important;
+}
+
+.tactical-hero-content {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.tactical-epicenter-title {
+  font-size: 1.22rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  line-height: 1.25 !important;
+  margin: 0 0 5px 0 !important;
+}
+
+.tactical-hero-row {
+  font-size: 0.82rem !important;
+  color: #94a3b8 !important;
+  margin-bottom: 3px !important;
+}
+
+.tactical-hero-coords {
+  font-size: 0.76rem !important;
+  color: #64748b !important;
+  margin-bottom: 6px !important;
+}
+
+.tactical-hero-waveform {
+  width: 100% !important;
+  height: 20px !important;
+  opacity: 0.85 !important;
+}
+
+.hero-waveform-svg {
+  width: 100% !important;
+  height: 100% !important;
+  filter: drop-shadow(0 0 4px rgba(255, 30, 66, 0.6)) !important;
+}
+
+/* 4 Casillas de Métricas Físicas (Grid 2x2 Glass) */
+.tactical-metrics-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 12px !important;
+}
+
+.tactical-metric-box {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  padding: 12px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  transition: all 0.2s ease !important;
+}
+
+.tactical-metric-box:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  transform: translateY(-1px) !important;
+}
+
+.metric-box-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 2px !important;
+}
+
+.metric-box-icon {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.metric-box-tag {
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+  color: #64748b !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  padding: 1px 5px !important;
+  border-radius: 4px !important;
+}
+
+.metric-box-value {
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  line-height: 1.2 !important;
+}
+
+.metric-box-lbl {
+  font-size: 0.72rem !important;
+  color: #94a3b8 !important;
+}
+
+/* Botones de Acción Táctica */
+.tactical-actions-row {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+
+.tactical-btn-report {
+  width: 100% !important;
+  background: linear-gradient(135deg, #ff1744 0%, #b71c1c 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 14px !important;
+  padding: 14px 18px !important;
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 20px rgba(255, 23, 68, 0.45) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.tactical-btn-report:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 26px rgba(255, 23, 68, 0.6) !important;
+  filter: brightness(1.08) !important;
+}
+
+.tactical-btn-report:active {
+  transform: translateY(1px) !important;
+}
+
+.btn-report-content {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.tactical-btn-map {
+  width: 100% !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 14px !important;
+  padding: 12px 18px !important;
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+.tactical-btn-map:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+}
+
+/* Llegada de Ondas Sísmicas */
+.tactical-eta-card {
+  background: rgba(20, 24, 38, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+}
+
+.tactical-eta-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 12px !important;
+}
+
+.eta-title-wrap {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 0.84rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+}
+
+.eta-badge {
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  color: #00e5ff !important;
+  background: rgba(0, 229, 255, 0.1) !important;
+  border: 1px solid rgba(0, 229, 255, 0.25) !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+}
+
+.tactical-table-scroll {
+  max-height: 180px !important;
+  overflow-y: auto !important;
+}
+
+.tactical-eta-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 0.82rem !important;
+}
+
+.tactical-eta-table th {
+  text-align: left !important;
+  padding: 6px 8px !important;
+  color: #64748b !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.tactical-eta-table td {
+  padding: 8px 8px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+
+.eta-passed-chip {
+  display: inline-block !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  color: #64748b !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+}
+
+.eta-countdown-chip {
+  display: inline-block !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  color: #ff9100 !important;
+  background: rgba(255, 145, 0, 0.15) !important;
+  border: 1px solid rgba(255, 145, 0, 0.3) !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+}
+
+.eta-countdown-chip.urgent {
+  color: #ff1744 !important;
+  background: rgba(255, 23, 68, 0.2) !important;
+  border-color: rgba(255, 23, 68, 0.45) !important;
+  animation: pulseUrgent 1s infinite alternate !important;
+}
+
+@keyframes pulseUrgent {
+  from { filter: drop-shadow(0 0 2px #ff1744); }
+  to { filter: drop-shadow(0 0 8px #ff1744); }
+}
+
+/* Footer del Popup */
+.tactical-popup-footer {
+  padding: 12px 24px 16px 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+  background: rgba(14, 18, 28, 0.8) !important;
+}
+
+.footer-meta {
+  font-size: 0.75rem !important;
+  color: #64748b !important;
+}
+
+.spin-icon {
+  animation: spinSlow 1.5s linear infinite !important;
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+
+/* ==========================================================================
+   KORSHQUAKE EEW MOTOR DE PREDICCIONES SÍSMICAS - POPUP TÁCTICO V2.4
+   ========================================================================== */
+
+.eew-predict-dialog {
+  max-width: 940px !important;
+  max-height: 92vh !important;
+  box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.95), 0 0 36px rgba(0, 229, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+}
+
+.eew-predict-body {
+  gap: 12px !important;
+  padding: 16px 20px !important;
+  overflow-y: auto !important;
+}
+
+/* Selector Bar */
+.eew-selector-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 8px 14px !important;
+  flex-wrap: wrap !important;
+}
+
+.eew-selector-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 0.78rem !important;
+  color: #94a3b8 !important;
+}
+
+.eew-selector-lbl {
+  font-weight: 700 !important;
+  color: #7dd3fc !important;
+  letter-spacing: 0.5px !important;
+}
+
+.eew-event-dropdown {
+  background: rgba(10, 14, 24, 0.9) !important;
+  border: 1px solid rgba(0, 229, 255, 0.3) !important;
+  color: #f1f5f9 !important;
+  border-radius: 8px !important;
+  padding: 4px 10px !important;
+  font-size: 0.78rem !important;
+  cursor: pointer !important;
+  outline: none !important;
+  max-width: 320px !important;
+}
+
+.eew-event-dropdown:focus {
+  border-color: #00e5ff !important;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.3) !important;
+}
+
+.eew-selector-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.eew-live-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  color: #ff1e42 !important;
+  background: rgba(255, 30, 66, 0.15) !important;
+  border: 1px solid rgba(255, 30, 66, 0.35) !important;
+  padding: 3px 8px !important;
+  border-radius: 5px !important;
+}
+
+.eew-model-badge {
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  color: #00e5ff !important;
+  background: rgba(0, 229, 255, 0.12) !important;
+  border: 1px solid rgba(0, 229, 255, 0.3) !important;
+  padding: 3px 8px !important;
+  border-radius: 5px !important;
+}
+
+/* Event Banner */
+.eew-event-banner {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.05) 0%, rgba(18, 24, 40, 0.85) 100%) !important;
+  border: 1px solid rgba(0, 229, 255, 0.22) !important;
+  border-radius: 18px !important;
+  padding: 16px 20px !important;
+  flex-wrap: wrap !important;
+}
+
+.eew-banner-left {
+  flex: 1 !important;
+  min-width: 300px !important;
+}
+
+.eew-banner-hero-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+}
+
+.eew-mag-disc {
+  width: 72px !important;
+  height: 72px !important;
+  min-width: 72px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 30, 66, 0.45) 0%, rgba(183, 28, 28, 0.95) 100%) !important;
+  border: 2px solid rgba(255, 30, 66, 0.6) !important;
+  box-shadow: 0 0 24px rgba(255, 30, 66, 0.4), inset 0 0 12px rgba(255, 255, 255, 0.2) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.eew-mag-disc.moderate {
+  background: radial-gradient(circle at 35% 35%, rgba(255, 145, 0, 0.45) 0%, rgba(180, 83, 9, 0.95) 100%) !important;
+  border-color: rgba(255, 145, 0, 0.6) !important;
+  box-shadow: 0 0 20px rgba(255, 145, 0, 0.35), inset 0 0 12px rgba(255, 255, 255, 0.2) !important;
+}
+
+.eew-mag-disc.minor {
+  background: radial-gradient(circle at 35% 35%, rgba(0, 229, 255, 0.45) 0%, rgba(3, 105, 161, 0.95) 100%) !important;
+  border-color: rgba(0, 229, 255, 0.6) !important;
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.35), inset 0 0 12px rgba(255, 255, 255, 0.2) !important;
+}
+
+.eew-mag-val {
+  font-size: 1.35rem !important;
+  font-weight: 900 !important;
+  color: #ffffff !important;
+  line-height: 1 !important;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.6) !important;
+}
+
+.eew-mag-tag {
+  font-size: 8px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.8px !important;
+  color: rgba(255, 255, 255, 0.75) !important;
+  margin-top: 2px !important;
+}
+
+.eew-event-info {
+  flex: 1 !important;
+}
+
+.eew-event-title {
+  font-size: 1.15rem !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  margin: 0 0 4px 0 !important;
+  line-height: 1.25 !important;
+}
+
+.eew-event-meta {
+  font-size: 0.78rem !important;
+  color: #94a3b8 !important;
+  margin-bottom: 8px !important;
+}
+
+.eew-event-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.eew-btn-action {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #cbd5e1 !important;
+  border-radius: 8px !important;
+  padding: 5px 11px !important;
+  font-size: 0.74rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.eew-btn-action:hover {
+  background: rgba(0, 229, 255, 0.12) !important;
+  border-color: rgba(0, 229, 255, 0.4) !important;
+  color: #00e5ff !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Velocity Card */
+.eew-banner-right {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.eew-velocity-card {
+  background: rgba(10, 14, 24, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+  padding: 10px 14px !important;
+  min-width: 240px !important;
+}
+
+.eew-vel-head {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.8px !important;
+  color: #7dd3fc !important;
+  margin-bottom: 6px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  padding-bottom: 4px !important;
+}
+
+.eew-vel-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.eew-vel-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  font-size: 0.74rem !important;
+}
+
+.vel-lbl {
+  color: #94a3b8 !important;
+}
+
+.vel-num {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.vel-num.cyan { color: #00e5ff !important; }
+.vel-num.orange { color: #ff9100 !important; }
+.vel-num.green { color: #00e676 !important; }
+
+/* Table Card */
+.eew-table-card {
+  background: rgba(16, 20, 32, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+}
+
+.eew-table-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 10px !important;
+}
+
+.eew-table-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 0.86rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+}
+
+.eew-table-scroll {
+  max-height: 250px !important;
+  overflow-y: auto !important;
+}
+
+.eew-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 0.82rem !important;
+}
+
+.eew-table th {
+  text-align: left !important;
+  padding: 8px 10px !important;
+  color: #7dd3fc !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.25) !important;
+  background: rgba(10, 14, 22, 0.95) !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 2 !important;
+}
+
+.eew-table td {
+  padding: 9px 10px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  transition: background 0.15s ease !important;
+}
+
+.eew-table tr:hover td {
+  background: rgba(0, 229, 255, 0.04) !important;
+}
+
+.eew-status-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  padding: 2px 7px !important;
+  border-radius: 4px !important;
+}
+
+.eew-status-chip.arrived {
+  color: #64748b !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.eew-status-chip.cyan {
+  color: #00e5ff !important;
+  background: rgba(0, 229, 255, 0.12) !important;
+  border: 1px solid rgba(0, 229, 255, 0.3) !important;
+}
+
+.eew-status-chip.warning {
+  color: #ff9100 !important;
+  background: rgba(255, 145, 0, 0.16) !important;
+  border: 1px solid rgba(255, 145, 0, 0.35) !important;
+}
+
+.eew-status-chip.urgent {
+  color: #ff1744 !important;
+  background: rgba(255, 23, 68, 0.22) !important;
+  border: 1px solid rgba(255, 23, 68, 0.5) !important;
+  animation: pulseUrgent 1s infinite alternate !important;
+}
+
+/* Protocol Strip */
+.eew-protocol-strip {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 10px !important;
+}
+
+@media (max-width: 768px) {
+  .eew-protocol-strip {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.protocol-card {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  background: rgba(255, 255, 255, 0.025) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 12px !important;
+  padding: 10px 12px !important;
+}
+
+.protocol-icon {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.protocol-icon.cyan {
+  background: rgba(0, 229, 255, 0.12) !important;
+  color: #00e5ff !important;
+  border: 1px solid rgba(0, 229, 255, 0.3) !important;
+}
+
+.protocol-icon.orange {
+  background: rgba(255, 145, 0, 0.12) !important;
+  color: #ff9100 !important;
+  border: 1px solid rgba(255, 145, 0, 0.3) !important;
+}
+
+.protocol-icon.green {
+  background: rgba(0, 230, 118, 0.12) !important;
+  color: #00e676 !important;
+  border: 1px solid rgba(0, 230, 118, 0.3) !important;
+}
+
+.protocol-text {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.protocol-text strong {
+  font-size: 0.76rem !important;
+  color: #f1f5f9 !important;
+}
+
+.protocol-text span {
+  font-size: 0.70rem !important;
+  color: #94a3b8 !important;
+  line-height: 1.3 !important;
+}
+/* Scrollbar ultra-fino táctico para EEW dialog */
+.eew-predict-body::-webkit-scrollbar,
+.eew-table-scroll::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
+}
+
+.eew-predict-body::-webkit-scrollbar-track,
+.eew-table-scroll::-webkit-scrollbar-track {
+  background: rgba(10, 14, 24, 0.4) !important;
+  border-radius: 4px !important;
+}
+
+.eew-predict-body::-webkit-scrollbar-thumb,
+.eew-table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 229, 255, 0.25) !important;
+  border-radius: 4px !important;
+}
+
+.eew-predict-body::-webkit-scrollbar-thumb:hover,
+.eew-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 229, 255, 0.5) !important;
+}
+
+.eew-table-scroll {
+  max-height: 195px !important;
+  overflow-y: auto !important;
+}
+
+.eew-predict-dialog {
+  max-height: 94vh !important;
+}
+
+.eew-predict-body {
+  gap: 10px !important;
+  padding: 12px 18px !important;
+}
+
+.eew-event-banner {
+  padding: 12px 16px !important;
+}
+
+.eew-mag-disc {
+  width: 66px !important;
+  height: 66px !important;
+  min-width: 66px !important;
+}
+
+.eew-table-card {
+  padding: 10px 14px !important;
+}
+
+.eew-protocol-strip {
+  gap: 8px !important;
+  margin-top: 2px !important;
+}
+
+.protocol-card {
+  padding: 8px 10px !important;
+}
