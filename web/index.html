@@ -377,6 +377,16 @@
           <span class="badge-count font-mono" id="feed-count">0</span>
         </div>
 
+                <div class="feed-search-wrap">
+          <div class="ios-search-box">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="feed-search-input" placeholder="Buscar sismos, ciudades o regiones..." autocomplete="off">
+            <button id="feed-search-clear" style="display: none;" title="Limpiar búsqueda">&times;</button>
+          </div>
+        </div>
         <div class="quake-list" id="quake-list">
           <div class="loading-state">
             <div class="spinner"></div>
@@ -386,6 +396,88 @@
       </div>
     </aside>
   </main>
+
+    <!-- Modal: Ficha Detallada del Sismo (Estilo iPhone Glass) -->
+  <div class="modal-overlay" id="modal-quake-detail" style="display: none;">
+    <div class="modal-content ios-sheet" id="sheet-quake-detail">
+      <div class="sheet-handle"></div>
+      <div class="modal-header ios-sheet-header">
+        <div class="modal-title-box">
+          <span class="terminal-dot pulse-red"></span>
+          <h3 id="qd-modal-title">Ficha Técnica del Sismo</h3>
+        </div>
+        <button class="modal-close ios-btn-close" id="btn-close-quake-detail">&times;</button>
+      </div>
+      <div class="modal-body ios-sheet-body">
+        <!-- Banner del Sismo Seleccionado -->
+        <div class="ios-quake-hero">
+          <div class="ios-mag-badge" id="qd-mag-badge">M --</div>
+          <div class="ios-hero-info">
+            <h2 id="qd-place">Cargando evento...</h2>
+            <div class="ios-hero-meta font-mono" id="qd-time">--</div>
+            <div class="ios-hero-coords font-mono" id="qd-coords">--</div>
+          </div>
+        </div>
+
+        <!-- 4 Casillas Glass de Métricas Físicas Reales -->
+        <div class="ios-grid-metrics">
+          <div class="ios-metric-tile">
+            <div class="ios-tile-icon">📏</div>
+            <div class="ios-tile-val font-mono" id="qd-depth">-- km</div>
+            <div class="ios-tile-lbl">Profundidad</div>
+          </div>
+          <div class="ios-metric-tile">
+            <div class="ios-tile-icon">🔥</div>
+            <div class="ios-tile-val font-mono" id="qd-mmi">--</div>
+            <div class="ios-tile-lbl">Intensidad MMI</div>
+          </div>
+          <div class="ios-metric-tile">
+            <div class="ios-tile-icon">⚡</div>
+            <div class="ios-tile-val font-mono" id="qd-pga">-- gal</div>
+            <div class="ios-tile-lbl">Aceleración (PGA)</div>
+          </div>
+          <div class="ios-metric-tile">
+            <div class="ios-tile-icon">🛰️</div>
+            <div class="ios-tile-val font-mono" id="qd-consensus">--</div>
+            <div class="ios-tile-lbl">Red Sísmica</div>
+          </div>
+        </div>
+
+        <!-- Botones de Acción Táctil -->
+        <div class="ios-sheet-actions">
+          <button class="btn btn-primary ios-action-btn" id="btn-report-felt">
+            <span>🚨 ¿Sentiste este sismo? Reportar vibración</span>
+          </button>
+          <button class="btn btn-secondary ios-action-btn" id="btn-focus-map">
+            <span>🗺️ Centrar y Ver en Mapa Tectónico</span>
+          </button>
+        </div>
+
+        <!-- Tabla Glass de Llegada a Ciudades Cercanas -->
+        <div class="ios-predictions-card">
+          <div class="ios-card-title font-mono">⚡ Tiempos de Arribo de Onda (ETA a Centros Urbanos)</div>
+          <div class="ios-table-wrap">
+            <table class="ios-eta-table font-mono">
+              <thead>
+                <tr>
+                  <th>Ciudad</th>
+                  <th>Distancia</th>
+                  <th>Onda P</th>
+                  <th>Onda S (Fuerte)</th>
+                </tr>
+              </thead>
+              <tbody id="qd-cities-tbody">
+                <tr><td colspan="4" style="text-align: center; color: #64748b; padding: 14px;">Calculando arribo...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer ios-sheet-footer">
+        <button class="btn btn-secondary btn-sm" id="btn-close-qd-footer">Cerrar Ficha</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal: Descargar e Instalar KorshQuake en Android (APK / PWA) -->
   <div class="modal-overlay" id="modal-apk">

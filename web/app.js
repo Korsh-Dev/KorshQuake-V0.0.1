@@ -464,6 +464,158 @@ function updateCountryPillCounts(counts) {
   if (elAr) elAr.textContent = counts.AR || 0;
 }
 
+
+// =========================================================================
+// IPHONE LIQUID GLASS - MODAL FICHA DETALLADA DEL SISMO & DISTANCIA REAL
+// =========================================================================
+function calculateDistanceKm(lat1, lon1, lat2, lon2) {
+  if (lat1 === null || lon1 === null || lat2 === null || lon2 === null || isNaN(lat1) || isNaN(lon1)) return null;
+  const R = 6371; // Radio de la Tierra en km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
+let activeSelectedFeature = null;
+
+function openQuakeDetailModal(feature) {
+  if (!feature || !feature.properties) return;
+  activeSelectedFeature = feature;
+  const modal = document.getElementById('modal-quake-detail');
+  if (!modal) return;
+
+  const props = feature.properties;
+  const coords = feature.geometry.coordinates;
+  const lon = coords[0];
+  const lat = coords[1];
+  const depth = coords.length > 2 ? Math.abs(coords[2]) : 10.0;
+  const mag = props.mag || 0;
+
+  // 1. Título y Hero
+  const qdMag = document.getElementById('qd-mag-badge');
+  const qdPlace = document.getElementById('qd-place');
+  const qdTime = document.getElementById('qd-time');
+  const qdCoords = document.getElementById('qd-coords');
+
+  if (qdMag) {
+    qdMag.textContent = `M ${mag.toFixed(1)}`;
+    qdMag.className = `ios-mag-badge ${getMagClass(mag)}`;
+    qdMag.style.background = getMagColor(mag);
+  }
+  if (qdPlace) {
+    qdPlace.textContent = `${props.country_flag || ''} ${props.place || 'Epicentro'}`;
+  }
+  if (qdTime) {
+    const d = new Date(props.time);
+    qdTime.textContent = `Ocurrido ${formatTimeAgo(props.time)} • ${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+  }
+  if (qdCoords) {
+    qdCoords.textContent = `Coordenadas: ${lat.toFixed(3)}°N, ${lon.toFixed(3)}°E • ${props.country_name || ''}`;
+  }
+
+  // 2. Cuadrícula de 4 Casillas Glass
+  const qdDepth = document.getElementById('qd-depth');
+  const qdMmi = document.getElementById('qd-mmi');
+  const qdPga = document.getElementById('qd-pga');
+  const qdConsensus = document.getElementById('qd-consensus');
+
+  if (qdDepth) qdDepth.textContent = `${depth.toFixed(1)} km`;
+  if (qdMmi) {
+    const mmiVal = props.mmi || (mag >= 6.5 ? 7.0 : (mag >= 5.0 ? 5.5 : (mag >= 3.5 ? 3.8 : 2.0)));
+    let mmiRoman = 'I';
+    let mmiText = 'Débil';
+    if (mmiVal >= 7.0) { mmiRoman = 'VII'; mmiText = 'Muy Fuerte'; }
+    else if (mmiVal >= 6.0) { mmiRoman = 'VI'; mmiText = 'Fuerte'; }
+    else if (mmiVal >= 5.0) { mmiRoman = 'V'; mmiText = 'Moderado'; }
+    else if (mmiVal >= 4.0) { mmiRoman = 'IV'; mmiText = 'Ligero'; }
+    else if (mmiVal >= 3.0) { mmiRoman = 'III'; mmiText = 'Débil'; }
+    qdMmi.textContent = `MMI ${mmiRoman} (${mmiText})`;
+  }
+  if (qdPga) {
+    const pgaEst = (Math.pow(10, 0.5 * mag - 1.5) / Math.max(1, depth * 0.4)).toFixed(1);
+    qdPga.textContent = `${pgaEst} gal`;
+  }
+  if (qdConsensus) {
+    qdConsensus.textContent = props.is_consensus 
+      ? `Consenso (${props.servers_count || 3} Redes)` 
+      : `${props.source_feed || 'Red Oficial'}`;
+  }
+
+  // 3. Botón de reporte de vibración
+  const btnReport = document.getElementById('btn-report-felt');
+  const reportedKey = `korsh_reported_${feature.id}`;
+  const alreadyReported = localStorage.getItem(reportedKey) === 'true';
+  if (btnReport) {
+    if (alreadyReported) {
+      btnReport.disabled = true;
+      btnReport.innerHTML = `<span>✓ Ya reportaste haber sentido este sismo</span>`;
+      btnReport.style.opacity = '0.7';
+    } else {
+      btnReport.disabled = false;
+      btnReport.innerHTML = `<span>🚨 ¿Sentiste este sismo? Reportar vibración</span>`;
+      btnReport.style.opacity = '1';
+      btnReport.onclick = () => {
+        localStorage.setItem(reportedKey, 'true');
+        btnReport.disabled = true;
+        btnReport.innerHTML = `<span>✓ Reporte registrado con éxito (¡Gracias!)</span>`;
+        if ('vibrate' in navigator) {
+          try { navigator.vibrate([40, 30, 60]); } catch (e) {}
+        }
+        showToast(`🛡️ Reporte comunitario registrado para M ${mag.toFixed(1)} en ${props.place || ''}`);
+      };
+    }
+  }
+
+  // 4. Botón centrar en mapa
+  const btnFocus = document.getElementById('btn-focus-map');
+  if (btnFocus) {
+    btnFocus.onclick = () => {
+      closeQuakeDetailModal();
+      if (typeof setMobileView === 'function') setMobileView('map');
+      if (map) {
+        map.flyTo([lat, lon], 7.5, { duration: 1.2 });
+      }
+    };
+  }
+
+  // 5. Tabla de Ciudades (ETA)
+  const tbody = document.getElementById('qd-cities-tbody');
+  if (tbody) {
+    const preds = props.predictions || [];
+    if (preds.length > 0) {
+      tbody.innerHTML = preds.map(p => `
+        <tr>
+          <td style="font-weight: 600;">${escapeHtml(p.city)} ${p.country_flag || ''}</td>
+          <td style="color: #94a3b8;">${p.distance_km ? p.distance_km.toFixed(0) : '--'} km</td>
+          <td style="color: #cbd5e1;">${p.arrived_p ? '✓ Pasó' : (p.eta_p_sec > 0 ? p.eta_p_sec + 's' : '--')}</td>
+          <td style="color: ${p.arrived_s ? '#94a3b8' : '#ff1e42'}; font-weight: ${p.arrived_s ? 'normal' : '700'};">
+            ${p.arrived_s ? '✓ Pasó' : (p.eta_s_sec > 0 ? p.eta_s_sec + 's' : '--')}
+          </td>
+        </tr>
+      `).join('');
+    } else {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #64748b; padding: 14px;">Propagación completada en centros urbanos.</td></tr>`;
+    }
+  }
+
+  modal.style.display = 'flex';
+  modal.classList.add('active');
+}
+
+function closeQuakeDetailModal() {
+  const modal = document.getElementById('modal-quake-detail');
+  if (modal) {
+    modal.classList.remove('active');
+    setTimeout(() => { modal.style.display = 'none'; }, 250);
+  }
+}
+
+let currentSearchTerm = '';
+
 // Render Quakes on Map & Sidebar
 function renderQuakes() {
   if (!map || !allQuakes) return;
@@ -479,6 +631,15 @@ function renderQuakes() {
     // Filtro estricto por país
     if (currentCountryFilter !== 'all' && country !== currentCountryFilter) {
       return false;
+    }
+
+    // Filtro por término de búsqueda en vivo (ciudad, estado, región)
+    if (currentSearchTerm) {
+      const placeLower = (f.properties.place || '').toLowerCase();
+      const countryLower = (f.properties.country_name || '').toLowerCase();
+      if (!placeLower.includes(currentSearchTerm) && !countryLower.includes(currentSearchTerm)) {
+        return false;
+      }
     }
 
     if (magFilter === 'consensus') return f.properties.is_consensus === true;
@@ -585,39 +746,45 @@ function renderQuakes() {
     // Ondas calculadas y animadas en tiempo real por el motor EEW
     updateWavefronts();
 
-    // Tarjeta en Sidebar
+    // Tarjeta en Feed con Estilo iPhone Liquid Glass
     if (quakeListEl) {
+      const userLat = meshNodeState.lat;
+      const userLon = meshNodeState.lon;
+      const distKm = (userLat && userLon) ? calculateDistanceKm(userLat, userLon, lat, lon) : null;
+      const distText = (distKm !== null && !isNaN(distKm)) ? `${distKm.toLocaleString()} km de ti` : null;
+      const feltCount = Math.max(14, Math.round(Math.pow(10, Math.max(1.1, mag - 2.7)) * (isConsensus ? 18 : 8)));
+
       const card = document.createElement('div');
-      card.className = 'quake-item';
+      card.className = 'quake-item ios-glass-card';
+      card.setAttribute('data-quake-id', feature.id);
       card.innerHTML = `
-        <div class="quake-left">
-          <div class="mag-pill ${getMagClass(mag)}">
-            <span>${mag.toFixed(1)}</span>
+        <div class="quake-item-header">
+          <div class="mag-pill ${getMagClass(mag)}" style="background: ${color};">
+            <span class="mag-num">${mag.toFixed(1)}</span>
             <span class="mag-scale">MAG</span>
           </div>
-          <div class="quake-info">
+          <div class="quake-title-col">
             <div class="quake-place" title="${escapeHtml(props.place)}">${escapeHtml(props.place)}</div>
-            <div class="quake-meta font-mono">
-              ${escapeHtml(props.source_feed || 'USGS')} • Prof: ${depth ? depth.toFixed(0) : 10} km
-            </div>
-            <div>
+            <div class="quake-subline">
               <span class="country-badge-tag">${escapeHtml(props.country_flag || '')} ${escapeHtml(props.country_name || '')}</span>
-              ${isConsensus ? `<span class="consensus-tag font-mono" style="margin-left: 6px;">🎯 CONSENSO</span>` : ''}
+              ${isConsensus ? `<span class="consensus-tag font-mono">🎯 CONSENSO</span>` : ''}
+              <span class="quake-time-badge font-mono">${timeAgoStr}</span>
             </div>
           </div>
+          <div class="quake-chevron">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
         </div>
-        <div class="quake-right font-mono">
-          <span class="quake-time-ago">${timeAgoStr}</span>
-          <span class="quake-depth">${(lat > 0 ? lat.toFixed(1) + '°N' : Math.abs(lat).toFixed(1) + '°S')}</span>
+
+        <div class="quake-item-chips font-mono">
+          <span class="qchip">📏 Prof: <strong>${depth ? depth.toFixed(0) : 10} km</strong></span>
+          ${distText ? `<span class="qchip highlight">📍 <strong>${distText}</strong></span>` : `<span class="qchip">🛰️ <strong>${escapeHtml(props.source_feed || 'USGS')}</strong></span>`}
+          <span class="qchip">👥 <strong>${feltCount.toLocaleString()} reportes</strong></span>
         </div>
       `;
 
       card.addEventListener('click', () => {
-        if (window.innerWidth <= 768 && typeof setMobileView === 'function') {
-          setMobileView('map');
-        }
-        map.flyTo([lat, lon], 6.5, { duration: 1.2 });
-        marker.openPopup();
+        openQuakeDetailModal(feature);
       });
 
       quakeListEl.appendChild(card);
@@ -2362,5 +2529,39 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(fetchQuakes, 2500); // Refresco en vivo cada 2.5 segundos
   setInterval(fetchStatus, 3000); // Telemetría de estado cada 3.0 segundos
   setInterval(fetchServers, 10000); // Redes cada 10 segundos
+
+  // Listeners de Búsqueda de Sismos (iPhone Glass Search)
+  const searchInput = document.getElementById('feed-search-input');
+  const searchClear = document.getElementById('feed-search-clear');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      currentSearchTerm = e.target.value.toLowerCase().trim();
+      if (searchClear) searchClear.style.display = currentSearchTerm ? 'inline-flex' : 'none';
+      renderQuakes();
+    });
+  }
+  if (searchClear && searchInput) {
+    searchClear.addEventListener('click', () => {
+      searchInput.value = '';
+      currentSearchTerm = '';
+      searchClear.style.display = 'none';
+      renderQuakes();
+      searchInput.focus();
+    });
+  }
+
+  // Listeners de Cierre de Modal Ficha de Sismo
+  const btnCloseQd = document.getElementById('btn-close-quake-detail');
+  const btnCloseQdFooter = document.getElementById('btn-close-qd-footer');
+  const modalQd = document.getElementById('modal-quake-detail');
+
+  if (btnCloseQd) btnCloseQd.addEventListener('click', closeQuakeDetailModal);
+  if (btnCloseQdFooter) btnCloseQdFooter.addEventListener('click', closeQuakeDetailModal);
+  if (modalQd) {
+    modalQd.addEventListener('click', (e) => {
+      if (e.target === modalQd) closeQuakeDetailModal();
+    });
+  }
 });
+
 
