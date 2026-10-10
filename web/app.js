@@ -2530,6 +2530,25 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(fetchStatus, 3000); // Telemetría de estado cada 3.0 segundos
   setInterval(fetchServers, 10000); // Redes cada 10 segundos
 
+
+  // Botón de Pantalla Completa (Centro de Control Desktop)
+  const btnFullscreen = document.getElementById('btn-fullscreen');
+  if (btnFullscreen) {
+    btnFullscreen.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(() => {
+          showToast('🖥️ Modo Pantalla Completa Activado');
+          if (map) setTimeout(() => map.invalidateSize(), 200);
+        }).catch(() => {});
+      } else {
+        document.exitFullscreen().then(() => {
+          showToast('🖥️ Modo Pantalla Completa Desactivado');
+          if (map) setTimeout(() => map.invalidateSize(), 200);
+        }).catch(() => {});
+      }
+    });
+  }
+
   // Listeners de Búsqueda de Sismos (iPhone Glass Search)
   const searchInput = document.getElementById('feed-search-input');
   const searchClear = document.getElementById('feed-search-clear');
