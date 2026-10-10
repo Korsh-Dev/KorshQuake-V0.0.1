@@ -1,8 +1,106 @@
 
 // =========================================================================
+// GESTIÓN DE DISPOSITIVO: NODO MÓVIL (ACELERÓMETRO) O ESTACIÓN CENTINELA PC
+// =========================================================================
+function setupDeviceNodeRole() {
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const isApk = navigator.userAgent.includes('KorshQuake');
+  
+  meshNodeState.isDesktop = !isMobile;
+  meshNodeState.deviceType = isMobile ? 'mobile_phone' : 'desktop_pc';
+  meshNodeState.platform = isApk ? 'apk' : (isMobile ? 'web_mobile' : 'desktop');
+
+  if (isApk) {
+    meshNodeState.device = 'Android Phone (APK Nativa)';
+  } else if (isMobile) {
+    meshNodeState.device = navigator.userAgent.includes('Android') ? 'Android Móvil (Web)' : 'iPhone Móvil (Web)';
+  } else {
+    if (navigator.userAgent.includes('Windows')) meshNodeState.device = 'Windows PC (Estación Centinela)';
+    else if (navigator.userAgent.includes('Macintosh')) meshNodeState.device = 'Mac Workstation (Estación Centinela)';
+    else if (navigator.userAgent.includes('Linux')) meshNodeState.device = 'Linux PC (Estación Centinela)';
+    else meshNodeState.device = 'Computadora de Escritorio';
+  }
+
+  // Actualizar elementos de interfaz según el tipo de dispositivo
+  const topDevBadge = document.getElementById('top-device-badge');
+  const topDevLabel = document.getElementById('top-device-label');
+  const topDevIcon = document.getElementById('top-device-icon');
+  const deviceRoleDisplay = document.getElementById('device-role-display');
+  const seismoTitle = document.getElementById('seismo-title');
+  const sensorModeTag = document.getElementById('sensor-mode-tag');
+  const tabStationLabel = document.getElementById('sidebar-station-tab-label');
+  const tabStationIcon = document.getElementById('sidebar-station-tab-icon');
+
+  if (meshNodeState.isDesktop) {
+    if (topDevLabel) topDevLabel.textContent = 'PC Centinela';
+    if (topDevIcon) topDevIcon.textContent = '🖥️';
+    if (deviceRoleDisplay) deviceRoleDisplay.textContent = 'PC Centinela';
+    if (seismoTitle) seismoTitle.textContent = '🖥️ Estación Centinela PC';
+    if (sensorModeTag) sensorModeTag.textContent = 'Vigilancia 24/7';
+    if (tabStationLabel) tabStationLabel.textContent = 'Estación PC';
+    if (tabStationIcon) tabStationIcon.textContent = '🖥️';
+  } else {
+    if (topDevLabel) topDevLabel.textContent = 'Sensor Móvil';
+    if (topDevIcon) topDevIcon.textContent = '📱';
+    if (deviceRoleDisplay) deviceRoleDisplay.textContent = 'Móvil (100 Hz)';
+    if (seismoTitle) seismoTitle.textContent = '📱 Nodo Sismográfico Móvil';
+    if (sensorModeTag) sensorModeTag.textContent = 'Acelerómetro Activo';
+    if (tabStationLabel) tabStationLabel.textContent = 'Sismógrafo';
+    if (tabStationIcon) tabStationIcon.textContent = '〰️';
+  }
+}
+
+// Sirena de alerta para computadoras y estaciones de habitación
+function playRoomEmergencySiren() {
+  initAudio();
+  if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  const now = audioCtx.currentTime;
+  const osc1 = audioCtx.createOscillator();
+  const osc2 = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc1.type = 'sawtooth';
+  osc2.type = 'sine';
+
+  // Alternancia de frecuencia estilo alarma sísmica de alta advertencia (880 Hz / 587 Hz)
+  osc1.frequency.setValueAtTime(880, now);
+  osc1.frequency.setValueAtTime(587, now + 0.25);
+  osc1.frequency.setValueAtTime(880, now + 0.50);
+  osc1.frequency.setValueAtTime(587, now + 0.75);
+  osc1.frequency.setValueAtTime(880, now + 1.00);
+
+  osc2.frequency.setValueAtTime(440, now);
+  osc2.frequency.setValueAtTime(293, now + 0.25);
+  osc2.frequency.setValueAtTime(440, now + 0.50);
+  osc2.frequency.setValueAtTime(293, now + 0.75);
+
+  gain.gain.setValueAtTime(0.28, now);
+  gain.gain.exponentialRampToValueAtTime(0.01, now + 1.25);
+
+  osc1.connect(gain);
+  osc2.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  osc1.start(now);
+  osc2.start(now);
+  osc1.stop(now + 1.25);
+  osc2.stop(now + 1.25);
+
+  // Efecto visual en la estación
+  const container = document.getElementById('seismograph-container');
+  if (container) {
+    container.classList.add('seismo-trigger-active');
+    setTimeout(() => container.classList.remove('seismo-trigger-active'), 1400);
+  }
+}
+
+
+// =========================================================================
 // SISTEMA DE ACTUALIZACIÓN AUTOMÁTICA PUSH OTA (Sin reinstalar APK)
 // =========================================================================
-const APP_CURRENT_VERSION = '1.1.4 PRO';
+const APP_CURRENT_VERSION = '1.1.5 PRO';
 let latestDetectedVersion = null;
 
 async function checkAppVersion(isManual = false) {
@@ -1203,16 +1301,17 @@ async function sendNodeTelemetryPing() {
   try {
     const payload = {
       node_id: meshNodeState.nodeId,
-      lat: meshNodeState.lat || 0.0,
-      lon: meshNodeState.lon || 0.0,
-      accuracy: meshNodeState.accuracy || 999.0,
+      lat: meshNodeState.lat || (meshNodeState.isDesktop ? 10.4806 : 0.0),
+      lon: meshNodeState.lon || (meshNodeState.isDesktop ? -66.9036 : 0.0),
+      accuracy: meshNodeState.accuracy || (meshNodeState.isDesktop ? 20.0 : 999.0),
       pga: Math.round(meshNodeState.currentPga * 100) / 100,
       sta_lta: Math.round(meshNodeState.staLtaRatio * 10) / 10,
       noise_floor: Math.round(meshNodeState.lta * 100) / 100,
-      platform: navigator.userAgent.includes('KorshQuake') ? 'apk' : 'web',
-      device: navigator.userAgent.includes('Android') ? 'Android Phone' : (navigator.userAgent.includes('iPhone') ? 'iPhone' : 'Web Browser'),
-      gps_enabled: meshNodeState.hasGpsLocation,
-      location_mode: meshNodeState.locationMode
+      platform: meshNodeState.platform || 'web',
+      device: meshNodeState.device || 'Dispositivo',
+      node_type: meshNodeState.deviceType || 'mobile_phone',
+      gps_enabled: meshNodeState.hasGpsLocation || meshNodeState.isDesktop,
+      location_mode: meshNodeState.isDesktop ? 'desktop_fixed' : meshNodeState.locationMode
     };
 
     const resp = await fetch('/api/nodes/ping', {
@@ -1224,20 +1323,25 @@ async function sendNodeTelemetryPing() {
     const data = await resp.json();
     if (data && data.total_network_nodes !== undefined) {
       meshNodeState.activeNodesCount = data.total_network_nodes;
-      updateMeshNodesCounter(data.total_network_nodes, data.nearby_nodes_count);
+      updateMeshNodesCounter(data.total_network_nodes, data.nearby_nodes_count, data.mobile_nodes_count, data.desktop_nodes_count);
     }
   } catch (err) {
     // Silencioso en desconexiones
   }
 }
 
-function updateMeshNodesCounter(total, nearby) {
+function updateMeshNodesCounter(total, nearby, mobileCount = null, desktopCount = null) {
   const headerCountEl = document.getElementById('mesh-header-nodes');
   const panelStatusEl = document.getElementById('mesh-nodes-status');
+  const sidebarCountEl = document.getElementById('sidebar-badge-quakes');
 
   if (headerCountEl) headerCountEl.textContent = total;
   if (panelStatusEl) {
-    panelStatusEl.textContent = `${total} nodos (${nearby || 0} cercanos)`;
+    if (mobileCount !== null && desktopCount !== null) {
+      panelStatusEl.textContent = `${total} nodos (${mobileCount} móviles • ${desktopCount} PC)`;
+    } else {
+      panelStatusEl.textContent = `${total} nodos (${nearby || 0} en radio regional)`;
+    }
   }
 }
 
@@ -2206,6 +2310,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Conexión persistente SSE en tiempo real (Notificaciones instantáneas de onda P y S)
   initRealtimeStream();
+
+  // =========================================================================
+  // VINCULACIÓN DE BOTÓN DE SIRENA DE PC Y PESTAÑAS DE BARRA LATERAL DESKTOP
+  // =========================================================================
+  setupDeviceNodeRole();
+
+  const btnTestSiren = document.getElementById('btn-test-room-siren');
+  if (btnTestSiren) {
+    btnTestSiren.addEventListener('click', () => {
+      playRoomEmergencySiren();
+      showToast('🚨 Sirena de Alerta Temprana Probada (Volumen y Altavoz OK)', 'warning');
+    });
+  }
+
+  const btnCloseDiagAlt = document.getElementById('btn-close-diagnostics-alt');
+  if (btnCloseDiagAlt) {
+    btnCloseDiagAlt.addEventListener('click', () => {
+      const modalDiag = document.getElementById('modal-diagnostics');
+      if (modalDiag) modalDiag.classList.remove('active');
+    });
+  }
+
+  // Pestañas de la barra lateral en Desktop
+  const tabBtnQuakes = document.getElementById('tab-btn-quakes');
+  const tabBtnStation = document.getElementById('tab-btn-station');
+  const feedPanel = document.querySelector('.feed-panel');
+  const seismoPanel = document.getElementById('seismograph-container');
+
+  if (tabBtnQuakes && tabBtnStation) {
+    tabBtnQuakes.addEventListener('click', () => {
+      tabBtnQuakes.classList.add('active');
+      tabBtnStation.classList.remove('active');
+      if (feedPanel) feedPanel.style.display = 'flex';
+      if (seismoPanel && window.innerWidth <= 1200) seismoPanel.style.display = 'none';
+    });
+
+    tabBtnStation.addEventListener('click', () => {
+      tabBtnStation.classList.add('active');
+      tabBtnQuakes.classList.remove('active');
+      if (seismoPanel) seismoPanel.style.display = 'flex';
+      if (feedPanel && window.innerWidth <= 1200) feedPanel.style.display = 'none';
+    });
+  }
 
   // Initial fetch and auto-polling ultra-rápido en tiempo real
   fetchQuakes();

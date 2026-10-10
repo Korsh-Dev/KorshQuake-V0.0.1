@@ -23,8 +23,8 @@ from datetime import datetime
 
 _server_start_time = time.time()
 
-CURRENT_VERSION = "1.1.4 PRO"
-CURRENT_VERSION_CODE = 114
+CURRENT_VERSION = "1.1.5 PRO"
+CURRENT_VERSION_CODE = 115
 
 
 PORT = 8080
@@ -970,7 +970,7 @@ def calculate_haversine_distance(lat1, lon1, lat2, lon2):
     except Exception:
         return 999999.0
 
-def register_mesh_node(node_id, lat, lon, accuracy=10.0, pga=0.0, sta_lta=1.0, noise_floor=0.02, platform="mobile", device="Mobile Sensor", gps_enabled=True, location_mode="gps_fine"):
+def register_mesh_node(node_id, lat, lon, accuracy=10.0, pga=0.0, sta_lta=1.0, noise_floor=0.02, platform="mobile", device="Mobile Sensor", gps_enabled=True, location_mode="gps_fine", node_type="auto"):
     """Registra o actualiza el latido de un teléfono o aplicación activa como nodo sismográfico."""
     now = time.time()
     with _mesh_nodes_lock:
@@ -984,8 +984,20 @@ def register_mesh_node(node_id, lat, lon, accuracy=10.0, pga=0.0, sta_lta=1.0, n
             country_code = "VE"
         country_name = TARGET_COUNTRIES[country_code]["name"]
 
-        is_real_gps = bool(gps_enabled and (float(lat) != 0.0 or float(lon) != 0.0) and location_mode != "denied")
+        # Detectar si el nodo es móvil (con acelerómetro) o computadora de escritorio (nodo centinela fijo)
+        if node_type == "auto":
+            is_desktop = any(k in platform.lower() or k in device.lower() for k in ["desktop", "pc", "windows", "mac", "linux", "workstation"])
+            resolved_node_type = "desktop_pc" if is_desktop else "mobile_phone"
+        else:
+            resolved_node_type = node_type
+
+        # En computadoras de escritorio, las coordenadas regionales fijas son válidas como ancla
+        is_real_gps = bool((gps_enabled or resolved_node_type == "desktop_pc") and (float(lat) != 0.0 or float(lon) != 0.0) and location_mode != "denied")
+
         _mesh_nodes[node_id] = {
+            "node_id": node_id,
+            "node_type": resolved_node_type,
+            "role": "Estación Centinela Fija" if resolved_node_type == "desktop_pc" else "Sensor Sísmico Móvil",
             "node_id": node_id,
             "lat": float(lat),
             "lon": float(lon),
@@ -1006,12 +1018,20 @@ def register_mesh_node(node_id, lat, lon, accuracy=10.0, pga=0.0, sta_lta=1.0, n
         
         # Conteo de nodos activos en un radio de 50km
         nearby_count = 0
+        mobile_count = 0
+        desktop_count = 0
         for nid, data in _mesh_nodes.items():
+            if data.get("node_type") == "desktop_pc":
+                desktop_count += 1
+            else:
+                mobile_count += 1
             if nid != node_id and calculate_haversine_distance(lat, lon, data["lat"], data["lon"]) <= 50.0:
                 nearby_count += 1
                 
         return {
             "node_id": node_id,
+            "node_type": resolved_node_type,
+            "role": "Estación Centinela Fija" if resolved_node_type == "desktop_pc" else "Sensor Sísmico Móvil",
             "status": "active_node" if is_real_gps else "location_required",
             "country": country_code,
             "country_code": country_code,
@@ -1020,6 +1040,8 @@ def register_mesh_node(node_id, lat, lon, accuracy=10.0, pga=0.0, sta_lta=1.0, n
             "location_mode": location_mode if is_real_gps else "denied_or_missing",
             "accuracy_m": round(float(accuracy), 1),
             "total_network_nodes": len(_mesh_nodes),
+            "mobile_nodes_count": mobile_count,
+            "desktop_nodes_count": desktop_count,
             "nearby_nodes_count": nearby_count,
             "timestamp": int(now * 1000)
         }
@@ -1041,6 +1063,8 @@ def get_mesh_nodes_list():
                     "sta_lta": n.get("sta_lta", 1.0),
                     "platform": n.get("platform", "mobile"),
                     "device": n.get("device", "Phone"),
+                    "node_type": n.get("node_type", "mobile_phone"),
+                    "role": n.get("role", "Sensor"),
                     "gps_enabled": n.get("gps_enabled", True),
                     "location_mode": n.get("location_mode", "gps_fine"),
                     "accuracy_m": n.get("accuracy_m", 15.0),
@@ -1294,7 +1318,8 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             gps_enabled = bool(body.get("gps_enabled", True))
             location_mode = str(body.get("location_mode", "gps_fine"))
             
-            result = register_mesh_node(node_id, lat, lon, accuracy, pga, sta_lta, noise_floor, platform, device, gps_enabled, location_mode)
+            node_type = str(body.get("node_type", "auto"))
+            result = register_mesh_node(node_id, lat, lon, accuracy, pga, sta_lta, noise_floor, platform, device, gps_enabled, location_mode, node_type)
             send_json(result)
             return
 
@@ -1424,9 +1449,13 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
         # API: Estadísticas de Nodos de la Red Ciudadana (/api/nodes/stats)
         if path == "/api/nodes/stats":
             with _mesh_nodes_lock:
+                mob_cnt = sum(1 for n in _mesh_nodes.values() if n.get("node_type") != "desktop_pc")
+                desk_cnt = sum(1 for n in _mesh_nodes.values() if n.get("node_type") == "desktop_pc")
                 stats = {
                     "service": "KorshQuake Citizen Mesh Network",
                     "active_nodes_count": len(_mesh_nodes),
+                    "mobile_nodes_count": mob_cnt,
+                    "desktop_nodes_count": desk_cnt,
                     "recent_triggers_count": len(_recent_mesh_triggers),
                     "confirmed_clusters_count": len(_confirmed_mesh_clusters),
                     "clusters": list(_confirmed_mesh_clusters)

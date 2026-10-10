@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>KorshQuake v1.1.4 PRO - Monitor Sísmico en Tiempo Real</title>
+  <title>KorshQuake v1.1.5 PRO - Monitor Sísmico en Tiempo Real</title>
   
   <!-- PWA & Mobile Meta Tags -->
   <link rel="manifest" href="/manifest.json">
@@ -37,10 +37,14 @@
       <div class="brand-text">
         <div class="brand-title-row">
           <h1 class="app-title">KorshQuake</h1>
-          <span class="badge-version">v1.1.4 PRO</span>
+          <span class="badge-version">v1.1.5 PRO</span>
           <span class="live-status-pill" title="Ingesta continua cada 2.8s">
             <span class="stat-dot pulse-green"></span>
             <span class="live-text">EN VIVO</span>
+          </span>
+                    <span class="top-device-badge" id="top-device-badge" title="Dispositivo activo en la red">
+            <span id="top-device-icon">🖥️</span>
+            <span id="top-device-label">PC Centinela</span>
           </span>
           <span class="top-gps-pill gps-warn" id="top-gps-pill" title="Estado de Ubicación GPS para Sismos">
             <span class="stat-dot" id="top-gps-dot"></span>
@@ -57,6 +61,11 @@
         <span class="stat-dot pulse-green"></span>
         <span class="stat-label">Redes:</span>
         <span class="stat-val font-mono" id="cluster-count">7 Servidores</span>
+      </div>
+      <div class="stat-pill" id="device-pill" title="Rol de este Dispositivo en la Red Sísmica">
+        <span class="stat-dot pulse-cyan" id="device-pill-dot"></span>
+        <span class="stat-label">Nodo:</span>
+        <span class="stat-val font-mono" id="device-role-display">PC Centinela</span>
       </div>
       <div class="stat-pill" title="Algoritmo Sísmico de Precisión ak135">
         <span class="stat-dot" id="gq-app-dot"></span>
@@ -143,7 +152,7 @@
       </div>
       <div class="ota-update-text">
         <div class="ota-title-row">
-          <strong id="ota-version-title">Nueva Versión Disponible (v1.1.4 PRO)</strong>
+          <strong id="ota-version-title">Nueva Versión Disponible (v1.1.5 PRO)</strong>
           <span class="ota-badge">OTA Push</span>
         </div>
         <p class="ota-desc" id="ota-changelog-preview">Mejoras en sensor GPS obligatorio, precisión de red y sincronización instantánea.</p>
@@ -343,6 +352,19 @@
 
     <!-- Right Column: Sidebar Feed & Waveform Seismograph -->
     <aside class="sidebar-section">
+      <!-- Pestañas de Vista para Barra Lateral en Desktop -->
+      <div class="sidebar-tabs-bar desktop-only" id="sidebar-tabs-bar">
+        <button class="sidebar-tab-btn active" id="tab-btn-quakes" data-tab="quakes">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          <span>Sismos Recientes</span>
+          <span class="badge-tab-count font-mono" id="sidebar-badge-quakes">0</span>
+        </button>
+        <button class="sidebar-tab-btn" id="tab-btn-station" data-tab="station">
+          <span id="sidebar-station-tab-icon">🖥️</span>
+          <span id="sidebar-station-tab-label">Estación PC</span>
+          <span class="stat-dot pulse-green" style="width: 7px; height: 7px; display: inline-block;"></span>
+        </button>
+      </div>
       <!-- Live Station Waveform Monitor -->
             <!-- Live Station Seismograph Feed & Citizen Mesh Node -->
       <div class="seismograph-panel glass-panel" id="seismograph-container">
@@ -388,9 +410,10 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
             <span style="color: #00e5ff;">Salud del Nodo</span>
           </button>
-          <a href="/admin" class="btn btn-sm btn-secondary" title="Consola técnica y pruebas sísmicas para administradores" style="font-size: 0.72rem; padding: 4px 8px; opacity: 0.85;">
-            ⚙️ Admin (/admin)
-          </a>
+          <button class="btn btn-sm btn-secondary" id="btn-test-room-siren" title="Probar sirena y altavoz local de alerta temprana en esta estación">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff9100" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            <span style="color: #ff9100;">Probar Sirena</span>
+          </button>
         </div>
       </div>
 
@@ -505,7 +528,7 @@
       <div class="modal-header">
         <div class="modal-title-box">
           <span class="terminal-dot pulse-green"></span>
-          <h3>Consola en Tiempo Real - KorshQuake v1.1.4 PRO</h3>
+          <h3>Consola en Tiempo Real - KorshQuake v1.1.5 PRO</h3>
         </div>
         <button class="modal-close" id="btn-close-logs">&times;</button>
       </div>
@@ -573,7 +596,7 @@
           </div>
           <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px;">
             <span style="font-size: 0.8rem; color: #94a3b8;">Versión Local:</span>
-            <span class="badge-version" id="settings-local-version">v1.1.4 PRO</span>
+            <span class="badge-version" id="settings-local-version">v1.1.5 PRO</span>
           </div>
           <div style="margin-top: 10px;">
             <button class="btn btn-primary" id="btn-check-updates-manual" style="width: 100%; justify-content: center;">
@@ -883,9 +906,9 @@
         </div>
 
         <div style="margin-top: 18px; text-align: center;">
-          <a href="/admin" class="btn btn-secondary" style="font-size: 0.78rem;">
-            ⚙️ Abrir Consola Técnica de Administrador (/admin)
-          </a>
+          <button class="btn btn-secondary btn-sm" id="btn-close-diagnostics-alt" style="width: 100%;">
+            Entendido • Nodo Protegido
+          </button>
         </div>
       </div>
     </div>

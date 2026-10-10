@@ -22,8 +22,8 @@ class TestKorshQuakeServer(unittest.TestCase):
         req = urllib.request.urlopen(url, timeout=5)
         self.assertEqual(req.status, 200)
         data = json.loads(req.read().decode('utf-8'))
-        self.assertEqual(data["version"], "1.1.4 PRO")
-        self.assertEqual(data["version_code"], 114)
+        self.assertEqual(data["version"], "1.1.5 PRO")
+        self.assertEqual(data["version_code"], 115)
         self.assertTrue(data["ota_update_available"])
         self.assertIn("changelog", data)
         self.assertIsInstance(data["changelog"], list)
@@ -35,7 +35,7 @@ class TestKorshQuakeServer(unittest.TestCase):
         self.assertEqual(req.status, 200)
         data = json.loads(req.read().decode('utf-8'))
         self.assertIn("version", data)
-        self.assertEqual(data["version"], "1.1.4 PRO")
+        self.assertEqual(data["version"], "1.1.5 PRO")
         self.assertEqual(data["software_name"], "KorshQuake")
         self.assertIn("apk_url", data)
         self.assertIn("target_countries", data)
@@ -319,6 +319,24 @@ class TestKorshQuakeServer(unittest.TestCase):
         data_nogps = json.loads(resp_nogps.read().decode("utf-8"))
         self.assertEqual(data_nogps["status"], "location_required")
         self.assertFalse(data_nogps["gps_enabled"])
+
+        # 4. Registrar una computadora como Estación Centinela de Apoyo
+        payload_pc = json.dumps({
+            "node_id": "test-desktop-madrid-01",
+            "lat": 40.4168,
+            "lon": -3.7038,
+            "accuracy": 25.0,
+            "platform": "desktop",
+            "device": "Windows PC (Workstation Sentinel)",
+            "node_type": "desktop_pc"
+        }).encode("utf-8")
+        req_pc = urllib.request.Request(url_ping, data=payload_pc, headers={"Content-Type": "application/json"})
+        resp_pc = urllib.request.urlopen(req_pc, timeout=5)
+        data_pc = json.loads(resp_pc.read().decode("utf-8"))
+        self.assertEqual(data_pc["node_type"], "desktop_pc")
+        self.assertEqual(data_pc["role"], "Estación Centinela Fija")
+        self.assertEqual(data_pc["status"], "active_node")
+        self.assertGreaterEqual(data_pc["desktop_nodes_count"], 1)
 
     def test_mesh_single_node_trigger_avoids_false_alarm(self):
         # Un solo telfono movindose (sacudida accidental) NO debe disparar alerta de sismo

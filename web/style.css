@@ -2195,3 +2195,120 @@ body {
   0%, 100% { border-color: rgba(255, 23, 68, 0.5); }
   50% { border-color: rgba(255, 23, 68, 1); box-shadow: 0 0 12px rgba(255, 23, 68, 0.4); }
 }
+
+/* ==========================================================================
+   DESKTOP SIDEBAR TABS & PC SENTINEL NODE STYLING (Rediseño Profesional)
+   ========================================================================== */
+.sidebar-tabs-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  background: rgba(10, 18, 32, 0.75);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-tab-btn:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-tab-btn.active {
+  background: rgba(0, 240, 255, 0.14);
+  color: #00f0ff;
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  box-shadow: 0 2px 10px rgba(0, 240, 255, 0.15);
+}
+
+.badge-tab-count {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: rgba(0, 240, 255, 0.2);
+  color: #00f0ff;
+  font-weight: 700;
+}
+
+/* Top Device Badge in Header */
+.top-device-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(10, 25, 45, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.28);
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  color: #00f0ff;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+  user-select: none;
+}
+
+#btn-test-room-siren {
+  border-color: rgba(255, 145, 0, 0.4) !important;
+  transition: all 0.2s ease;
+}
+
+#btn-test-room-siren:hover {
+  background: rgba(255, 145, 0, 0.18) !important;
+  border-color: #ff9100 !important;
+  box-shadow: 0 0 12px rgba(255, 145, 0, 0.3);
+}
+
+/* Sismógrafo en modo PC Centinela */
+.seismograph-panel {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.seismograph-panel.seismo-trigger-active {
+  border-color: #ff1744 !important;
+  box-shadow: 0 0 28px rgba(255, 23, 68, 0.55) !important;
+  animation: pulseAlarmBorder 0.6s infinite alternate ease-in-out;
+}
+
+@keyframes pulseAlarmBorder {
+  0% { border-color: rgba(255, 23, 68, 0.5); }
+  100% { border-color: #ff1744; box-shadow: 0 0 35px rgba(255, 23, 68, 0.8); }
+}
+
+/* Rediseño refinado de la barra inferior en móvil */
+@media (max-width: 768px) {
+  .sidebar-tabs-bar {
+    display: none;
+  }
+  .bottom-nav-bar {
+    background: rgba(6, 12, 22, 0.94) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-top: 1px solid rgba(0, 240, 255, 0.2) !important;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.7) !important;
+  }
+  .nav-tab.active .nav-icon-wrap {
+    color: #00f0ff;
+    transform: translateY(-2px);
+    filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.6));
+  }
+  .nav-tab.active .nav-label {
+    color: #00f0ff;
+    font-weight: 700;
+  }
+}
