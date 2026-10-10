@@ -1,6 +1,6 @@
-// KorshQuake Service Worker v1.1.5 PRO
+// KorshQuake Service Worker v1.1.6 PRO
 // Arquitectura OTA Push Instantánea con Network-First para código de interfaz
-const CACHE_NAME = 'korshquake-v1.1.5';
+const CACHE_NAME = 'korshquake-v1.1.6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -12,7 +12,9 @@ const STATIC_ASSETS = [
   '/vendor/plates.json',
   '/vendor/world.json',
   '/icons/icon-192.png',
-  '/icons/icon-512.png'
+  '/icons/icon-512.png',
+  '/icons/logo.png',
+  '/favicon.ico'
 ];
 
 self.addEventListener('install', (event) => {

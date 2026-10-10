@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>KorshQuake v1.1.5 PRO - Monitor Sísmico en Tiempo Real</title>
+  <title>KorshQuake v1.1.6 PRO - Monitor Sísmico en Tiempo Real</title>
   
   <!-- PWA & Mobile Meta Tags -->
   <link rel="manifest" href="/manifest.json">
@@ -11,8 +11,10 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KorshQuake">
-  <link rel="icon" type="image/png" href="/icons/icon-192.png">
-  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,17 +29,14 @@
   <!-- Header / Navigation Bar Rediseñado -->
   <header class="app-header">
     <div class="header-left">
-      <div class="logo-container">
+      <div class="logo-container" title="KorshQuake Official Network">
         <div class="logo-pulse"></div>
-        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <path d="M2 12h5l2-4 4 8 2-4h7"></path>
-        </svg>
+        <img src="/icons/logo.png" alt="KorshQuake Logo" class="brand-logo-img">
       </div>
       <div class="brand-text">
         <div class="brand-title-row">
           <h1 class="app-title">KorshQuake</h1>
-          <span class="badge-version">v1.1.5 PRO</span>
+          <span class="badge-version">v1.1.6 PRO</span>
           <span class="live-status-pill" title="Ingesta continua cada 2.8s">
             <span class="stat-dot pulse-green"></span>
             <span class="live-text">EN VIVO</span>
@@ -152,7 +151,7 @@
       </div>
       <div class="ota-update-text">
         <div class="ota-title-row">
-          <strong id="ota-version-title">Nueva Versión Disponible (v1.1.5 PRO)</strong>
+          <strong id="ota-version-title">Nueva Versión Disponible (v1.1.6 PRO)</strong>
           <span class="ota-badge">OTA Push</span>
         </div>
         <p class="ota-desc" id="ota-changelog-preview">Mejoras en sensor GPS obligatorio, precisión de red y sincronización instantánea.</p>
@@ -528,7 +527,7 @@
       <div class="modal-header">
         <div class="modal-title-box">
           <span class="terminal-dot pulse-green"></span>
-          <h3>Consola en Tiempo Real - KorshQuake v1.1.5 PRO</h3>
+          <h3>Consola en Tiempo Real - KorshQuake v1.1.6 PRO</h3>
         </div>
         <button class="modal-close" id="btn-close-logs">&times;</button>
       </div>
@@ -596,7 +595,7 @@
           </div>
           <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px;">
             <span style="font-size: 0.8rem; color: #94a3b8;">Versión Local:</span>
-            <span class="badge-version" id="settings-local-version">v1.1.5 PRO</span>
+            <span class="badge-version" id="settings-local-version">v1.1.6 PRO</span>
           </div>
           <div style="margin-top: 10px;">
             <button class="btn btn-primary" id="btn-check-updates-manual" style="width: 100%; justify-content: center;">

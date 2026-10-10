@@ -23,8 +23,8 @@ from datetime import datetime
 
 _server_start_time = time.time()
 
-CURRENT_VERSION = "1.1.5 PRO"
-CURRENT_VERSION_CODE = 115
+CURRENT_VERSION = "1.1.6 PRO"
+CURRENT_VERSION_CODE = 116
 
 
 PORT = 8080
@@ -1472,6 +1472,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
                 "release_date": "2026-10-09",
                 "ota_update_available": True,
                 "changelog": [
+                    "Logotipo oficial integrado como favicon, icono de aplicación y emblema de marca",
                     "Geolocalización GPS obligatoria para detección de sismos en tiempo real",
                     "Sistema de actualizaciones automáticas Push OTA sin reinstalar APK",
                     "Telemetría y precisión de nodos móviles (±metros) con diagnóstico en vivo",
