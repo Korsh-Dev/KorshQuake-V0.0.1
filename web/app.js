@@ -33,20 +33,20 @@ function setupDeviceNodeRole() {
 
   if (meshNodeState.isDesktop) {
     if (topDevLabel) topDevLabel.textContent = 'PC Centinela';
-    if (topDevIcon) topDevIcon.textContent = '🖥️';
+    if (topDevIcon) topDevIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
     if (deviceRoleDisplay) deviceRoleDisplay.textContent = 'PC Centinela';
     if (seismoTitle) seismoTitle.textContent = 'Digital Seismograph Oscilloscope';
     if (sensorModeTag) sensorModeTag.textContent = 'Vigilancia 24/7';
     if (tabStationLabel) tabStationLabel.textContent = 'Estación PC';
-    if (tabStationIcon) tabStationIcon.textContent = '🖥️';
+    if (tabStationIcon) tabStationIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
   } else {
     if (topDevLabel) topDevLabel.textContent = 'Sensor Móvil';
-    if (topDevIcon) topDevIcon.textContent = '📱';
+    if (topDevIcon) topDevIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>';
     if (deviceRoleDisplay) deviceRoleDisplay.textContent = 'Móvil (100 Hz)';
     if (seismoTitle) seismoTitle.textContent = 'Digital Seismograph Oscilloscope';
     if (sensorModeTag) sensorModeTag.textContent = 'Acelerómetro Activo';
     if (tabStationLabel) tabStationLabel.textContent = 'Sismógrafo';
-    if (tabStationIcon) tabStationIcon.textContent = '〰️';
+    if (tabStationIcon) tabStationIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>';
   }
 }
 
@@ -118,7 +118,7 @@ async function checkAppVersion(isManual = false) {
     if (data.version && data.version !== storedVer) {
       showOtaUpdateBanner(data);
     } else if (isManual) {
-      showToast(`✅ Ya tienes la última versión instalada (${data.version})`, 'info');
+      showToast(`Ya tienes la última versión instalada (${data.version})`, 'success');
     }
   } catch (err) {
     if (isManual) showToast('Error al verificar versiones: ' + err.message, 'error');
@@ -130,7 +130,7 @@ function showOtaUpdateBanner(vData) {
   if (!banner) return;
   const title = document.getElementById('ota-version-title');
   const desc = document.getElementById('ota-changelog-preview');
-  if (title) title.textContent = `🚀 Nueva Versión Disponible (${vData.version})`;
+  if (title) title.textContent = `Nueva Versión Disponible (${vData.version})`;
   if (desc && vData.changelog && vData.changelog.length > 0) {
     desc.textContent = vData.changelog[0] + ' • Toca para actualizar con 1 clic.';
   }
@@ -141,10 +141,10 @@ function showOtaUpdateBanner(vData) {
 async function applyOtaUpdate() {
   const btn = document.getElementById('btn-ota-apply');
   if (btn) {
-    btn.innerHTML = '<span>⚡ Actualizando...</span>';
+    btn.innerHTML = '<span>Actualizando...</span>';
     btn.disabled = true;
   }
-  showToast('⚡ Aplicando actualización instantánea sin descargas...', 'info');
+  showToast('Aplicando actualización instantánea...', 'info');
 
   try {
     // 1. Limpiar caches de Service Worker
@@ -197,10 +197,10 @@ let currentCountryFilter = 'all';
 // Coordenadas y vistas por país
 const REGION_VIEWPORTS = {
   all: { center: [15.0, -40.0], zoom: 3, title: "Mapa Sísmico: Panamá, Venezuela, España y Argentina" },
-  PA: { center: [8.538, -80.782], zoom: 7.5, title: "Panamá 🇵🇦 - Monitoreo Sísmico Nacional" },
-  VE: { center: [8.000, -66.100], zoom: 6.5, title: "Venezuela 🇻🇪 - Monitoreo Sísmico Nacional" },
-  ES: { center: [40.200, -3.750], zoom: 6.0, title: "España 🇪🇸 - Monitoreo Peninsular e Insular" },
-  AR: { center: [-38.416, -63.616], zoom: 5.0, title: "Argentina 🇦🇷 - Monitoreo Sísmico Nacional" }
+  PA: { center: [8.538, -80.782], zoom: 7.5, title: "Panamá - Monitoreo Sísmico Nacional" },
+  VE: { center: [8.000, -66.100], zoom: 6.5, title: "Venezuela - Monitoreo Sísmico Nacional" },
+  ES: { center: [40.200, -3.750], zoom: 6.0, title: "España - Monitoreo Peninsular e Insular" },
+  AR: { center: [-38.416, -63.616], zoom: 5.0, title: "Argentina - Monitoreo Sísmico Nacional" }
 };
 
 // Tile Layer Definitions (100% Públicas, Sin Clave de API, Sin Marcas de Agua)
@@ -376,10 +376,9 @@ async function loadVectorLayers() {
       const data = await res.json();
       L.geoJSON(data, {
         style: {
-          color: '#ff5722',
-          weight: 1.5,
-          opacity: 0.65,
-          dashArray: '3, 4'
+          color: '#ff2d55',
+          weight: 1.6,
+          opacity: 0.82
         }
       }).addTo(platesLayer);
     }
@@ -556,11 +555,11 @@ function openQuakeDetailModal(feature) {
   if (btnReport) {
     if (alreadyReported) {
       btnReport.disabled = true;
-      btnReport.innerHTML = `<span>✓ Ya reportaste este sismo (${modalRealFelt} reportes reales)</span>`;
+      btnReport.innerHTML = `<span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>Ya reportaste este sismo (${modalRealFelt} reportes reales)</span>`;
       btnReport.style.opacity = '0.7';
     } else {
       btnReport.disabled = false;
-      btnReport.innerHTML = `<span>🚨 ¿Sentiste este sismo? (${modalRealFelt} reportes reales)</span>`;
+      btnReport.innerHTML = `<span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>¿Sentiste este sismo? (${modalRealFelt} reportes reales)</span>`;
       btnReport.style.opacity = '1';
       btnReport.onclick = async () => {
         btnReport.disabled = true;
@@ -582,15 +581,15 @@ function openQuakeDetailModal(feature) {
           props.felt_reports = newTotal;
           props.felt = newTotal;
           localStorage.setItem(reportedKey, 'true');
-          btnReport.innerHTML = `<span>✓ Reporte registrado exitosamente (${newTotal} reportes reales)</span>`;
+          btnReport.innerHTML = `<span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>Reporte registrado exitosamente (${newTotal} reportes reales)</span>`;
           if ('vibrate' in navigator) {
             try { navigator.vibrate([40, 30, 60]); } catch (e) {}
           }
-          showToast(`🛡️ Reporte comunitario registrado para M ${mag.toFixed(1)}. Total: ${newTotal}`);
+          showToast(`Reporte comunitario registrado para M ${mag.toFixed(1)}. Total: ${newTotal}`, 'success');
           renderQuakes();
         } catch (err) {
           btnReport.disabled = false;
-          btnReport.innerHTML = `<span>🚨 Reintentar reporte</span>`;
+          btnReport.innerHTML = `<span>Reintentar reporte</span>`;
           showToast('Error de red al enviar reporte');
         }
       };
@@ -618,9 +617,9 @@ function openQuakeDetailModal(feature) {
         <tr>
           <td style="font-weight: 600;">${escapeHtml(p.city)} ${p.country_flag || ''}</td>
           <td style="color: #94a3b8;">${p.distance_km ? p.distance_km.toFixed(0) : '--'} km</td>
-          <td style="color: #cbd5e1;">${p.arrived_p ? '✓ Pasó' : (p.eta_p_sec > 0 ? p.eta_p_sec + 's' : '--')}</td>
+          <td style="color: #cbd5e1;">${p.arrived_p ? 'Pasó' : (p.eta_p_sec > 0 ? p.eta_p_sec + 's' : '--')}</td>
           <td style="color: ${p.arrived_s ? '#94a3b8' : '#ff1e42'}; font-weight: ${p.arrived_s ? 'normal' : '700'};">
-            ${p.arrived_s ? '✓ Pasó' : (p.eta_s_sec > 0 ? p.eta_s_sec + 's' : '--')}
+            ${p.arrived_s ? 'Pasó' : (p.eta_s_sec > 0 ? p.eta_s_sec + 's' : '--')}
           </td>
         </tr>
       `).join('');
@@ -644,6 +643,85 @@ function closeQuakeDetailModal() {
 let currentSearchTerm = '';
 
 // Render Quakes on Map & Sidebar
+
+function createTacticalQuakeMarker(lat, lon, mag, isConsensus, featureId, isRecent) {
+  let size = 28;
+  let coreR = 4.5;
+  let haloR = 10;
+  let ringR = 12;
+  let coreColor = '#38bdf8';
+  let fadeColor = 'rgba(2, 132, 199, 0.45)';
+  const isMajor = mag >= 6.0;
+
+  if (mag >= 6.0) {
+    size = 54;
+    coreR = 7.5;
+    haloR = 23;
+    ringR = 25;
+    coreColor = '#ff1744';
+    fadeColor = 'rgba(255, 23, 68, 0.4)';
+  } else if (mag >= 4.5) {
+    size = 40;
+    coreR = 6.0;
+    haloR = 17;
+    ringR = 18.5;
+    coreColor = '#ff6d00';
+    fadeColor = 'rgba(255, 109, 0, 0.38)';
+  } else if (mag >= 3.0) {
+    size = 32;
+    coreR = 5.0;
+    haloR = 13;
+    ringR = 14.5;
+    coreColor = '#f59e0b';
+    fadeColor = 'rgba(245, 158, 11, 0.35)';
+  } else {
+    size = 24;
+    coreR = 3.5;
+    haloR = 8.5;
+    ringR = 10;
+    coreColor = '#38bdf8';
+    fadeColor = 'rgba(56, 189, 248, 0.3)';
+  }
+
+  const center = size / 2;
+  const safeId = String(featureId || 'qk' + Math.random().toString(36).substring(2, 8)).replace(/[^a-zA-Z0-9_-]/g, '');
+  const gradId = `tact-grad-${safeId}`;
+
+  const pulseClass = isMajor ? 'sonar-pulse-active' : (isRecent ? 'sonar-pulse-recent' : '');
+
+  const svgHtml = `
+    <div class="tactical-marker-wrap ${pulseClass}" style="width:${size}px; height:${size}px;">
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="display:block; overflow:visible;">
+        <defs>
+          <radialGradient id="${gradId}" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+            <stop offset="30%" stop-color="${coreColor}" stop-opacity="0.88"/>
+            <stop offset="70%" stop-color="${fadeColor}" stop-opacity="0.45"/>
+            <stop offset="100%" stop-color="${coreColor}" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <!-- Halo Radial con Degradado Táctico -->
+        <circle cx="${center}" cy="${center}" r="${haloR}" fill="url(#${gradId})"/>
+        <!-- Anillo Concéntrico Sonar / Radar Militar -->
+        ${(mag >= 3.5 || isRecent) ? `<circle cx="${center}" cy="${center}" r="${ringR}" fill="none" stroke="${coreColor}" stroke-width="1" stroke-opacity="0.6" stroke-dasharray="2 3"/>` : ''}
+        ${isMajor ? `<circle cx="${center}" cy="${center}" r="${ringR - 6}" fill="none" stroke="#ffffff" stroke-width="0.8" stroke-opacity="0.5"/>` : ''}
+        <!-- Núcleo Central de Alta Luminosidad con Borde Blanco Táctico -->
+        <circle cx="${center}" cy="${center}" r="${coreR}" fill="${coreColor}" stroke="${isConsensus ? '#00e676' : '#ffffff'}" stroke-width="${isConsensus ? 2 : 1.2}" style="filter: drop-shadow(0 0 3px ${coreColor});"/>
+      </svg>
+    </div>
+  `;
+
+  const icon = L.divIcon({
+    className: 'tactical-div-icon',
+    html: svgHtml,
+    iconSize: [size, size],
+    iconAnchor: [center, center],
+    popupAnchor: [0, -center]
+  });
+
+  return L.marker([lat, lon], { icon: icon });
+}
+
 function renderQuakes() {
   if (!map || !allQuakes) return;
 
@@ -740,15 +818,10 @@ function renderQuakes() {
     const timeAgoStr = formatTimeAgo(props.time);
     const isConsensus = props.is_consensus;
 
-    // Marker con halo de consenso
-    const marker = L.circleMarker([lat, lon], {
-      radius: radius,
-      fillColor: color,
-      color: isConsensus ? '#00e676' : '#ffffff',
-      weight: isConsensus ? 2.5 : 1,
-      opacity: 0.95,
-      fillOpacity: 0.78
-    });
+    // Marcador Táctico Profesional con Halo Radial, Núcleo Luminoso y Anillos Sonar
+    const nowMs = Date.now();
+    const isRecent = (nowMs - (props.time || 0)) <= 3600000; // Sismo en la última hora
+    const marker = createTacticalQuakeMarker(lat, lon, mag, isConsensus, feature.id, isRecent);
 
     const popupHtml = `
       <div class="popup-quake">
@@ -763,15 +836,14 @@ function renderQuakes() {
           <span><strong>Hora UTC:</strong> ${new Date(props.time).toUTCString()}</span>
         </div>
         <button class="btn btn-primary btn-sm" style="width: 100%; margin-top: 10px; justify-content: center; font-size: 0.82rem; padding: 6px 12px;" onclick="openPredictForEvent('${feature.id}')">
-          ⚡ Predicción de Arribo EEW
+          Predicción de Arribo EEW
         </button>
       </div>
     `;
     marker.bindPopup(popupHtml);
     quakeLayerGroup.addLayer(marker);
 
-    // Ondas calculadas y animadas en tiempo real por el motor EEW
-    updateWavefronts();
+    // Ondas calculadas y animadas por el motor EEW
 
     // Tarjeta Pro de Sismos con Fidelidad Total a la Maqueta (Fiel a la Maqueta Desktop)
     if (quakeListEl) {
@@ -807,7 +879,7 @@ function renderQuakes() {
             <span>Prof: <strong>${Math.abs(depth || 10).toFixed(0)} km</strong></span>
             <span>${(distKm !== null && !isNaN(distKm)) ? `Dist: <strong>${Math.round(distKm).toLocaleString()} km</strong>` : `Red: <strong>${escapeHtml(props.source_feed ? props.source_feed.split('/')[0] : 'USGS')}</strong>`}</span>
             <span>Reportes: <strong>${realFelt}</strong></span>
-            ${isConsensus ? `<span class="consensus-tag">🎯 Consenso</span>` : ''}
+            ${isConsensus ? `<span class="consensus-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px;margin-right:2px;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Consenso</span>` : ''}
           </div>
         </div>
         <div class="pro-quake-chevron">
@@ -823,6 +895,9 @@ function renderQuakes() {
       quakeListEl.appendChild(card);
     }
   });
+
+  // Actualizar frentes de onda sísmica P y S
+  updateWavefronts();
 }
 
 // Control de Alertas en Tiempo Real
@@ -889,7 +964,7 @@ function handleLiveEarthquakePush(feature) {
 
     if (shouldSound) {
       playAlertSound(mag >= 4.5 ? 'major' : 'moderate');
-      showToast(`🚨 SISMO EN VIVO DETECTADO: M ${mag.toFixed(1)} en ${place} (${flag} ${countryName})`);
+      showToast(`SISMO EN VIVO: M ${mag.toFixed(1)} en ${place} (${countryName})`, 'danger');
       if (mag >= 4.5) {
         triggerEarlyWarning(feature);
       }
@@ -899,7 +974,7 @@ function handleLiveEarthquakePush(feature) {
       navigator.vibrate(mag >= 5.0 ? [400, 150, 400, 150, 600] : [200, 100, 200]);
     }
 
-    showToast(`🚨 ¡ONDA SÍSMICA EN VIVO! ${flag} M ${mag.toFixed(1)} - ${place}`);
+    showToast(`¡ONDA SÍSMICA EN VIVO! M ${mag.toFixed(1)} - ${place}`, 'danger');
 
     // Disparar banner EEW de alerta temprana
     triggerEarlyWarning(feature);
@@ -925,7 +1000,7 @@ function initRealtimeStream() {
     liveEventSource = new EventSource('/api/events/live');
 
     liveEventSource.addEventListener('ready', (e) => {
-      console.log('📡 KorshQuake Realtime EEW Stream conectado:', e.data);
+      console.log('[KorshQuake EEW] Stream conectado:', e.data);
       const clusterPill = document.getElementById('cluster-pill');
       if (clusterPill) {
         clusterPill.title = 'Red Sísmica en Vivo: Stream WebSocket EMSC Activo';
@@ -935,7 +1010,7 @@ function initRealtimeStream() {
     liveEventSource.addEventListener('mesh_eew_alert', (e) => {
       try {
         const alertData = JSON.parse(e.data);
-        console.warn('⚡ [KORSH-MESH] Alerta Sísmica Temprana de Red Ciudadana:', alertData);
+        console.warn('[KORSH-MESH] Alerta Sísmica Temprana de Red Ciudadana:', alertData);
         if (typeof handleCitizenMeshAlert === 'function') {
           handleCitizenMeshAlert(alertData);
         }
@@ -1005,7 +1080,7 @@ async function fetchQuakes() {
           if (mag >= thresholdVal) {
             const isMajor = mag >= 4.5;
             playAlertSound(isMajor ? 'major' : 'moderate');
-            showToast(`🚨 SISMO EN VIVO DETECTADO: M ${mag.toFixed(1)} en ${p.place || ''} (${p.country_flag || ''} ${p.country_name || ''})`);
+            showToast(`SISMO EN VIVO: M ${mag.toFixed(1)} en ${p.place || ''} (${p.country_name || ''})`, 'danger');
             if (isMajor) {
               triggerEarlyWarning(topNew);
             }
@@ -1279,7 +1354,7 @@ function updateGpsUIState(status, accuracy, coords) {
         bannerBadge.textContent = 'Permiso Denegado';
         bannerBadge.className = 'gps-badge-status';
       }
-      if (bannerTitle) bannerTitle.textContent = '📍 Activa la Ubicación en tu Teléfono';
+      if (bannerTitle) bannerTitle.textContent = 'Activa la Ubicación en tu Teléfono';
     }
     if (modalStatus) {
       modalStatus.textContent = 'DENEGADO / APAGADO';
@@ -1298,7 +1373,7 @@ function updateGpsUIState(status, accuracy, coords) {
         bannerBadge.textContent = 'Requerido';
         bannerBadge.className = 'gps-badge-status';
       }
-      if (bannerTitle) bannerTitle.textContent = '📍 Ubicación GPS Requerida';
+      if (bannerTitle) bannerTitle.textContent = 'Ubicación GPS Requerida';
     }
     if (modalStatus) {
       modalStatus.textContent = 'Buscando satélites...';
@@ -1327,7 +1402,7 @@ function requestGpsPermission(isUserAction = false) {
       meshNodeState.locationMode = (pos.coords.accuracy && pos.coords.accuracy < 80) ? 'gps_fine' : 'gps_coarse';
       updateGpsUIState('granted', pos.coords.accuracy, { lat: pos.coords.latitude, lon: pos.coords.longitude });
       if (isUserAction) {
-        showToast(`📍 Ubicación fijada con éxito (Precisión: ±${Math.round(pos.coords.accuracy || 10)}m)`, 'success');
+        showToast(`Ubicación fijada con éxito (Precisión: ±${Math.round(pos.coords.accuracy || 10)}m)`, 'success');
       }
     },
     (err) => {
@@ -1337,7 +1412,7 @@ function requestGpsPermission(isUserAction = false) {
       meshNodeState.locationMode = 'denied';
       updateGpsUIState('denied', null, null);
       if (isUserAction) {
-        showToast('⚠️ No se pudo acceder al GPS. Asegúrate de encender la Ubicación en los ajustes de tu teléfono y permitir el acceso.', 'warning');
+        showToast('No se pudo acceder al GPS. Asegúrate de encender la Ubicación en los ajustes y permitir el acceso.', 'warning');
       }
     },
     { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 }
@@ -1477,7 +1552,7 @@ async function sendSeismicTriggerToNetwork(pgaGal, staLta) {
 
     const data = await resp.json();
     if (data.cluster_detected) {
-      console.warn('🚨 [KORSH-MESH] ¡SISMO CONFIRMADO POR LA RED DE NODOS CERCANOS!', data);
+      console.warn('[KORSH-MESH] ¡SISMO CONFIRMADO POR LA RED DE NODOS CERCANOS!', data);
       handleCitizenMeshAlert({
         alert_title: `¡ALERTA SÍSMICA PRELIMINAR! Magnitud M${data.estimated_magnitude}`,
         magnitude: data.estimated_magnitude,
@@ -1489,7 +1564,7 @@ async function sendSeismicTriggerToNetwork(pgaGal, staLta) {
         alert_level: data.estimated_magnitude >= 5.0 ? 'EMERGENCY' : 'WARNING'
       });
     } else {
-      console.log('📡 [KORSH-MESH] Disparo registrado. Esperando coincidencia con teléfonos cercanos...');
+      console.log('[KORSH-MESH] Disparo registrado. Esperando coincidencia...');
     }
   } catch (err) {
     console.error('[KORSH-MESH] Error enviando trigger:', err);
@@ -1566,8 +1641,8 @@ async function updateMeshNodesMapLayer() {
           weight: isSpike ? 3 : 1.5
         });
         marker.bindTooltip(
-          `<strong>📡 Nodo KorshQuake #${node.node_id.slice(-6).toUpperCase()}</strong><br>` +
-          `Estado: ${isSpike ? '⚠️ Disparo Sísmico Activo' : '🟢 Monitoreo en Tiempo Real'}<br>` +
+          `<strong>Nodo KorshQuake #${node.node_id.slice(-6).toUpperCase()}</strong><br>` +
+          `Estado: ${isSpike ? 'Disparo Sísmico Activo' : 'Monitoreo en Tiempo Real'}<br>` +
           `PGA: ${node.pga.toFixed(2)} gal | País: ${node.country}`,
           { direction: 'top', className: 'node-tooltip' }
         );
@@ -1592,7 +1667,7 @@ function handleCitizenMeshAlert(alertData) {
   const eewEta = document.getElementById('eew-eta');
 
   if (eewBanner && eewTitle) {
-    eewTitle.textContent = `🚨 ALERTA SÍSMICA CIUDADANA - M${alertData.magnitude || 4.5}`;
+    eewTitle.textContent = `ALERTA SÍSMICA CIUDADANA - M${alertData.magnitude || 4.5}`;
     if (eewMeta) {
       eewMeta.textContent = `Detectado por ${alertData.nodes_confirmed || 2} teléfonos cercanos en ${alertData.target_country || 'Región'} • PGA: ${alertData.max_pga_gal || 25} gal`;
     }
@@ -1859,13 +1934,23 @@ function formatTimeAgo(timeMs) {
   return `Hace ${diffDays}d`;
 }
 
-// Utility: Toast notifications
-function showToast(msg) {
+// Utility: Toast notifications con iconos SVG de alta definición y cero emojis
+function showToast(msg, type = 'info') {
   const container = document.getElementById('toast-container');
   if (!container) return;
+  // Sanitizar cualquier carácter emoji residual
+  const cleanMsg = String(msg).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}]/gu, '').trim();
   const toast = document.createElement('div');
-  toast.className = 'toast font-mono';
-  toast.innerHTML = `<span style="color: #ff1e42;">●</span> <span>${escapeHtml(msg)}</span>`;
+  toast.className = `toast font-mono toast-${type}`;
+
+  let iconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+  if (type === 'danger' || type === 'error' || type === 'warning' || cleanMsg.toUpperCase().includes('SISMO') || cleanMsg.toUpperCase().includes('SIRENA')) {
+    iconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff1744" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  } else if (type === 'success' || cleanMsg.toLowerCase().includes('éxito') || cleanMsg.toLowerCase().includes('instalada') || cleanMsg.toLowerCase().includes('copiado')) {
+    iconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
+  }
+
+  toast.innerHTML = `<span class="toast-icon-wrap" style="display:flex;align-items:center;">${iconSvg}</span> <span>${escapeHtml(cleanMsg)}</span>`;
   container.appendChild(toast);
   setTimeout(() => {
     toast.style.opacity = '0';
@@ -1912,29 +1997,71 @@ function updateWavefronts() {
     const pWaveMeters = Math.min(2500000, ageSec * 7800);
     const sWaveMeters = Math.min(1500000, ageSec * 4100);
 
-    // Frente de Onda P (Compresional primaria, azul celeste con borde discontinuo)
+    const opacityP = Math.max(0.18, 0.88 - (ageSec / 1200));
+    const opacityS = Math.max(0.22, 0.95 - (ageSec / 1200));
+
+    // 1. Frente de Onda P (Compresional primaria, Azul Eléctrico / Cian brillante con trazo discontinuo táctico)
     const pWave = L.circle([lat, lon], {
       radius: pWaveMeters,
-      color: '#ff1e42',
-      weight: 1.5,
-      opacity: Math.max(0.2, 0.85 - (ageSec / 1200)),
-      fillColor: '#ff1e42',
-      fillOpacity: 0.03,
-      dashArray: '5, 5'
+      color: '#00e5ff',
+      weight: 1.6,
+      opacity: opacityP,
+      fillColor: '#00e5ff',
+      fillOpacity: 0.035,
+      dashArray: '6, 6'
     });
 
-    // Frente de Onda S (Cizalla/destructiva, roja o naranja pulsante)
+    // 2. Anillo de Transición Acústica Concéntrica Táctica
+    if (pWaveMeters > sWaveMeters + 60000) {
+      const midWave = L.circle([lat, lon], {
+        radius: (pWaveMeters + sWaveMeters) / 2,
+        color: '#38bdf8',
+        weight: 1.0,
+        opacity: opacityP * 0.45,
+        fillOpacity: 0,
+        dashArray: '3, 5'
+      });
+      waveLayerGroup.addLayer(midWave);
+    }
+
+    // 3. Frente de Onda S (Cizalla / Destructiva, Naranja Fuego / Carmesí)
+    const sColor = mag >= 5.0 ? '#ff1744' : '#ff6d00';
     const sWave = L.circle([lat, lon], {
       radius: sWaveMeters,
-      color: mag >= 5.0 ? '#ff1744' : '#ff9100',
+      color: sColor,
       weight: 2.2,
-      opacity: Math.max(0.25, 0.95 - (ageSec / 1200)),
-      fillColor: mag >= 5.0 ? '#ff1744' : '#ff9100',
-      fillOpacity: 0.07
+      opacity: opacityS,
+      fillColor: sColor,
+      fillOpacity: 0.075
     });
 
     waveLayerGroup.addLayer(pWave);
     waveLayerGroup.addLayer(sWave);
+
+    // 4. Badges Tipográficos de Cresta de Onda P y S (Idénticos al Mockup Táctico)
+    if (pWaveMeters > 20000) {
+      const latTopP = lat + (pWaveMeters / 111320);
+      const pBadgeIcon = L.divIcon({
+        className: 'wave-crest-container',
+        html: '<div class="wave-crest-badge crest-p">P</div>',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+      const pBadgeMarker = L.marker([latTopP, lon], { icon: pBadgeIcon, interactive: false });
+      waveLayerGroup.addLayer(pBadgeMarker);
+    }
+
+    if (sWaveMeters > 25000) {
+      const latTopS = lat + (sWaveMeters / 111320);
+      const sBadgeIcon = L.divIcon({
+        className: 'wave-crest-container',
+        html: '<div class="wave-crest-badge crest-s">S</div>',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+      const sBadgeMarker = L.marker([latTopS, lon], { icon: sBadgeIcon, interactive: false });
+      waveLayerGroup.addLayer(sBadgeMarker);
+    }
   });
 }
 
@@ -1987,15 +2114,15 @@ function renderPredictionsModal(data) {
     // Status de Onda S (Destructiva)
     let sStatusHtml = '';
     if (sArrived) {
-      sStatusHtml = `<span style="color: #64748b; font-weight: 600;">✓ Onda Arribada</span>`;
+      sStatusHtml = `<span style="color: #64748b; font-weight: 600;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px;margin-right:2px;"><polyline points="20 6 9 17 4 12"/></svg> Arribada</span>`;
     } else {
       const isUrgent = pred.eta_s_sec <= 30;
-      sStatusHtml = `<span class="pulse-tag" style="background: ${isUrgent ? 'rgba(255, 23, 68, 0.25)' : 'rgba(255, 145, 0, 0.25)'}; color: ${isUrgent ? '#ff1744' : '#ff9100'}; border: 1px solid ${isUrgent ? '#ff1744' : '#ff9100'}; padding: 3px 8px; border-radius: 4px; font-weight: 700;">🚨 IMPACTO EN ${pred.eta_s_sec}s</span>`;
+      sStatusHtml = `<span class="pulse-tag" style="background: ${isUrgent ? 'rgba(255, 23, 68, 0.25)' : 'rgba(255, 145, 0, 0.25)'}; color: ${isUrgent ? '#ff1744' : '#ff9100'}; border: 1px solid ${isUrgent ? '#ff1744' : '#ff9100'}; padding: 3px 8px; border-radius: 4px; font-weight: 700;">IMPACTO EN ${pred.eta_s_sec}s</span>`;
     }
 
     // Status de Onda P
     let pStatusHtml = pArrived 
-      ? `<span style="color: #64748b;">✓ Arribada</span>`
+      ? `<span style="color: #64748b;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px;margin-right:2px;"><polyline points="20 6 9 17 4 12"/></svg> Arribada</span>`
       : `<span style="color: #ff1e42; font-weight: 700;">Arribo en ${pred.eta_p_sec}s</span>`;
 
     // Color según MMI
@@ -2185,13 +2312,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnCopyAppUrl && apkAppUrlInput) {
     btnCopyAppUrl.addEventListener('click', () => {
       navigator.clipboard.writeText(apkAppUrlInput.value || window.location.origin);
-      showToast('✓ Enlace copiado al portapapeles');
+      showToast('Enlace copiado al portapapeles', 'success');
     });
   }
 
   if (btnDlApk) {
     btnDlApk.addEventListener('click', () => {
-      showToast('📲 Descargando KorshQuake.apk (0.25 MB)...');
+      showToast('Descargando KorshQuake.apk (0.25 MB)...', 'info');
     });
   }
 
@@ -2211,7 +2338,7 @@ document.addEventListener('DOMContentLoaded', () => {
         deferredPwaPrompt.prompt();
         const { outcome } = await deferredPwaPrompt.userChoice;
         if (outcome === 'accepted') {
-          showToast('✓ KorshQuake se está instalando en tu pantalla de inicio');
+          showToast('KorshQuake se está instalando en tu pantalla de inicio', 'success');
           const banner = document.getElementById('pwa-install-banner');
           if (banner) banner.style.display = 'none';
         }
@@ -2287,7 +2414,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnTestSound) {
     btnTestSound.addEventListener('click', () => {
       playAlertSound('major');
-      showToast('🔊 Sirena de alerta sísmica de prueba emitida');
+      showToast('Sirena de alerta sísmica de prueba emitida', 'warning');
     });
   }
 
@@ -2298,9 +2425,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (selectAudioThreshold) selectAudioThreshold.value = val;
     if (selectAudioThresholdMenu) selectAudioThresholdMenu.value = val;
     if (val === 'off') {
-      showToast('🔇 Alertas sonoras silenciadas completamente');
+      showToast('Alertas sonoras silenciadas', 'info');
     } else {
-      showToast(`🔔 Alerta configurada: Solo sismos en vivo M ${val}+`);
+      showToast(`Alerta configurada: Solo sismos en vivo M ${val}+`, 'info');
       playAlertSound('moderate');
     }
   };
@@ -2426,7 +2553,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try { await DeviceMotionEvent.requestPermission(); } catch (e) {}
       }
 
-      showToast('🛡️ Nodo Sísmico Activado: Protección Comunitaria 24/7 Conectada');
+      showToast('Nodo Sísmico Activado: Protección Comunitaria 24/7 Conectada', 'success');
       calibrateSensorBaseline();
     });
   }
@@ -2520,7 +2647,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnTestSiren) {
     btnTestSiren.addEventListener('click', () => {
       playRoomEmergencySiren();
-      showToast('🚨 Sirena de Alerta Temprana Probada (Volumen y Altavoz OK)', 'warning');
+      showToast('Sirena de Alerta Temprana Probada (Volumen y Altavoz OK)', 'warning');
     });
   }
 
@@ -2570,12 +2697,12 @@ document.addEventListener('DOMContentLoaded', () => {
     btnFullscreen.addEventListener('click', () => {
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().then(() => {
-          showToast('🖥️ Modo Pantalla Completa Activado');
+          showToast('Modo Pantalla Completa Activado', 'info');
           if (map) setTimeout(() => map.invalidateSize(), 200);
         }).catch(() => {});
       } else {
         document.exitFullscreen().then(() => {
-          showToast('🖥️ Modo Pantalla Completa Desactivado');
+          showToast('Modo Pantalla Completa Desactivado', 'info');
           if (map) setTimeout(() => map.invalidateSize(), 200);
         }).catch(() => {});
       }
@@ -2650,9 +2777,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (togglePlates) {
     togglePlates.addEventListener('change', () => {
       if (togglePlates.checked) {
-        if (!map.hasLayer(tectonicPlatesLayer)) map.addLayer(tectonicPlatesLayer);
+        if (!map.hasLayer(platesLayer)) map.addLayer(platesLayer);
       } else {
-        if (map.hasLayer(tectonicPlatesLayer)) map.removeLayer(tectonicPlatesLayer);
+        if (map.hasLayer(platesLayer)) map.removeLayer(platesLayer);
       }
     });
   }
@@ -2719,10 +2846,10 @@ document.addEventListener('DOMContentLoaded', () => {
     dockPlates.addEventListener('click', () => {
       dockPlates.classList.toggle('active');
       if (dockPlates.classList.contains('active')) {
-        if (!map.hasLayer(tectonicPlatesLayer)) map.addLayer(tectonicPlatesLayer);
+        if (!map.hasLayer(platesLayer)) map.addLayer(platesLayer);
         showToast('Placas tectónicas activadas');
       } else {
-        if (map.hasLayer(tectonicPlatesLayer)) map.removeLayer(tectonicPlatesLayer);
+        if (map.hasLayer(platesLayer)) map.removeLayer(platesLayer);
         showToast('Placas tectónicas ocultas');
       }
     });

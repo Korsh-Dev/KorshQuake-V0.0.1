@@ -11,7 +11,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KorshQuake">
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=3">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png">
@@ -31,12 +31,11 @@
   <header class="app-header">
     <div class="header-left">
       <div class="logo-container" title="KorshQuake Official Network">
-        <div class="logo-pulse"></div>
-        <img src="/icons/logo.png" alt="KorshQuake Logo" class="brand-logo-img">
+        <img src="/icons/logo.png?v=3" alt="KorshQuake Logo" class="brand-logo-img">
       </div>
       <div class="brand-text">
         <div class="brand-title-row">
-          <h1 class="app-title"><span class="brand-ecg">📈</span><span class="brand-korsh">Korsh</span><span class="brand-quake">Quake</span></h1>
+          <h1 class="app-title"><svg class="brand-ecg-svg" viewBox="0 0 38 20" fill="none" stroke="#ff1e42" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width: 24px; height: 16px; margin-right: 5px; vertical-align: middle; filter: drop-shadow(0 0 5px rgba(255,30,66,0.6));"><path d="M2 10h6l3-6 5 13 4-9 3 5 4-3h9"/></svg><span class="brand-korsh">Korsh</span><span class="brand-quake">Quake</span></h1>
           <span class="badge-version desktop-only">v1.1.7 PRO</span>
           <span class="live-status-pill mobile-only" title="Ingesta continua en vivo">
             <span class="stat-dot pulse-red"></span>
@@ -47,7 +46,7 @@
             <span class="gps-pill-text" id="top-gps-text">GPS</span>
           </span>
         </div>
-        <p class="app-subtitle mobile-only">Panamá 🇵🇦 • Venezuela 🇻🇪 • España 🇪🇸 • Argentina 🇦🇷</p>
+        <p class="app-subtitle mobile-only"><span class="iso-chip">PA</span> Panamá • <span class="iso-chip">VE</span> Venezuela • <span class="iso-chip">ES</span> España • <span class="iso-chip">AR</span> Argentina</p>
       </div>
 
       <!-- Telemetry Pills (Matching Desktop Dashboard Mockup) -->
@@ -72,23 +71,23 @@
       <span class="desktop-country-lbl font-mono">Country</span>
       <div class="desktop-country-pills" id="desktop-country-tabs">
         <button class="country-pill active" data-country="all" title="Ver todos los países">
-          <span class="country-pill-flag">🌐</span>
+          <span class="country-pill-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
           <span>Todos</span>
         </button>
         <button class="country-pill" data-country="PA" title="Panamá">
-          <span class="country-pill-flag">🇵🇦</span>
+          <span class="country-pill-code pan">PA</span>
           <span>Panama</span>
         </button>
         <button class="country-pill" data-country="VE" title="Venezuela">
-          <span class="country-pill-flag">🇻🇪</span>
+          <span class="country-pill-code ven">VE</span>
           <span>Venezuela</span>
         </button>
         <button class="country-pill" data-country="ES" title="España">
-          <span class="country-pill-flag">🇪🇸</span>
+          <span class="country-pill-code esp">ES</span>
           <span>Spain</span>
         </button>
         <button class="country-pill" data-country="AR" title="Argentina">
-          <span class="country-pill-flag">🇦🇷</span>
+          <span class="country-pill-code arg">AR</span>
           <span>Argentina</span>
         </button>
       </div>
@@ -129,7 +128,7 @@
   <div class="ota-update-banner" id="ota-update-banner" style="display: none;">
     <div class="ota-update-content">
       <div class="ota-update-icon-wrap">
-        <span class="ota-icon">🚀</span>
+        <span class="ota-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg></span>
       </div>
       <div class="ota-update-text">
         <div class="ota-title-row">
@@ -140,7 +139,7 @@
       </div>
       <div class="ota-actions">
         <button class="ota-btn-update" id="btn-ota-apply" title="Actualizar instantáneamente sin descargas">
-          <span>⚡ Actualizar Ahora</span>
+          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Actualizar Ahora</span>
         </button>
         <button class="ota-btn-dismiss" id="btn-ota-dismiss" title="Posponer actualización">&times;</button>
       </div>
@@ -162,14 +161,14 @@
       </div>
       <div class="gps-banner-text">
         <div class="gps-title-row">
-          <strong id="gps-banner-title">📍 Ubicación GPS Requerida</strong>
+          <strong id="gps-banner-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 5px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Ubicación GPS Requerida</strong>
           <span class="gps-badge-status" id="gps-banner-badge">Desactivada</span>
         </div>
         <p class="gps-banner-desc" id="gps-banner-desc">Tu teléfono debe tener la ubicación activada para actuar como nodo sismográfico y recibir alertas tempranas en tu ciudad.</p>
       </div>
       <div class="gps-actions">
         <button class="btn-enable-gps" id="btn-enable-gps" title="Activar y Conceder Ubicación GPS">
-          <span>📍 Activar GPS</span>
+          <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Activar GPS</span>
         </button>
       </div>
     </div>
@@ -179,7 +178,7 @@
   <div class="eew-banner" id="eew-banner" style="display: none;">
     <div class="eew-content">
       <div class="eew-badge">
-        <span class="eew-icon">⚠️</span>
+        <span class="eew-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff1744" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
         <span>KORSHQUAKE ALERTA TEMPRANA EN VIVO</span>
       </div>
       <div class="eew-details">
@@ -242,27 +241,27 @@
     <div class="country-tabs-label font-mono">Región Focalizada:</div>
     <div class="country-tabs-group" id="country-tabs">
       <button class="country-pill active" data-country="all">
-        <span class="country-pill-flag">🌐</span>
+        <span class="country-pill-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
         <span>Todos (4 Países)</span>
         <span class="country-pill-count font-mono" id="count-pill-all">0</span>
       </button>
       <button class="country-pill" data-country="PA">
-        <span class="country-pill-flag">🇵🇦</span>
+        <span class="country-pill-code pan">PA</span>
         <span>Panamá</span>
         <span class="country-pill-count font-mono" id="count-pill-pa">0</span>
       </button>
       <button class="country-pill" data-country="VE">
-        <span class="country-pill-flag">🇻🇪</span>
+        <span class="country-pill-code ven">VE</span>
         <span>Venezuela</span>
         <span class="country-pill-count font-mono" id="count-pill-ve">0</span>
       </button>
       <button class="country-pill" data-country="ES">
-        <span class="country-pill-flag">🇪🇸</span>
+        <span class="country-pill-code esp">ES</span>
         <span>España</span>
         <span class="country-pill-count font-mono" id="count-pill-es">0</span>
       </button>
       <button class="country-pill" data-country="AR">
-        <span class="country-pill-flag">🇦🇷</span>
+        <span class="country-pill-code arg">AR</span>
         <span>Argentina</span>
         <span class="country-pill-count font-mono" id="count-pill-ar">0</span>
       </button>
@@ -307,7 +306,7 @@
           
           <div class="map-overlay-menu" id="menu-data-overlays" style="display: none;">
             <div class="overlay-section-title font-mono">CAPA BASE</div>
-            <div class="overlay-menu-item active" data-layer="dark">✓ Modo Oscuro (CartoDB Dark Matter)</div>
+            <div class="overlay-menu-item active" data-layer="dark"><svg class="menu-check-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Modo Oscuro (CartoDB Dark Matter)</div>
             <div class="overlay-menu-item" data-layer="satellite">Satélite Alta Resolución (Esri)</div>
             <div class="overlay-menu-item" data-layer="topo">Físico / Topográfico (OpenTopo)</div>
             <div class="overlay-menu-divider"></div>
@@ -480,22 +479,22 @@
         <!-- 4 Casillas Glass de Métricas Físicas Reales -->
         <div class="ios-grid-metrics">
           <div class="ios-metric-tile">
-            <div class="ios-tile-icon">📏</div>
+            <div class="ios-tile-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg></div>
             <div class="ios-tile-val font-mono" id="qd-depth">-- km</div>
             <div class="ios-tile-lbl">Profundidad</div>
           </div>
           <div class="ios-metric-tile">
-            <div class="ios-tile-icon">🔥</div>
+            <div class="ios-tile-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div>
             <div class="ios-tile-val font-mono" id="qd-mmi">--</div>
             <div class="ios-tile-lbl">Intensidad MMI</div>
           </div>
           <div class="ios-metric-tile">
-            <div class="ios-tile-icon">⚡</div>
+            <div class="ios-tile-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
             <div class="ios-tile-val font-mono" id="qd-pga">-- gal</div>
             <div class="ios-tile-lbl">Aceleración (PGA)</div>
           </div>
           <div class="ios-metric-tile">
-            <div class="ios-tile-icon">🛰️</div>
+            <div class="ios-tile-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg></div>
             <div class="ios-tile-val font-mono" id="qd-consensus">--</div>
             <div class="ios-tile-lbl">Red Sísmica</div>
           </div>
@@ -504,16 +503,16 @@
         <!-- Botones de Acción Táctil -->
         <div class="ios-sheet-actions">
           <button class="btn btn-primary ios-action-btn" id="btn-report-felt">
-            <span>🚨 ¿Sentiste este sismo? Reportar vibración</span>
+            <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 5px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>¿Sentiste este sismo? Reportar vibración</span>
           </button>
           <button class="btn btn-secondary ios-action-btn" id="btn-focus-map">
-            <span>🗺️ Centrar y Ver en Mapa Tectónico</span>
+            <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 5px;"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Centrar y Ver en Mapa Tectónico</span>
           </button>
         </div>
 
         <!-- Tabla Glass de Llegada a Ciudades Cercanas -->
         <div class="ios-predictions-card">
-          <div class="ios-card-title font-mono">⚡ Tiempos de Arribo de Onda (ETA a Centros Urbanos)</div>
+          <div class="ios-card-title font-mono"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 5px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Tiempos de Arribo de Onda (ETA a Centros Urbanos)</div>
           <div class="ios-table-wrap">
             <table class="ios-eta-table font-mono">
               <thead>
@@ -552,7 +551,7 @@
           <img src="/icons/icon-192.png" alt="KorshQuake" style="width: 80px; height: 80px; border-radius: 18px; box-shadow: 0 0 25px rgba(0,229,255,0.45); border: 1px solid rgba(0,229,255,0.4);">
           <h2 style="font-size: 1.3rem; margin-top: 10px; color: #fff;">KorshQuake Mobile v1.1.2 PRO</h2>
           <div style="display: flex; gap: 8px; justify-content: center; margin-top: 6px;">
-            <span class="country-badge-tag" style="background: rgba(0,230,118,0.15); color: #00e676; border-color: rgba(0,230,118,0.3);">✓ Android Nativo / PWA</span>
+            <span class="country-badge-tag" style="background: rgba(0,230,118,0.15); color: #00e676; border-color: rgba(0,230,118,0.3);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: -1px; margin-right: 3px;"><polyline points="20 6 9 17 4 12"/></svg>Android Nativo / PWA</span>
             <span class="country-badge-tag" style="background: rgba(0,229,255,0.15); color: #ff1e42; border-color: rgba(0,229,255,0.3);">0.25 MB Ultraligero</span>
           </div>
           <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 8px;">Monitoreo sísmico y predicción de ondas en tiempo real en la palma de tu mano.</p>
@@ -560,16 +559,16 @@
 
         <!-- Botón 1-Clic para PWA/WebAPK (si está disponible en el navegador) -->
         <div id="pwa-install-banner" style="display: none; background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(2,132,199,0.2)); border: 1px solid #00e5ff; border-radius: 10px; padding: 14px; margin-bottom: 16px; text-align: center;">
-          <h4 style="color: #ff1e42; font-size: 0.95rem; margin-bottom: 6px;">⚡ Instalación Instantánea Detectada</h4>
+          <h4 style="color: #ff1e42; font-size: 0.95rem; margin-bottom: 6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Instalación Instantánea Detectada</h4>
           <p style="font-size: 0.8rem; color: #cbd5e1; margin-bottom: 10px;">Tu navegador permite instalar KorshQuake directamente como aplicación nativa en tu pantalla de inicio.</p>
           <button id="btn-native-install-pwa" class="btn btn-primary" style="width: 100%; justify-content: center; font-weight: 700;">
-            📲 Instalar App en tu Celular (1-Clic)
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 6px;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>Instalar App en tu Celular (1-Clic)
           </button>
         </div>
 
         <!-- Opción 1: Descarga directa APK Android -->
         <div style="background: rgba(0, 229, 255, 0.08); border: 1px solid rgba(0, 229, 255, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
-          <h4 style="color: var(--cyan); font-size: 0.9rem; margin-bottom: 6px;">📲 Opción 1: Descarga Directa del Instalador APK</h4>
+          <h4 style="color: var(--cyan); font-size: 0.9rem; margin-bottom: 6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Opción 1: Descarga Directa del Instalador APK</h4>
           <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Descarga directamente el archivo instalador oficial <strong>KorshQuake.apk</strong> para tu celular o tablet Android.</p>
           <a href="/KorshQuake.apk" download="KorshQuake.apk" class="btn btn-primary" id="btn-download-apk-link" style="display: inline-flex; width: 100%; justify-content: center; gap: 8px;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -579,7 +578,7 @@
 
         <!-- Opción 2: Instalación como WebAPK / PWA -->
         <div style="background: rgba(0, 230, 118, 0.08); border: 1px solid rgba(0, 230, 118, 0.25); border-radius: 10px; padding: 14px;">
-          <h4 style="color: var(--green); font-size: 0.9rem; margin-bottom: 6px;">🌐 Opción 2: Instalar desde Navegador (WebAPK / iOS)</h4>
+          <h4 style="color: var(--green); font-size: 0.9rem; margin-bottom: 6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Opción 2: Instalar desde Navegador (WebAPK / iOS)</h4>
           <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">Abre esta dirección en el navegador de tu celular (Chrome o Safari):</p>
           <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
             <input type="text" id="apk-app-url" readonly class="font-mono" style="flex: 1; background: rgba(0,0,0,0.5); border: 1px solid #1e3a5f; color: #ff1e42; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; text-align: center;" value="">
@@ -659,7 +658,7 @@
         <!-- 1. Predicciones Sísmicas en Tiempo Real (EEW) -->
         <div class="settings-card highlight-card" style="border-color: rgba(255, 30, 66, 0.45); background: rgba(255, 30, 66, 0.08);">
           <div class="settings-card-header">
-            <span class="settings-icon">⚡</span>
+            <span class="settings-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
             <div>
               <div class="settings-title">Predicciones Sísmicas y Alerta Temprana (EEW)</div>
               <div class="settings-desc">Modelado físico de arribo de ondas P y S con cuenta regresiva en segundos</div>
@@ -667,7 +666,7 @@
           </div>
           <div style="margin-top: 10px; display: flex; gap: 8px;">
             <button class="btn btn-primary" id="btn-open-predict-modal" style="flex: 1; justify-content: center;">
-              ⚡ Abrir Motor de Predicciones EEW
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 5px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Abrir Motor de Predicciones EEW
             </button>
             <button class="btn btn-outline" id="btn-menu-open-predict" style="display: none;"></button>
           </div>
@@ -676,7 +675,7 @@
         <!-- 2. Descargar e Instalar App Mobile (APK / PWA) -->
         <div class="settings-card">
           <div class="settings-card-header">
-            <span class="settings-icon">📱</span>
+            <span class="settings-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span>
             <div>
               <div class="settings-title">KorshQuake Mobile (APK & PWA)</div>
               <div class="settings-desc">Convierte tu celular Android en una estación sismográfica con acelerómetro 3D</div>
@@ -684,7 +683,7 @@
           </div>
           <div style="margin-top: 10px; display: flex; gap: 8px;">
             <button class="btn btn-primary" id="btn-open-apk-modal" style="flex: 1; justify-content: center;">
-              📲 Instalar APK / Descargar Aplicación
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 5px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Instalar APK / Descargar Aplicación
             </button>
             <button class="btn btn-outline" id="btn-menu-open-apk" style="display: none;"></button>
           </div>
@@ -693,7 +692,7 @@
         <!-- 3. Configuración de Alertas Sonoras y Sensibilidad -->
         <div class="settings-card">
           <div class="settings-card-header">
-            <span class="settings-icon">🔊</span>
+            <span class="settings-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
             <div>
               <div class="settings-title">Alertas Sísmicas en Vivo</div>
               <div class="settings-desc">Sonar únicamente cuando el sismo ocurra en tiempo real (&lt;10 min)</div>
@@ -701,10 +700,10 @@
           </div>
           <div style="margin-top: 10px;">
             <select id="select-audio-threshold-menu" class="select-dark font-mono" style="width: 100%; padding: 10px;">
-              <option value="3.5" selected>🔊 M 3.5+ Moderados y Mayores (Recomendado)</option>
-              <option value="4.5">⚠️ M 4.5+ Solo Sismos Fuertes</option>
-              <option value="6.0">🚨 M 6.0+ Solo Terremotos Mayores</option>
-              <option value="off">🔇 Silencio Total (Mudo)</option>
+              <option value="3.5" selected>M 3.5+ Moderados y Mayores (Recomendado)</option>
+              <option value="4.5">M 4.5+ Solo Sismos Fuertes</option>
+              <option value="6.0">M 6.0+ Solo Terremotos Mayores</option>
+              <option value="off">Silencio Total (Mudo)</option>
             </select>
             <select id="select-audio-threshold" style="display: none;">
               <option value="3.5">3.5</option><option value="4.5">4.5</option><option value="6.0">6.0</option><option value="off">off</option>
@@ -712,7 +711,7 @@
           </div>
           <div style="margin-top: 8px;">
             <button class="btn btn-secondary btn-sm" id="btn-test-sound" style="width: 100%; justify-content: center;">
-              🔔 Probar Alarma Sonora
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 5px;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Probar Alarma Sonora
             </button>
           </div>
         </div>
@@ -720,7 +719,7 @@
         <!-- 4. Diagnóstico y Estado GPS Obligatorio -->
         <div class="settings-card" id="card-settings-gps" style="border-left: 3px solid #ff9100;">
           <div class="settings-card-header">
-            <span class="settings-icon">📍</span>
+            <span class="settings-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
             <div>
               <div class="settings-title">Ubicación GPS del Sensor Móvil</div>
               <div class="settings-desc" id="gps-settings-desc">Obligatorio para correlación de sismos y cálculo de epicentro regional</div>
@@ -742,7 +741,7 @@
           </div>
           <div style="margin-top: 10px;">
             <button class="btn btn-secondary btn-sm" id="btn-modal-request-gps" style="width: 100%; justify-content: center;">
-              📍 Reintentar / Conceder Permiso GPS
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 5px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Reintentar / Conceder Permiso GPS
             </button>
           </div>
         </div>
@@ -750,7 +749,7 @@
         <!-- 5. Actualizaciones Push OTA (In-App Zero Reinstall) -->
         <div class="settings-card highlight-card" style="border-color: rgba(255, 30, 66, 0.35);">
           <div class="settings-card-header">
-            <span class="settings-icon">🚀</span>
+            <span class="settings-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg></span>
             <div>
               <div class="settings-title">Actualizaciones Push OTA (Sin Reinstalar)</div>
               <div class="settings-desc">Los celulares con la APK se actualizan al instante en 1 clic</div>
@@ -762,7 +761,7 @@
           </div>
           <div style="margin-top: 10px;">
             <button class="btn btn-primary" id="btn-check-updates-manual" style="width: 100%; justify-content: center;">
-              ⚡ Buscar Actualizaciones y Sincronizar
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 5px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Buscar Actualizaciones y Sincronizar
             </button>
           </div>
         </div>
@@ -770,7 +769,7 @@
         <!-- 6. Redes Sísmicas Regionales -->
         <div class="settings-card">
           <div class="settings-card-header">
-            <span class="settings-icon">🌐</span>
+            <span class="settings-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
             <div>
               <div class="settings-title">Redes Sísmicas Regionales</div>
               <div class="settings-desc">Panamá (OSOP), Venezuela (FUNVISIS), España (IGN), Argentina (INPRES)</div>
@@ -787,7 +786,7 @@
         <!-- 7. Consola de Logs y Diagnóstico -->
         <div class="settings-card">
           <div class="settings-card-header">
-            <span class="settings-icon">💻</span>
+            <span class="settings-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
             <div>
               <div class="settings-title">Consola de Diagnóstico & Logs</div>
               <div class="settings-desc">Telemetría interna y trazas del motor sísmico</div>
@@ -872,7 +871,7 @@
       <div class="modal-header" style="background: rgba(6, 13, 24, 0.95); padding: 14px 22px;">
         <div class="modal-title-box">
           <span class="terminal-dot pulse-green"></span>
-          <h3>⚡ KorshQuake: Motor de Predicción Sísmica y Alerta Temprana (EEW)</h3>
+          <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -3px; margin-right: 6px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>KorshQuake: Motor de Predicción Sísmica y Alerta Temprana (EEW)</h3>
         </div>
         <button class="modal-close" id="btn-close-predict">&times;</button>
       </div>
@@ -963,7 +962,7 @@
         </div>
 
         <button class="btn btn-primary" id="btn-accept-terms" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem; font-weight: 700;">
-          🛡️ Aceptar Términos y Activar Protección 24/7
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -3px; margin-right: 6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>Aceptar Términos y Activar Protección 24/7
         </button>
       </div>
     </div>
