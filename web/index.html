@@ -27,6 +27,7 @@
 </head>
 <body>
   <!-- Header / Navigation Bar Rediseñado -->
+    <!-- Header / Unified Desktop & Mobile Navigation Bar -->
   <header class="app-header">
     <div class="header-left">
       <div class="logo-container" title="KorshQuake Official Network">
@@ -35,41 +36,61 @@
       </div>
       <div class="brand-text">
         <div class="brand-title-row">
-          <h1 class="app-title">KorshQuake</h1>
-          <span class="badge-version">v1.1.7 PRO</span>
-          <span class="live-status-pill" title="Ingesta continua cada 2.8s">
+          <h1 class="app-title"><span class="brand-ecg">📈</span><span class="brand-korsh">Korsh</span><span class="brand-quake">Quake</span></h1>
+          <span class="badge-version desktop-only">v1.1.7 PRO</span>
+          <span class="live-status-pill mobile-only" title="Ingesta continua en vivo">
             <span class="stat-dot pulse-red"></span>
             <span class="live-text">EN VIVO</span>
           </span>
-          <span class="top-device-badge" id="top-device-badge" title="Dispositivo activo en la red">
-            <span id="top-device-icon">💻</span>
-            <span id="top-device-label">PC Centinela</span>
-          </span>
-          <span class="top-gps-pill gps-warn" id="top-gps-pill" title="Estado de Ubicación GPS para Sismos">
+          <span class="top-gps-pill gps-warn mobile-only" id="top-gps-pill" title="Estado GPS">
             <span class="stat-dot" id="top-gps-dot"></span>
-            <span class="gps-pill-text" id="top-gps-text">GPS: Comprobando...</span>
+            <span class="gps-pill-text" id="top-gps-text">GPS</span>
           </span>
         </div>
-        <p class="app-subtitle">Panamá 🇵🇦 • Venezuela 🇻🇪 • España 🇪🇸 • Argentina 🇦🇷</p>
+        <p class="app-subtitle mobile-only">Panamá 🇵🇦 • Venezuela 🇻🇪 • España 🇪🇸 • Argentina 🇦🇷</p>
+      </div>
+
+      <!-- Telemetry Pills (Matching Desktop Dashboard Mockup) -->
+      <div class="desktop-telemetry-pills desktop-only">
+        <div class="desktop-stat-pill" id="cluster-pill" title="7 Servidores y redes conectadas en tiempo real">
+          <span class="stat-dot pulse-green"></span>
+          <span class="stat-label">7 Servers Online</span>
+        </div>
+        <div class="desktop-stat-pill" id="device-pill" title="Red de sensores centinela y teléfonos activos">
+          <span class="stat-dot pulse-green"></span>
+          <span class="stat-label">Sentinel Nodes</span>
+        </div>
+        <div class="desktop-stat-pill" title="Motor sísmico ak135 en tiempo real">
+          <span class="stat-dot pulse-green"></span>
+          <span class="stat-label">Engine Status</span>
+        </div>
       </div>
     </div>
 
-    <!-- Telemetry Stats Compact -->
-    <div class="header-stats desktop-only">
-      <div class="stat-pill" id="cluster-pill" style="cursor: pointer;" title="Ver Clúster de Redes Sísmicas">
-        <span class="stat-dot pulse-green"></span>
-        <span class="stat-label">Redes:</span>
-        <span class="stat-val font-mono" id="cluster-count">7 Servidores</span>
-      </div>
-      <div class="stat-pill" id="device-pill" style="display:none;" title="Rol de este Dispositivo">
-        <span class="stat-dot pulse-cyan" id="device-pill-dot"></span>
-        <span class="stat-label">Nodo:</span>
-        <span class="stat-val font-mono" id="device-role-display">PC Centinela</span>
-      </div>
-      <div class="stat-pill" style="display:none;">
-        <span class="stat-dot" id="gq-app-dot"></span>
-        <span class="stat-label">Engine:</span>
-        <span class="stat-val font-mono" id="gq-app-status">Korsh Core</span>
+    <!-- Center/Right: Country Selector Pills (Matching Desktop Mockup) -->
+    <div class="desktop-country-bar desktop-only">
+      <span class="desktop-country-lbl font-mono">Country</span>
+      <div class="desktop-country-pills" id="desktop-country-tabs">
+        <button class="country-pill active" data-country="all" title="Ver todos los países">
+          <span class="country-pill-flag">🌐</span>
+          <span>Todos</span>
+        </button>
+        <button class="country-pill" data-country="PA" title="Panamá">
+          <span class="country-pill-flag">🇵🇦</span>
+          <span>Panama</span>
+        </button>
+        <button class="country-pill" data-country="VE" title="Venezuela">
+          <span class="country-pill-flag">🇻🇪</span>
+          <span>Venezuela</span>
+        </button>
+        <button class="country-pill" data-country="ES" title="España">
+          <span class="country-pill-flag">🇪🇸</span>
+          <span>Spain</span>
+        </button>
+        <button class="country-pill" data-country="AR" title="Argentina">
+          <span class="country-pill-flag">🇦🇷</span>
+          <span>Argentina</span>
+        </button>
       </div>
     </div>
 
@@ -81,7 +102,7 @@
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
           <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
         </svg>
-        <span class="desktop-only" id="sound-label">Audio: ON</span>
+        <span class="desktop-only" id="sound-label" style="display: none;">Audio</span>
       </button>
 
       <!-- Botón Pantalla Completa (Centro de Control Desktop) -->
@@ -249,149 +270,172 @@
   </section>
 
   <!-- Main View Container -->
+    <!-- Main View Container: Tactical 2-Column Split Matching Mockup -->
   <main class="main-layout" data-mobile-view="map">
-    <!-- Center Left: Interactive Seismic Map -->
-    <section class="map-section glass-panel">
-      <div class="map-header">
-        <div class="map-title-box">
-          <h2 id="map-section-title">KorshQuake: Panamá, Venezuela, España y Argentina</h2>
-          <span class="live-tag"><span class="pulse-dot"></span> EN VIVO</span>
+    <!-- Center Left: High-Tech Interactive Seismic Map (Full Panel) -->
+    <section class="map-section">
+      <div class="map-wrapper">
+        <!-- Floating Glass Title Badge (Top-Left) -->
+        <div class="map-floating-badge top-left">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="22" y1="12" x2="18" y2="12"></line>
+            <line x1="6" y1="12" x2="2" y2="12"></line>
+            <line x1="12" y1="6" x2="12" y2="2"></line>
+            <line x1="12" y1="22" x2="12" y2="18"></line>
+          </svg>
+          <span id="map-section-title">High-Tech Interactive Seismic Map</span>
         </div>
-        <!-- Map Filters & Layer Switcher -->
-        <div class="map-controls">
-          <div class="filter-group">
-            <label for="select-layer">Capa:</label>
-            <select id="select-layer" class="select-dark">
-              <option value="dark" selected>Modo Oscuro (Esri Canvas)</option>
-              <option value="satellite">Satélite (Alta Resolución)</option>
-              <option value="topo">Físico / Topográfico</option>
-              <option value="vector">Vectorial Tectónico (Offline)</option>
-            </select>
+
+        <!-- Floating Glass Overlays Dropdown (Top-Right) -->
+        <div class="map-floating-dropdown top-right">
+          <button class="map-overlay-btn" id="btn-data-overlays">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="4" y1="21" x2="4" y2="14"></line>
+              <line x1="4" y1="10" x2="4" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12" y2="3"></line>
+              <line x1="20" y1="21" x2="20" y2="16"></line>
+              <line x1="20" y1="12" x2="20" y2="3"></line>
+              <line x1="1" y1="14" x2="7" y2="14"></line>
+              <line x1="9" y1="8" x2="15" y2="8"></line>
+              <line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
+            <span>Data Overlays</span>
+            <svg class="chevron-down" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          
+          <div class="map-overlay-menu" id="menu-data-overlays" style="display: none;">
+            <div class="overlay-section-title font-mono">CAPA BASE</div>
+            <div class="overlay-menu-item active" data-layer="dark">✓ Modo Oscuro (CartoDB Dark Matter)</div>
+            <div class="overlay-menu-item" data-layer="satellite">Satélite Alta Resolución (Esri)</div>
+            <div class="overlay-menu-item" data-layer="topo">Físico / Topográfico (OpenTopo)</div>
+            <div class="overlay-menu-divider"></div>
+            <div class="overlay-section-title font-mono">CAPAS SÍSMICAS</div>
+            <label class="overlay-toggle-item">
+              <input type="checkbox" id="toggle-tectonic-plates" checked>
+              <span>Placas Tectónicas (Fallas Activas)</span>
+            </label>
+            <label class="overlay-toggle-item">
+              <input type="checkbox" id="toggle-p-s-waves" checked>
+              <span>Propagación de Ondas P & S</span>
+            </label>
+            <label class="overlay-toggle-item">
+              <input type="checkbox" id="toggle-mesh-sensors" checked>
+              <span>Nodos Centinela y Celulares</span>
+            </label>
           </div>
-          <div class="filter-group">
-            <label for="filter-mag">Filtro Magnitud:</label>
-            <select id="filter-mag" class="select-dark">
-              <option value="all">Todas las Magnitudes</option>
-              <option value="consensus">🎯 Solo Consenso Multi-Red</option>
-              <option value="3">M 3.0+ Moderados</option>
-              <option value="5">M 5.0+ Fuertes</option>
-              <option value="6">M 6.0+ Mayores</option>
-            </select>
+        </div>
+
+        <!-- Left Vertical Dock Toolbar (Matching Mockup) -->
+        <div class="map-left-dock desktop-only">
+          <div class="dock-group">
+            <button class="dock-btn active" id="dock-btn-recenter" title="Vista General / Centrar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            </button>
+            <button class="dock-btn" id="dock-btn-focus-latest" title="Enfocar Último Sismo">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff1e42" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </button>
+            <button class="dock-btn" id="dock-btn-consensus" title="Filtrar Consenso Multi-Red">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="12" cy="12" r="4"></circle></svg>
+            </button>
+            <button class="dock-btn" id="dock-btn-search" title="Buscar Ubicación">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </button>
+            <button class="dock-btn" id="dock-btn-fullscreen" title="Pantalla Completa">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+            </button>
           </div>
-          <button class="btn btn-sm btn-secondary" id="btn-recenter" title="Reajustar vista del mapa">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
-            Centrar
+          <div class="dock-group">
+            <button class="dock-btn" id="dock-btn-layers" title="Selector de Capas">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+            </button>
+            <button class="dock-btn active" id="dock-btn-plates" title="Placas Tectónicas">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff1e42" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+            </button>
+            <button class="dock-btn" id="dock-btn-sensors" title="Nodos Centinela y Celulares">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path><circle cx="12" cy="12" r="2"></circle><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Bottom-Right Zoom Dock (Matching Mockup) -->
+        <div class="map-bottom-controls desktop-only">
+          <div class="map-zoom-pill">
+            <button class="zoom-btn" id="btn-map-zoom-in" title="Acercar">+</button>
+            <div class="zoom-divider"></div>
+            <button class="zoom-btn" id="btn-map-zoom-out" title="Alejar">−</button>
+          </div>
+          <button class="map-circle-btn" id="btn-map-quick-layer" title="Cambiar Capa">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
           </button>
         </div>
-      </div>
 
-      <!-- Leaflet Map Container -->
-      <div class="map-wrapper">
+        <!-- Mobile Floating Pill for Latest Quake -->
         <div class="mobile-latest-pill" id="mobile-latest-pill" style="display: none;" title="Pulsar para centrar en este sismo">
           <span class="live-dot pulse-red"></span>
           <span class="mlp-mag font-mono" id="mlp-mag">M --</span>
           <span class="mlp-place" id="mlp-place">Último sismo</span>
           <span class="mlp-time font-mono" id="mlp-time">--</span>
         </div>
-        <div id="map"></div>
-      </div>
 
-      <!-- Wave Propagation Overlay Legend -->
-      <div class="map-legend">
-        <div class="legend-item"><span class="legend-color cyan"></span> M &lt; 3.0</div>
-        <div class="legend-item"><span class="legend-color yellow"></span> M 3.0 - 4.9</div>
-        <div class="legend-item"><span class="legend-color orange"></span> M 5.0 - 6.4</div>
-        <div class="legend-item"><span class="legend-color red"></span> M 6.5+ Mayor</div>
-        <div class="legend-divider"></div>
-        <div class="legend-item"><span class="legend-ring wave-p"></span> Onda P (~8 km/s)</div>
-        <div class="legend-item"><span class="legend-ring wave-s"></span> Onda S (~4 km/s)</div>
-        <div class="legend-divider"></div>
-        <div class="legend-item"><span class="legend-plate-line"></span> Placas Tectónicas</div>
+        <div id="map"></div>
       </div>
     </section>
 
-    <!-- Right Column: Sidebar Feed & Waveform Seismograph -->
+    <!-- Right Column: Dual Stack Matching Mockup -->
     <aside class="sidebar-section">
-      <!-- Pestañas de Vista para Barra Lateral en Desktop -->
-      <div class="sidebar-tabs-bar desktop-only" id="sidebar-tabs-bar">
-        <button class="sidebar-tab-btn active" id="tab-btn-quakes" data-tab="quakes">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-          <span>Sismos Recientes</span>
-          <span class="badge-tab-count font-mono" id="sidebar-badge-quakes">0</span>
-        </button>
-        <button class="sidebar-tab-btn" id="tab-btn-station" data-tab="station">
-          <span id="sidebar-station-tab-icon">🖥️</span>
-          <span id="sidebar-station-tab-label">Estación PC</span>
-          <span class="stat-dot pulse-green" style="width: 7px; height: 7px; display: inline-block;"></span>
-        </button>
-      </div>
-      <!-- Live Station Waveform Monitor -->
-            <!-- Live Station Seismograph Feed & Citizen Mesh Node -->
-      <div class="seismograph-panel glass-panel" id="seismograph-container">
-        <div class="panel-header">
+      <!-- Widget 1 (Top): Digital Seismograph Oscilloscope -->
+      <div class="oscilloscope-widget glass-panel" id="seismograph-container">
+        <div class="panel-header widget-header">
           <div class="panel-title-wrap">
-            <span class="live-dot pulse-red" id="seismo-live-dot"></span>
-            <h3 id="seismo-title">Nodo Sismográfico Móvil</h3>
+            <h3 id="seismo-title">Digital Seismograph Oscilloscope</h3>
           </div>
-          <span class="freq-tag font-mono" id="sensor-mode-tag">Acelerómetro Activo</span>
+          <button class="btn-dots-menu" id="btn-seismo-menu" title="Opciones">•••</button>
         </div>
 
-        <!-- Sensor Status & Node Info -->
-        <div class="sensor-status-bar font-mono">
-          <div class="sensor-badge" id="sensor-hardware-badge">
-            <span class="sensor-dot"></span>
-            <span id="sensor-status-text">Detectando Acelerómetro Físico...</span>
+        <!-- Canvas Screen with 30u scale and Smy Hup axis ticks -->
+        <div class="oscilloscope-screen">
+          <span class="screen-scale-tag font-mono">30u</span>
+          <canvas id="seismograph-canvas" width="450" height="110"></canvas>
+          <div class="screen-axis-labels font-mono">
+            <span>Smy</span><span>9</span><span>12</span><span>18</span><span>24</span><span>38</span><span>30</span><span>Hup</span>
           </div>
-          <div class="node-id-pill" id="node-id-display">Nodo: Inicializando...</div>
         </div>
 
-        <canvas id="seismograph-canvas" width="450" height="110"></canvas>
-
-        <!-- Live Physical 3-Axis & Energy Readout -->
-        <div class="seismo-axes-bar font-mono">
-          <span>X: <strong id="axis-x">0.00</strong></span>
-          <span>Y: <strong id="axis-y">0.00</strong></span>
-          <span>Z: <strong id="axis-z">0.00</strong></span>
-          <span>STA/LTA: <strong id="seismo-sta-lta" class="text-cyan">1.0x</strong></span>
-        </div>
-
-        <div class="seismo-meta font-mono">
-          <span id="seismo-station-label">Red Ciudadana: <strong class="text-cyan" id="mesh-nodes-status">0 nodos</strong></span>
-          <span id="seismo-peak">PGA: 0.00 gal</span>
-        </div>
-
-        <!-- Sensor & Network Utility Controls -->
-        <div class="seismo-controls">
-          <button class="btn btn-sm btn-outline" id="btn-calibrate-sensor" title="Calibrar gravedad y nivel de ruido actual">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
-            Calibrar Sensor
-          </button>
-          <button class="btn btn-sm btn-secondary" id="btn-open-diagnostics" title="Verificar estado de salud y utilidad del nodo">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff1e42" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            <span style="color: #ff1e42;">Salud del Nodo</span>
-          </button>
-          <button class="btn btn-sm btn-secondary" id="btn-test-room-siren" title="Probar sirena y altavoz local de alerta temprana en esta estación">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff9100" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-            <span style="color: #ff9100;">Probar Sirena</span>
-          </button>
+        <!-- Bottom Readout: 3D Accelerometer & STA/LTA Energy -->
+        <div class="oscilloscope-readout">
+          <div class="readout-block">
+            <span class="readout-label font-mono">3D Accelerometer</span>
+            <span class="readout-val font-mono">
+              <span class="axis-x-span">X <strong id="axis-x">-0 gal</strong></span>
+              <span class="axis-y-span">Y <strong id="axis-y">-0 gal</strong></span>
+              <span class="axis-z-span">Z <strong id="axis-z">2.2 gal</strong></span>
+            </span>
+          </div>
+          <div class="readout-block text-right">
+            <span class="readout-label font-mono">STA/LTA Energy</span>
+            <span class="readout-val font-mono text-cyan" id="seismo-sta-lta">0.37</span>
+          </div>
         </div>
       </div>
 
-      <!-- Earthquake Live Activity Feed -->
-      <div class="feed-panel glass-panel">
-        <div class="panel-header feed-header-pro">
+      <!-- Widget 2 (Bottom): Live Earthquakes Feed with Mockup Cards -->
+      <div class="live-quakes-widget glass-panel">
+        <div class="panel-header widget-header">
           <div class="panel-title-wrap">
-            <span class="live-dot pulse-red"></span>
-            <h3 id="feed-panel-title">Sismos Recientes & Histórico</h3>
+            <h3 id="feed-panel-title">Live Earthquakes</h3>
           </div>
-          <div class="feed-header-actions">
-            <span class="badge-count font-mono" id="feed-count">0 sismos</span>
+          <div class="widget-header-actions">
+            <span class="feed-count-pill font-mono" id="feed-count">0</span>
+            <button class="btn-dots-menu" id="btn-feed-menu" title="Filtros">•••</button>
           </div>
         </div>
 
-                <div class="feed-search-wrap">
+        <!-- Search Bar -->
+        <div class="feed-search-wrap">
           <div class="ios-search-box">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
@@ -399,6 +443,8 @@
             <button id="feed-search-clear" style="display: none;" title="Limpiar búsqueda">&times;</button>
           </div>
         </div>
+
+        <!-- Quake List Container -->
         <div class="quake-list" id="quake-list">
           <div class="loading-state">
             <div class="spinner"></div>

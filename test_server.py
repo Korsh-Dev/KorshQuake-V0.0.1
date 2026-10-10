@@ -454,5 +454,25 @@ class TestKorshQuakeServer(unittest.TestCase):
         self.assertTrue(clear_res.get("success"))
         self.assertGreaterEqual(clear_res.get("cleared_count", 0), 1)
 
+
+    def test_real_felt_reports_flow(self):
+        quake_id = 'test-quake-123'
+        # 1. GET initial report count
+        url_get = f'http://127.0.0.1:{self.port}/api/quakes/{quake_id}/report'
+        req = urllib.request.urlopen(url_get, timeout=5)
+        self.assertEqual(req.status, 200)
+        data = json.loads(req.read().decode('utf-8'))
+        initial_count = data.get('felt_reports', 0)
+        
+        # 2. POST report
+        url_post = f'http://127.0.0.1:{self.port}/api/quakes/report'
+        post_data = json.dumps({'quake_id': quake_id, 'lat': 8.5, 'lon': -80.2}).encode('utf-8')
+        req2 = urllib.request.Request(url_post, data=post_data, headers={'Content-Type': 'application/json'})
+        resp2 = urllib.request.urlopen(req2, timeout=5)
+        self.assertEqual(resp2.status, 200)
+        res_data = json.loads(resp2.read().decode('utf-8'))
+        self.assertTrue(res_data.get('success'))
+        self.assertGreaterEqual(res_data.get('felt_reports', 0), initial_count)
+
 if __name__ == '__main__':
     unittest.main()

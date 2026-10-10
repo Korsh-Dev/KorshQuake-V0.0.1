@@ -33,6 +33,64 @@ WEB_DIR = os.path.join(BASE_DIR, "web")
 GODS_EYE_DIST = os.path.join(BASE_DIR, "gods-eye-view", "dist")
 ROAMING_GQ = os.path.join(os.environ.get("APPDATA", ""), "GlobalQuake")
 LOCAL_APP_PATH = os.path.join(BASE_DIR, "GlobalQuakeApp")
+DATA_DIR = os.path.join(BASE_DIR, "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+COMMUNITY_REPORTS_PATH = os.path.join(DATA_DIR, "community_reports.json")
+_community_reports_lock = threading.Lock()
+_community_reports = {}
+_community_report_ips = {}  # f"{quake_id}:{ip}" -> timestamp
+
+def load_community_reports():
+    global _community_reports
+    if os.path.exists(COMMUNITY_REPORTS_PATH):
+        try:
+            with open(COMMUNITY_REPORTS_PATH, "r", encoding="utf-8") as f:
+                _community_reports = json.load(f)
+        except Exception:
+            _community_reports = {}
+
+def save_community_reports():
+    try:
+        tmp_path = COMMUNITY_REPORTS_PATH + ".tmp"
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(_community_reports, f, indent=2, ensure_ascii=False)
+        os.replace(tmp_path, COMMUNITY_REPORTS_PATH)
+    except Exception:
+        pass
+
+load_community_reports()
+
+def get_felt_reports(quake_id):
+    with _community_reports_lock:
+        return _community_reports.get(str(quake_id), 0)
+
+def record_felt_report(quake_id, client_ip, lat=None, lon=None):
+    q_id = str(quake_id)
+    ip_key = f"{q_id}:{client_ip}"
+    now = time.time()
+    with _community_reports_lock:
+        last_time = _community_report_ips.get(ip_key, 0)
+        if now - last_time < 3600:
+            current_total = _community_reports.get(q_id, 0)
+            return {
+                "success": True,
+                "already_reported": True,
+                "quake_id": q_id,
+                "felt_reports": current_total,
+                "message": "Reporte previamente registrado para este evento"
+            }
+        _community_report_ips[ip_key] = now
+        _community_reports[q_id] = _community_reports.get(q_id, 0) + 1
+        new_total = _community_reports[q_id]
+        save_community_reports()
+    return {
+        "success": True,
+        "already_reported": False,
+        "quake_id": q_id,
+        "felt_reports": new_total,
+        "message": "Reporte ciudadano registrado exitosamente"
+    }
+
 
 # Target Countries metadata
 TARGET_COUNTRIES = {
@@ -705,7 +763,8 @@ def fetch_usgs_feed():
                             "country_code": country_code,
                             "country_name": country_meta["name"],
                             "country_flag": country_meta["flag"],
-                            "pga": None
+                            "pga": None,
+                            "felt": int(props.get("felt")) if props.get("felt") is not None else 0
                         })
             _server_telemetry["usgs_regional"]["latency_ms"] = dt
             _server_telemetry["usgs_regional"]["status"] = "ONLINE"
@@ -784,6 +843,10 @@ def merge_and_triangulate_events(raw_events):
         country_code = primary_ref["country_code"]
         country_meta = TARGET_COUNTRIES[country_code]
 
+        cluster_felt = max([int(ev.get("felt") or 0) for ev in matched_cluster]) if matched_cluster else 0
+        comm_felt = get_felt_reports(primary_ref["id"])
+        total_felt = cluster_felt + comm_felt
+
         feature = {
             "type": "Feature",
             "id": primary_ref["id"],
@@ -808,6 +871,10 @@ def merge_and_triangulate_events(raw_events):
                 "country_code": country_code,
                 "country_name": country_meta["name"],
                 "country_flag": country_meta["flag"],
+                "felt": total_felt,
+                "felt_reports": total_felt,
+                "usgs_felt": cluster_felt,
+                "community_felt": comm_felt,
                 "predictions": calculate_seismic_predictions(
                     primary_ref["coords"][1],
                     primary_ref["coords"][0],
@@ -1372,6 +1439,23 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             })
             return
 
+                # 5. Reporte ciudadano real de sismo sentido (DYFI)
+        if path == "/api/quakes/report" or (path.startswith("/api/quakes/") and path.endswith("/report")):
+            quake_id = body.get("quake_id")
+            if not quake_id and path.startswith("/api/quakes/"):
+                parts = path.strip("/").split("/")
+                if len(parts) >= 3 and parts[0] == "api" and parts[1] == "quakes" and parts[3] == "report":
+                    quake_id = parts[2]
+            if not quake_id:
+                send_json({"error": "Missing quake_id parameter"}, 400)
+                return
+            client_ip = self.headers.get("X-Forwarded-For") or self.client_address[0]
+            lat = body.get("lat")
+            lon = body.get("lon")
+            result = record_felt_report(quake_id, client_ip, lat, lon)
+            send_json(result)
+            return
+
         send_json({"error": "Endpoint not found", "path": path}, 404)
         return
 
@@ -1380,6 +1464,20 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
         query = urllib.parse.parse_qs(parsed_url.query)
+        # API: Obtener conteo real de reportes de sismo sentido (/api/quakes/<id>/report)
+        if path.startswith('/api/quakes/') and path.endswith('/report'):
+            parts = path.strip('/').split('/')
+            quake_id = parts[2] if len(parts) >= 3 else ''
+            count = get_felt_reports(quake_id)
+            payload = json.dumps({'success': True, 'quake_id': quake_id, 'felt_reports': count}).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Content-Length', str(len(payload)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(payload)
+            return
+
 
         # 0. API: Server-Sent Events (SSE) para Alertas Sísmicas Tempranas (/api/events/live y /api/stream)
         if path in ["/api/events/live", "/api/stream"]:

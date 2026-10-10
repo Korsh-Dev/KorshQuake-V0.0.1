@@ -35,7 +35,7 @@ function setupDeviceNodeRole() {
     if (topDevLabel) topDevLabel.textContent = 'PC Centinela';
     if (topDevIcon) topDevIcon.textContent = '🖥️';
     if (deviceRoleDisplay) deviceRoleDisplay.textContent = 'PC Centinela';
-    if (seismoTitle) seismoTitle.textContent = '🖥️ Estación Centinela PC';
+    if (seismoTitle) seismoTitle.textContent = 'Digital Seismograph Oscilloscope';
     if (sensorModeTag) sensorModeTag.textContent = 'Vigilancia 24/7';
     if (tabStationLabel) tabStationLabel.textContent = 'Estación PC';
     if (tabStationIcon) tabStationIcon.textContent = '🖥️';
@@ -43,7 +43,7 @@ function setupDeviceNodeRole() {
     if (topDevLabel) topDevLabel.textContent = 'Sensor Móvil';
     if (topDevIcon) topDevIcon.textContent = '📱';
     if (deviceRoleDisplay) deviceRoleDisplay.textContent = 'Móvil (100 Hz)';
-    if (seismoTitle) seismoTitle.textContent = '📱 Nodo Sismográfico Móvil';
+    if (seismoTitle) seismoTitle.textContent = 'Digital Seismograph Oscilloscope';
     if (sensorModeTag) sensorModeTag.textContent = 'Acelerómetro Activo';
     if (tabStationLabel) tabStationLabel.textContent = 'Sismógrafo';
     if (tabStationIcon) tabStationIcon.textContent = '〰️';
@@ -303,7 +303,7 @@ function initMap() {
     zoom: 3,
     minZoom: 1.5,
     maxZoom: 16,
-    zoomControl: true,
+    zoomControl: false,
     preferCanvas: true
   });
 
@@ -549,23 +549,50 @@ function openQuakeDetailModal(feature) {
   const btnReport = document.getElementById('btn-report-felt');
   const reportedKey = `korsh_reported_${feature.id}`;
   const alreadyReported = localStorage.getItem(reportedKey) === 'true';
+  const modalRealFelt = (typeof props.felt_reports === 'number' && props.felt_reports >= 0)
+    ? props.felt_reports
+    : ((typeof props.felt === 'number' && props.felt >= 0) ? props.felt : 0);
+
   if (btnReport) {
     if (alreadyReported) {
       btnReport.disabled = true;
-      btnReport.innerHTML = `<span>✓ Ya reportaste haber sentido este sismo</span>`;
+      btnReport.innerHTML = `<span>✓ Ya reportaste este sismo (${modalRealFelt} reportes reales)</span>`;
       btnReport.style.opacity = '0.7';
     } else {
       btnReport.disabled = false;
-      btnReport.innerHTML = `<span>🚨 ¿Sentiste este sismo? Reportar vibración</span>`;
+      btnReport.innerHTML = `<span>🚨 ¿Sentiste este sismo? (${modalRealFelt} reportes reales)</span>`;
       btnReport.style.opacity = '1';
-      btnReport.onclick = () => {
-        localStorage.setItem(reportedKey, 'true');
+      btnReport.onclick = async () => {
         btnReport.disabled = true;
-        btnReport.innerHTML = `<span>✓ Reporte registrado con éxito (¡Gracias!)</span>`;
-        if ('vibrate' in navigator) {
-          try { navigator.vibrate([40, 30, 60]); } catch (e) {}
+        btnReport.innerHTML = `<span>⏳ Enviando reporte al servidor...</span>`;
+        try {
+          const uLat = meshNodeState.lat || null;
+          const uLon = meshNodeState.lon || null;
+          const resp = await fetch(`/api/quakes/${encodeURIComponent(feature.id)}/report`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              quake_id: feature.id,
+              lat: uLat,
+              lon: uLon
+            })
+          });
+          const res = await resp.json();
+          const newTotal = (res && res.felt_reports !== undefined) ? res.felt_reports : (modalRealFelt + 1);
+          props.felt_reports = newTotal;
+          props.felt = newTotal;
+          localStorage.setItem(reportedKey, 'true');
+          btnReport.innerHTML = `<span>✓ Reporte registrado exitosamente (${newTotal} reportes reales)</span>`;
+          if ('vibrate' in navigator) {
+            try { navigator.vibrate([40, 30, 60]); } catch (e) {}
+          }
+          showToast(`🛡️ Reporte comunitario registrado para M ${mag.toFixed(1)}. Total: ${newTotal}`);
+          renderQuakes();
+        } catch (err) {
+          btnReport.disabled = false;
+          btnReport.innerHTML = `<span>🚨 Reintentar reporte</span>`;
+          showToast('Error de red al enviar reporte');
         }
-        showToast(`🛡️ Reporte comunitario registrado para M ${mag.toFixed(1)} en ${props.place || ''}`);
       };
     }
   }
@@ -746,13 +773,17 @@ function renderQuakes() {
     // Ondas calculadas y animadas en tiempo real por el motor EEW
     updateWavefronts();
 
-    // Tarjeta Pro de Sismos con Fidelidad Total a la Maqueta
+    // Tarjeta Pro de Sismos con Fidelidad Total a la Maqueta (Fiel a la Maqueta Desktop)
     if (quakeListEl) {
       const userLat = meshNodeState.lat;
       const userLon = meshNodeState.lon;
       const distKm = (userLat && userLon) ? calculateDistanceKm(userLat, userLon, lat, lon) : null;
-      const distText = (distKm !== null && !isNaN(distKm)) ? `${distKm.toLocaleString()} km de ti` : null;
-      const feltCount = Math.max(14, Math.round(Math.pow(10, Math.max(1.1, mag - 2.7)) * (isConsensus ? 18 : 8)));
+      const distClean = (distKm !== null && !isNaN(distKm)) ? `${Math.round(distKm).toLocaleString()} km` : `${props.source_feed || 'USGS'}`;
+
+      // Reportes 100% REALES (DYFI oficial USGS + votos ciudadanos registrados en KorshQuake)
+      const realFelt = (typeof props.felt_reports === 'number' && props.felt_reports >= 0)
+        ? props.felt_reports
+        : ((typeof props.felt === 'number' && props.felt >= 0) ? props.felt : 0);
 
       let magLevel = 'slate';
       let magClass = 'slate';
@@ -761,29 +792,26 @@ function renderQuakes() {
       else if (mag >= 3.0) { magLevel = 'yellow'; magClass = 'yellow'; }
 
       const card = document.createElement('div');
-      card.className = 'quake-item pro-quake-card';
+      card.className = `quake-item pro-quake-card ${magClass}`;
       card.setAttribute('data-mag-level', magLevel);
       card.setAttribute('data-quake-id', feature.id);
       card.innerHTML = `
         <div class="pro-mag-badge ${magClass}">
           <span class="pro-mag-val">M ${mag.toFixed(1)}</span>
         </div>
-        <div class="pro-quake-body">
-          <div class="pro-quake-top">
-            <span class="pro-quake-place" title="${escapeHtml(props.place || '')}">
-              ${escapeHtml(props.country_flag || '')} ${escapeHtml(props.place || 'Epicentro')}
-            </span>
-            <span class="pro-quake-time font-mono">${timeAgoStr}</span>
+        <div class="pro-quake-info">
+          <div class="pro-quake-title" title="${escapeHtml(props.place || '')}">
+            ${escapeHtml(props.place || 'Epicentro')}
           </div>
-          <div class="pro-quake-bottom font-mono">
-            <span class="pro-meta-tag">Prof: <strong>${depth ? depth.toFixed(0) : 10} km</strong></span>
-            ${distText ? `<span class="pro-meta-tag highlight">Dist: <strong>${distText}</strong></span>` : `<span class="pro-meta-tag">Red: <strong>${escapeHtml(props.source_feed || 'USGS')}</strong></span>`}
-            <span class="pro-meta-tag">Reportes: <strong>${feltCount.toLocaleString()}</strong></span>
-            ${isConsensus ? `<span class="pro-meta-tag consensus">🎯 Consenso</span>` : ''}
+          <div class="pro-quake-details font-mono">
+            <span>Prof: <strong>${Math.abs(depth || 10).toFixed(0)} km</strong></span>
+            <span>${(distKm !== null && !isNaN(distKm)) ? `Dist: <strong>${Math.round(distKm).toLocaleString()} km</strong>` : `Red: <strong>${escapeHtml(props.source_feed ? props.source_feed.split('/')[0] : 'USGS')}</strong>`}</span>
+            <span>Reportes: <strong>${realFelt}</strong></span>
+            ${isConsensus ? `<span class="consensus-tag">🎯 Consenso</span>` : ''}
           </div>
         </div>
-        <div class="pro-quake-arrow">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <div class="pro-quake-chevron">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="9 18 15 12 9 6"></polyline>
           </svg>
         </div>
@@ -2584,7 +2612,157 @@ document.addEventListener('DOMContentLoaded', () => {
   if (modalQd) {
     modalQd.addEventListener('click', (e) => {
       if (e.target === modalQd) closeQuakeDetailModal();
+    
+  // Controles Tácticos Flotantes del Mapa (Mockup Desktop)
+  const btnOverlays = document.getElementById('btn-data-overlays');
+  const menuOverlays = document.getElementById('menu-data-overlays');
+  if (btnOverlays && menuOverlays) {
+    btnOverlays.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isVisible = menuOverlays.style.display !== 'none';
+      menuOverlays.style.display = isVisible ? 'none' : 'block';
     });
+    document.addEventListener('click', (e) => {
+      if (!menuOverlays.contains(e.target) && e.target !== btnOverlays) {
+        menuOverlays.style.display = 'none';
+      }
+    });
+  }
+
+  // Selector de capas base dentro de Data Overlays
+  const overlayMenuItems = document.querySelectorAll('.overlay-menu-item');
+  const selectLayerEl = document.getElementById('select-layer');
+  overlayMenuItems.forEach(item => {
+    item.addEventListener('click', () => {
+      overlayMenuItems.forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      const targetLayer = item.dataset.layer;
+      if (selectLayerEl) {
+        selectLayerEl.value = targetLayer;
+        selectLayerEl.dispatchEvent(new Event('change'));
+      }
+      if (menuOverlays) menuOverlays.style.display = 'none';
+    });
+  });
+
+  // Toggles de capas tectónicas y ondas
+  const togglePlates = document.getElementById('toggle-tectonic-plates');
+  if (togglePlates) {
+    togglePlates.addEventListener('change', () => {
+      if (togglePlates.checked) {
+        if (!map.hasLayer(tectonicPlatesLayer)) map.addLayer(tectonicPlatesLayer);
+      } else {
+        if (map.hasLayer(tectonicPlatesLayer)) map.removeLayer(tectonicPlatesLayer);
+      }
+    });
+  }
+
+  const toggleWaves = document.getElementById('toggle-p-s-waves');
+  if (toggleWaves) {
+    toggleWaves.addEventListener('change', () => {
+      if (toggleWaves.checked) {
+        if (!map.hasLayer(waveLayerGroup)) map.addLayer(waveLayerGroup);
+      } else {
+        if (map.hasLayer(waveLayerGroup)) map.removeLayer(waveLayerGroup);
+      }
+    });
+  }
+
+  // Botones del Dock Vertical Izquierdo
+  const dockRecenter = document.getElementById('dock-btn-recenter');
+  if (dockRecenter) {
+    dockRecenter.addEventListener('click', () => {
+      const viewport = REGION_VIEWPORTS[currentCountryFilter] || REGION_VIEWPORTS.all;
+      map.flyTo(viewport.center, viewport.zoom, { duration: 1.2 });
+    });
+  }
+
+  const dockFocusLatest = document.getElementById('dock-btn-focus-latest');
+  if (dockFocusLatest) {
+    dockFocusLatest.addEventListener('click', () => {
+      if (allQuakes && allQuakes.length > 0) {
+        const latest = allQuakes[0];
+        const coords = latest.geometry ? latest.geometry.coordinates : null;
+        if (coords && coords.length >= 2) {
+          map.flyTo([coords[1], coords[0]], 7.5, { duration: 1.2 });
+          openQuakeDetailModal(latest);
+        }
+      }
+    });
+  }
+
+  const dockConsensus = document.getElementById('dock-btn-consensus');
+  if (dockConsensus) {
+    dockConsensus.addEventListener('click', () => {
+      dockConsensus.classList.toggle('active');
+      const filterMagEl = document.getElementById('filter-mag');
+      if (filterMagEl) {
+        filterMagEl.value = dockConsensus.classList.contains('active') ? 'consensus' : 'all';
+        renderQuakes();
+      }
+    });
+  }
+
+  const dockFullscreen = document.getElementById('dock-btn-fullscreen');
+  if (dockFullscreen) {
+    dockFullscreen.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+  }
+
+  const dockPlates = document.getElementById('dock-btn-plates');
+  if (dockPlates) {
+    dockPlates.addEventListener('click', () => {
+      dockPlates.classList.toggle('active');
+      if (dockPlates.classList.contains('active')) {
+        if (!map.hasLayer(tectonicPlatesLayer)) map.addLayer(tectonicPlatesLayer);
+        showToast('Placas tectónicas activadas');
+      } else {
+        if (map.hasLayer(tectonicPlatesLayer)) map.removeLayer(tectonicPlatesLayer);
+        showToast('Placas tectónicas ocultas');
+      }
+    });
+  }
+
+  const dockSensors = document.getElementById('dock-btn-sensors');
+  if (dockSensors) {
+    dockSensors.addEventListener('click', () => {
+      dockSensors.classList.toggle('active');
+      if (dockSensors.classList.contains('active')) {
+        if (!map.hasLayer(meshNodesLayerGroup)) map.addLayer(meshNodesLayerGroup);
+        showToast('Red de sensores móviles y centinelas visible');
+      } else {
+        if (map.hasLayer(meshNodesLayerGroup)) map.removeLayer(meshNodesLayerGroup);
+        showToast('Sensores móviles ocultos');
+      }
+    });
+  }
+
+  // Controles de zoom inferior derecho
+  const btnZoomIn = document.getElementById('btn-map-zoom-in');
+  const btnZoomOut = document.getElementById('btn-map-zoom-out');
+  if (btnZoomIn) btnZoomIn.addEventListener('click', () => map.zoomIn());
+  if (btnZoomOut) btnZoomOut.addEventListener('click', () => map.zoomOut());
+
+  const btnQuickLayer = document.getElementById('btn-map-quick-layer');
+  if (btnQuickLayer) {
+    btnQuickLayer.addEventListener('click', () => {
+      const layers = ['dark', 'satellite', 'topo'];
+      const current = selectLayerEl ? selectLayerEl.value : 'dark';
+      const next = layers[(layers.indexOf(current) + 1) % layers.length];
+      if (selectLayerEl) {
+        selectLayerEl.value = next;
+        selectLayerEl.dispatchEvent(new Event('change'));
+      }
+      showToast(`Capa de mapa: ${next.toUpperCase()}`);
+    });
+  }
+
+});
   }
 });
 
