@@ -23,7 +23,7 @@ from datetime import datetime
 
 _server_start_time = time.time()
 
-CURRENT_VERSION = "1.1.6 PRO"
+CURRENT_VERSION = "1.1.7 PRO"
 CURRENT_VERSION_CODE = 116
 
 
