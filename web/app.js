@@ -1,3 +1,4 @@
+let currentMagFilter = 'all';
 window.openQuakeDetailById = function(featureId) {
   if (!allQuakes) return;
   const f = allQuakes.find(q => q && q.id === featureId);
@@ -40,7 +41,7 @@ function setupDeviceNodeRole() {
     if (topDevLabel) topDevLabel.textContent = 'PC Centinela';
     if (topDevIcon) topDevIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
     if (deviceRoleDisplay) deviceRoleDisplay.textContent = 'PC Centinela';
-    if (seismoTitle) seismoTitle.textContent = 'Digital Seismograph Oscilloscope';
+    if (seismoTitle) seismoTitle.textContent = 'Sismógrafo Digital en Tiempo Real';
     if (sensorModeTag) sensorModeTag.textContent = 'Vigilancia 24/7';
     if (tabStationLabel) tabStationLabel.textContent = 'Estación PC';
     if (tabStationIcon) tabStationIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
@@ -48,7 +49,7 @@ function setupDeviceNodeRole() {
     if (topDevLabel) topDevLabel.textContent = 'Sensor Móvil';
     if (topDevIcon) topDevIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>';
     if (deviceRoleDisplay) deviceRoleDisplay.textContent = 'Móvil (100 Hz)';
-    if (seismoTitle) seismoTitle.textContent = 'Digital Seismograph Oscilloscope';
+    if (seismoTitle) seismoTitle.textContent = 'Sismógrafo Digital en Tiempo Real';
     if (sensorModeTag) sensorModeTag.textContent = 'Acelerómetro Activo';
     if (tabStationLabel) tabStationLabel.textContent = 'Sismógrafo';
     if (tabStationIcon) tabStationIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>';
@@ -774,7 +775,7 @@ function renderQuakes() {
   if (!map || !allQuakes) return;
 
   const filterEl = document.getElementById('filter-mag');
-  const magFilter = filterEl ? filterEl.value : 'all';
+  const magFilter = filterEl ? filterEl.value : currentMagFilter;
 
   const filtered = allQuakes.filter(f => {
     if (!f || !f.properties || !f.geometry || !f.geometry.coordinates) return false;
@@ -795,10 +796,11 @@ function renderQuakes() {
       }
     }
 
-    if (magFilter === 'consensus') return f.properties.is_consensus === true;
-    if (magFilter === '3') return mag >= 3.0;
-    if (magFilter === '5') return mag >= 5.0;
-    if (magFilter === '6') return mag >= 6.5;
+    if (magFilter === 'consensus') return f.properties.is_consensus === true || (f.properties.source_feed && f.properties.source_feed.includes('CONSENSO'));
+    if (magFilter === '3.0' || magFilter === '3') return mag >= 3.0;
+    if (magFilter === '4.5' || magFilter === '4') return mag >= 4.5;
+    if (magFilter === '5.0' || magFilter === '5') return mag >= 5.0;
+    if (magFilter === '6.0' || magFilter === '6') return mag >= 6.0;
     return true;
   });
 
@@ -832,7 +834,7 @@ function renderQuakes() {
       const mlpTime = document.getElementById('mlp-time');
 
       if (mlpMag) mlpMag.textContent = `M ${topMag.toFixed(1)}`;
-      if (mlpPlace) mlpPlace.textContent = `${topProps.country_flag || ''} ${topProps.place || 'Sismo'}`;
+      if (mlpPlace) mlpPlace.textContent = `${topProps.place || 'Sismo'}`;
       if (mlpTime) mlpTime.textContent = formatTimeAgo(topProps.time);
       
       mlpEl.style.display = 'flex';
@@ -858,7 +860,7 @@ function renderQuakes() {
     const coords = feature.geometry.coordinates;
     const lon = coords[0];
     const lat = coords[1];
-    const depth = coords.length > 2 ? coords[2] : 10.0;
+    const depth = coords.length > 2 ? Math.abs(coords[2]) : 10.0;
     const props = feature.properties;
     const mag = props.mag || 0;
     const color = getMagColor(mag);
@@ -873,7 +875,7 @@ function renderQuakes() {
 
     const popupHtml = `
       <div class="popup-quake">
-        <div class="popup-mag" style="color: ${color}">M ${mag.toFixed(1)} <span style="font-size: 0.9rem">${escapeHtml(props.country_flag || '')} ${escapeHtml(props.country_name || '')}</span></div>
+        <div class="popup-mag" style="color: ${color}">M ${mag.toFixed(1)} <span style="font-size: 0.9rem">${escapeHtml(props.country_name || '')}</span></div>
         <div class="popup-place">${escapeHtml(props.place || 'Epicentro')}</div>
         <div class="popup-details">
           <span><strong>Territorio:</strong> ${escapeHtml(props.country_name || '')} (${escapeHtml(props.country_code || '')})</span>
@@ -1237,7 +1239,7 @@ function triggerEarlyWarning(quake) {
 
   const mag = (quake.properties.mag || 5.0).toFixed(1);
   const place = quake.properties.place || 'Zona Sísmica';
-  const depth = (quake.geometry && quake.geometry.coordinates && quake.geometry.coordinates[2]) ? quake.geometry.coordinates[2].toFixed(1) : 10;
+  const depth = (quake.geometry && quake.geometry.coordinates && quake.geometry.coordinates[2]) ? Math.abs(quake.geometry.coordinates[2]).toFixed(1) : 10;
   const flag = quake.properties.country_flag || '';
 
   if (title) title.textContent = `${flag} Sismo M ${mag} Detectado en ${place}`;
@@ -2176,7 +2178,7 @@ function renderPredictionsModal(data) {
     }
   }
   const evCoords = data.coords || (data.event ? data.event.coords : null);
-  const evDepth = (data.depth_km !== undefined) ? data.depth_km : (evCoords && evCoords.length > 2 ? evCoords[2] : 10);
+  const evDepth = Math.abs((data.depth_km !== undefined) ? data.depth_km : (evCoords && evCoords.length > 2 ? evCoords[2] : 10));
   const evAge = (data.age_seconds !== undefined) 
     ? data.age_seconds 
     : (data.event && data.event.time ? Math.round(Math.max(0, (Date.now() - data.event.time) / 1000)) : 0);
@@ -2973,6 +2975,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+    const toggleSensors = document.getElementById('toggle-mesh-sensors');
+  if (toggleSensors) {
+    toggleSensors.addEventListener('change', () => {
+      if (toggleSensors.checked) {
+        if (!map.hasLayer(meshNodesLayerGroup)) map.addLayer(meshNodesLayerGroup);
+        showToast('Nodos centinela y celulares visibles');
+      } else {
+        if (map.hasLayer(meshNodesLayerGroup)) map.removeLayer(meshNodesLayerGroup);
+        showToast('Nodos centinela y celulares ocultos');
+      }
+    });
+  }
+
   const toggleWaves = document.getElementById('toggle-p-s-waves');
   if (toggleWaves) {
     toggleWaves.addEventListener('change', () => {
@@ -3011,11 +3026,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (dockConsensus) {
     dockConsensus.addEventListener('click', () => {
       dockConsensus.classList.toggle('active');
-      const filterMagEl = document.getElementById('filter-mag');
-      if (filterMagEl) {
-        filterMagEl.value = dockConsensus.classList.contains('active') ? 'consensus' : 'all';
-        renderQuakes();
-      }
+      const isCons = dockConsensus.classList.contains('active');
+      currentMagFilter = isCons ? 'consensus' : 'all';
+      showToast(isCons ? 'Filtrando: Solo Consenso Multired' : 'Filtro de consenso desactivado');
+      renderQuakes();
     });
   }
 
@@ -3059,22 +3073,75 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Controles de zoom inferior derecho
+
+  // Listener de Búsqueda del Dock
+  const dockBtnSearch = document.getElementById('dock-btn-search');
+  if (dockBtnSearch) {
+    dockBtnSearch.addEventListener('click', () => {
+      if (window.innerWidth <= 1024 && typeof switchMobileView === 'function') {
+        switchMobileView('feed');
+      }
+      const searchInput = document.getElementById('feed-search-input');
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+      }
+    });
+  }
+
+  // Listener de Selector de Capas del Dock
+  const dockBtnLayers = document.getElementById('dock-btn-layers');
+  if (dockBtnLayers) {
+    dockBtnLayers.addEventListener('click', () => {
+      const menu = document.getElementById('menu-data-overlays');
+      if (menu) {
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+      }
+    });
+  }
+
+  // Listener de Menú de Filtro de Sismos
+  const btnFeedMenu = document.getElementById('btn-feed-menu');
+  if (btnFeedMenu) {
+    btnFeedMenu.addEventListener('click', () => {
+      const filterSequence = ['all', '3.0', '4.5', '6.0'];
+      const idx = filterSequence.indexOf(currentMagFilter);
+      currentMagFilter = filterSequence[(idx + 1) % filterSequence.length];
+      const labels = {
+        'all': 'Mostrando Todos los Sismos',
+        '3.0': 'Filtrando: Magnitud >= 3.0',
+        '4.5': 'Filtrando: Sismos Fuertes >= 4.5',
+        '6.0': 'Filtrando: Terremotos Mayores >= 6.0'
+      };
+      showToast(labels[currentMagFilter] || 'Filtro actualizado');
+      renderQuakes();
+    });
+  }
+
+  // Listener de Opciones del Sismógrafo / Diagnóstico
+  const btnSeismoMenu = document.getElementById('btn-seismo-menu');
+  if (btnSeismoMenu) {
+    btnSeismoMenu.addEventListener('click', () => {
+      const diagModal = document.getElementById('modal-diagnostics');
+      if (diagModal) diagModal.style.display = 'flex';
+    });
+  }
+
   const btnZoomIn = document.getElementById('btn-map-zoom-in');
   const btnZoomOut = document.getElementById('btn-map-zoom-out');
   if (btnZoomIn) btnZoomIn.addEventListener('click', () => map.zoomIn());
   if (btnZoomOut) btnZoomOut.addEventListener('click', () => map.zoomOut());
 
+  let currentQuickLayerIdx = 0;
   const btnQuickLayer = document.getElementById('btn-map-quick-layer');
   if (btnQuickLayer) {
     btnQuickLayer.addEventListener('click', () => {
       const layers = ['dark', 'satellite', 'topo'];
-      const current = selectLayerEl ? selectLayerEl.value : 'dark';
-      const next = layers[(layers.indexOf(current) + 1) % layers.length];
-      if (selectLayerEl) {
-        selectLayerEl.value = next;
-        selectLayerEl.dispatchEvent(new Event('change'));
-      }
-      showToast(`Capa de mapa: ${next.toUpperCase()}`);
+      currentQuickLayerIdx = (currentQuickLayerIdx + 1) % layers.length;
+      const next = layers[currentQuickLayerIdx];
+      setTileLayer(next);
+      const layerNames = { dark: 'Esri Dark Canvas', satellite: 'Esri Satélite', topo: 'OpenTopo' };
+      showToast(`Capa: ${layerNames[next] || next}`);
     });
   }
 

@@ -94,10 +94,10 @@ def record_felt_report(quake_id, client_ip, lat=None, lon=None):
 
 # Target Countries metadata
 TARGET_COUNTRIES = {
-    "PA": {"name": "Panamá", "flag": "🇵🇦", "center": [8.538, -80.782], "zoom": 7.5},
-    "VE": {"name": "Venezuela", "flag": "🇻🇪", "center": [8.000, -66.100], "zoom": 6.5},
-    "ES": {"name": "España", "flag": "🇪🇸", "center": [40.200, -3.750], "zoom": 6.0},
-    "AR": {"name": "Argentina", "flag": "🇦🇷", "center": [-38.416, -63.616], "zoom": 5.0}
+    "PA": {"name": "Panamá", "flag": "", "center": [8.538, -80.782], "zoom": 7.5},
+    "VE": {"name": "Venezuela", "flag": "", "center": [8.000, -66.100], "zoom": 6.5},
+    "ES": {"name": "España", "flag": "", "center": [40.200, -3.750], "zoom": 6.0},
+    "AR": {"name": "Argentina", "flag": "", "center": [-38.416, -63.616], "zoom": 5.0}
 }
 
 # Regional Bounding Boxes to query focused data feeds
@@ -204,37 +204,37 @@ def is_point_in_bbox(lat, lon, min_lat, max_lat, min_lon, max_lon):
 # Centros urbanos y capitales clave de monitoreo sísmico
 SEISMIC_PREDICTION_TARGETS = [
     # Panamá 🇵🇦
-    {"city": "Ciudad de Panamá", "country_code": "PA", "lat": 8.982, "lon": -79.520, "flag": "🇵🇦"},
-    {"city": "David (Chiriquí)", "country_code": "PA", "lat": 8.427, "lon": -82.431, "flag": "🇵🇦"},
-    {"city": "Colón", "country_code": "PA", "lat": 9.359, "lon": -79.901, "flag": "🇵🇦"},
-    {"city": "Santiago de Veraguas", "country_code": "PA", "lat": 8.100, "lon": -80.970, "flag": "🇵🇦"},
-    {"city": "Chitré", "country_code": "PA", "lat": 7.962, "lon": -80.428, "flag": "🇵🇦"},
+    {"city": "Ciudad de Panamá", "country_code": "PA", "lat": 8.982, "lon": -79.520, "flag": ""},
+    {"city": "David (Chiriquí)", "country_code": "PA", "lat": 8.427, "lon": -82.431, "flag": ""},
+    {"city": "Colón", "country_code": "PA", "lat": 9.359, "lon": -79.901, "flag": ""},
+    {"city": "Santiago de Veraguas", "country_code": "PA", "lat": 8.100, "lon": -80.970, "flag": ""},
+    {"city": "Chitré", "country_code": "PA", "lat": 7.962, "lon": -80.428, "flag": ""},
 
     # Venezuela 🇻🇪
-    {"city": "Caracas", "country_code": "VE", "lat": 10.480, "lon": -66.903, "flag": "🇻🇪"},
-    {"city": "Valencia", "country_code": "VE", "lat": 10.162, "lon": -68.007, "flag": "🇻🇪"},
-    {"city": "Maracaibo", "country_code": "VE", "lat": 10.654, "lon": -71.637, "flag": "🇻🇪"},
-    {"city": "Barquisimeto", "country_code": "VE", "lat": 10.067, "lon": -69.347, "flag": "🇻🇪"},
-    {"city": "San Cristóbal", "country_code": "VE", "lat": 7.766, "lon": -72.225, "flag": "🇻🇪"},
-    {"city": "Mérida", "country_code": "VE", "lat": 8.598, "lon": -71.144, "flag": "🇻🇪"},
-    {"city": "Cumaná", "country_code": "VE", "lat": 10.453, "lon": -64.182, "flag": "🇻🇪"},
+    {"city": "Caracas", "country_code": "VE", "lat": 10.480, "lon": -66.903, "flag": ""},
+    {"city": "Valencia", "country_code": "VE", "lat": 10.162, "lon": -68.007, "flag": ""},
+    {"city": "Maracaibo", "country_code": "VE", "lat": 10.654, "lon": -71.637, "flag": ""},
+    {"city": "Barquisimeto", "country_code": "VE", "lat": 10.067, "lon": -69.347, "flag": ""},
+    {"city": "San Cristóbal", "country_code": "VE", "lat": 7.766, "lon": -72.225, "flag": ""},
+    {"city": "Mérida", "country_code": "VE", "lat": 8.598, "lon": -71.144, "flag": ""},
+    {"city": "Cumaná", "country_code": "VE", "lat": 10.453, "lon": -64.182, "flag": ""},
 
     # España 🇪🇸
-    {"city": "Madrid", "country_code": "ES", "lat": 40.416, "lon": -3.703, "flag": "🇪🇸"},
-    {"city": "Granada", "country_code": "ES", "lat": 37.177, "lon": -3.598, "flag": "🇪🇸"},
-    {"city": "Murcia", "country_code": "ES", "lat": 37.992, "lon": -1.130, "flag": "🇪🇸"},
-    {"city": "Málaga", "country_code": "ES", "lat": 36.721, "lon": -4.421, "flag": "🇪🇸"},
-    {"city": "Sevilla", "country_code": "ES", "lat": 37.389, "lon": -5.984, "flag": "🇪🇸"},
-    {"city": "Santa Cruz de Tenerife", "country_code": "ES", "lat": 28.463, "lon": -16.251, "flag": "🇪🇸"},
-    {"city": "Las Palmas de Gran Canaria", "country_code": "ES", "lat": 28.123, "lon": -15.436, "flag": "🇪🇸"},
+    {"city": "Madrid", "country_code": "ES", "lat": 40.416, "lon": -3.703, "flag": ""},
+    {"city": "Granada", "country_code": "ES", "lat": 37.177, "lon": -3.598, "flag": ""},
+    {"city": "Murcia", "country_code": "ES", "lat": 37.992, "lon": -1.130, "flag": ""},
+    {"city": "Málaga", "country_code": "ES", "lat": 36.721, "lon": -4.421, "flag": ""},
+    {"city": "Sevilla", "country_code": "ES", "lat": 37.389, "lon": -5.984, "flag": ""},
+    {"city": "Santa Cruz de Tenerife", "country_code": "ES", "lat": 28.463, "lon": -16.251, "flag": ""},
+    {"city": "Las Palmas de Gran Canaria", "country_code": "ES", "lat": 28.123, "lon": -15.436, "flag": ""},
 
     # Argentina 🇦🇷
-    {"city": "San Juan", "country_code": "AR", "lat": -31.537, "lon": -68.536, "flag": "🇦🇷"},
-    {"city": "Mendoza", "country_code": "AR", "lat": -32.890, "lon": -68.845, "flag": "🇦🇷"},
-    {"city": "Salta", "country_code": "AR", "lat": -24.782, "lon": -65.423, "flag": "🇦🇷"},
-    {"city": "San Salvador de Jujuy", "country_code": "AR", "lat": -24.185, "lon": -65.299, "flag": "🇦🇷"},
-    {"city": "Córdoba", "country_code": "AR", "lat": -31.420, "lon": -64.188, "flag": "🇦🇷"},
-    {"city": "Buenos Aires", "country_code": "AR", "lat": -34.603, "lon": -58.381, "flag": "🇦🇷"},
+    {"city": "San Juan", "country_code": "AR", "lat": -31.537, "lon": -68.536, "flag": ""},
+    {"city": "Mendoza", "country_code": "AR", "lat": -32.890, "lon": -68.845, "flag": ""},
+    {"city": "Salta", "country_code": "AR", "lat": -24.782, "lon": -65.423, "flag": ""},
+    {"city": "San Salvador de Jujuy", "country_code": "AR", "lat": -24.185, "lon": -65.299, "flag": ""},
+    {"city": "Córdoba", "country_code": "AR", "lat": -31.420, "lon": -64.188, "flag": ""},
+    {"city": "Buenos Aires", "country_code": "AR", "lat": -34.603, "lon": -58.381, "flag": ""},
 ]
 
 def calculate_seismic_predictions(lat, lon, depth_km, mag, origin_time_ms):
@@ -245,6 +245,7 @@ def calculate_seismic_predictions(lat, lon, depth_km, mag, origin_time_ms):
     - Onda S (cizalla/destructiva): Vs = 4.1 km/s
     - Atenuación de aceleración de suelo (PGA) y escala de intensidad Mercalli Modificada (MMI).
     """
+    depth_km = abs(float(depth_km or 10.0))
     now_ms = time.time() * 1000
     elapsed_sec = max(0.0, (now_ms - origin_time_ms) / 1000.0)
     vp = 7.8 # km/s
@@ -704,7 +705,7 @@ def fetch_emsc_region(region):
                 props = f.get("properties", {})
                 if len(coords) >= 2 and props.get("time"):
                     lon, lat = float(coords[0]), float(coords[1])
-                    depth = float(coords[2]) if len(coords) > 2 else 10.0
+                    depth = abs(float(coords[2])) if len(coords) > 2 else 10.0
                     place = props.get("flynn_region", "")
                     auth = props.get("auth", "EMSC")
                     
@@ -746,7 +747,7 @@ def fetch_usgs_feed():
                 coords = f.get("geometry", {}).get("coordinates", [])
                 if len(coords) >= 2:
                     lon, lat = float(coords[0]), float(coords[1])
-                    depth = float(coords[2]) if len(coords) > 2 else 10.0
+                    depth = abs(float(coords[2])) if len(coords) > 2 else 10.0
                     props = f.get("properties", {})
                     place = props.get("place") or ""
                     
@@ -780,7 +781,7 @@ def fetch_gq_events():
         m = re.search(r"Jumped to event Earthquake\{uuid=([^,]+), hypocenter=Hypocenter\{lat=([0-9\.\-]+), lon=([0-9\.\-]+), depth=([0-9\.\-]+)[^,]*, origin=([0-9]+), mag=([0-9\.\-]+)[^,]*, maxPGA=([0-9\.\-]+)\}[^,]*, region='([^']+)'", line)
         if m:
             uuid, lat, lon, depth, origin, mag, pga, region = m.groups()
-            lat_f, lon_f, depth_f = float(lat), float(lon), float(depth)
+            lat_f, lon_f, depth_f = float(lat), float(lon), abs(float(depth))
             country_code = identify_target_country(lat_f, lon_f, region, "GQ")
             if country_code:
                 country_meta = TARGET_COUNTRIES[country_code]
@@ -828,7 +829,7 @@ def merge_and_triangulate_events(raw_events):
 
         sources = list(set([item["source"] for item in matched_cluster]))
         sources_count = len(sources)
-        avg_mag = round(sum(item["mag"] for item in matched_cluster) / len(matched_cluster), 1)
+        avg_mag = round(sum(item["mag"] for item in matched_cluster) / max(1, len(matched_cluster)), 1)
         
         primary_ref = matched_cluster[0]
         for item in matched_cluster:
@@ -1875,7 +1876,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
                     p_lat = float(q_lat)
                     p_lon = float(q_lon)
                     p_mag = float(q_mag or 5.0)
-                    p_depth = float(q_depth or 10.0)
+                    p_depth = abs(float(q_depth or 10.0))
                     p_time = float(q_time or (time.time() * 1000))
                     preds = calculate_seismic_predictions(p_lat, p_lon, p_depth, p_mag, p_time)
                     send_json({
@@ -1908,7 +1909,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
                 p = latest.get("properties", {})
                 c = latest.get("geometry", {}).get("coordinates", [0, 0, 10])
                 ev_lon, ev_lat = float(c[0]), float(c[1])
-                ev_depth = float(c[2]) if len(c) > 2 else 10.0
+                ev_depth = abs(float(c[2])) if len(c) > 2 else 10.0
                 ev_mag = float(p.get("mag") or 4.0)
                 ev_time = float(p.get("time") or (time.time() * 1000))
 
@@ -1971,7 +1972,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
 </head>
 <body>
   <div class="card">
-    <h1>🛰️ God's Eye View Desacoplado</h1>
+    <h1>Centro de Monitoreo Global</h1>
     <p>El globo 3D de Cesium consumía recursos excesivos de CPU, GPU y RAM. KorshQuake ahora integra un <strong>Motor de Predicciones y Alerta Temprana en Tiempo Real (EEW)</strong> con propagación física de ondas P y S a latencia cero (< 1 ms).</p>
     <a href="/" class="btn">Abrir KorshQuake en Vivo</a>
   </div>
@@ -2008,13 +2009,25 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     daemon_threads = True
     allow_reuse_address = True
 
+    def handle_error(self, request, client_address):
+        # Suprimir trazas ruidosas de clientes que abortan conexiones prematuramente (health probes, scanners)
+        err = sys.exc_info()[1]
+        if isinstance(err, (ConnectionResetError, ConnectionAbortedError, BrokenPipeError)):
+            return
+        super().handle_error(request, client_address)
+
 def run_server(port=PORT):
     with ThreadedTCPServer(("0.0.0.0", port), GlobalQuakeHandler) as httpd:
         print("[OK] GlobalQuake Realtime Streaming Hub activo.")
         print("[OK] Frecuencia de sincronizacion continua: cada 2.8 segundos.")
         print("[OK] Regiones exclusivas: Panama, Venezuela, Espana y Argentina.")
         print(f"[OK] Servidor escuchando en: http://localhost:{port}")
-        httpd.serve_forever()
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        except Exception as e:
+            print(f"[ERROR] Error inesperado en el servidor: {e}")
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else PORT
