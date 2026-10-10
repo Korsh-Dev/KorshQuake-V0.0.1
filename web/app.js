@@ -1,3 +1,319 @@
+
+// =========================================================================
+// MOTOR DE ALERTA SÍSMICA REAL (SIRENA MULTI-FRECUENCIA + VOZ DE EMERGENCIA)
+// =========================================================================
+let activeSeismicSirenContext = null;
+let activeSirenOscillators = [];
+let activeSirenInterval = null;
+let activeAlertTimerInterval = null;
+let activeAlertQuake = null;
+
+function stopSeismicAlertSiren() {
+  if (activeSirenInterval) {
+    clearInterval(activeSirenInterval);
+    activeSirenInterval = null;
+  }
+  if (activeSirenOscillators && activeSirenOscillators.length > 0) {
+    activeSirenOscillators.forEach(osc => {
+      try {
+        osc.stop();
+        osc.disconnect();
+      } catch (e) {}
+    });
+    activeSirenOscillators = [];
+  }
+  if ('speechSynthesis' in window) {
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+  }
+  if ('vibrate' in navigator) {
+    try { navigator.vibrate(0); } catch (e) {}
+  }
+  const silenceBtn = document.getElementById('btn-silence-seismic-siren');
+  const silenceLabel = document.getElementById('label-silence-btn');
+  if (silenceLabel) silenceLabel.textContent = 'ALARMA SILENCIADA';
+  if (silenceBtn) {
+    silenceBtn.style.opacity = '0.6';
+    silenceBtn.disabled = true;
+  }
+}
+window.stopSeismicAlertSiren = stopSeismicAlertSiren;
+
+function playRealSeismicAlertSiren(magnitude = 5.5, place = 'Zona Sísmica') {
+  if (!soundEnabled) return;
+  stopSeismicAlertSiren();
+
+  try {
+    unlockAudioContext();
+    if (!audioCtx) initAudio();
+    if (!audioCtx) return;
+
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
+    const now = audioCtx.currentTime;
+
+    // 1. Sirena Acústica de Emergencia (Oscilador Doble con Filtro Resonante y Modulación de Frecuencia)
+    const mainGain = audioCtx.createGain();
+    mainGain.gain.setValueAtTime(0.42, now);
+
+    // Filtro pasa-bajos resonante que emula la trompeta metálica de altavoz público
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2200, now);
+    filter.Q.setValueAtTime(4.0, now);
+
+    // Oscilador de onda de diente de sierra (Sawtooth) para riqueza armónica penetrante
+    const sirenOsc = audioCtx.createOscillator();
+    sirenOsc.type = 'sawtooth';
+
+    // Oscilador de subgraves (Sine) para impacto físico (Rumble)
+    const subOsc = audioCtx.createOscillator();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(130, now);
+
+    // Modulador LFO para el barrido cíclico de frecuencia de la sirena (0.6s periodo)
+    const lfo = audioCtx.createOscillator();
+    const lfoGain = audioCtx.createGain();
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(1.6, now);
+    lfoGain.gain.setValueAtTime(260, now);
+
+    sirenOsc.frequency.setValueAtTime(840, now);
+    lfo.connect(lfoGain);
+    lfoGain.connect(sirenOsc.frequency);
+
+    const subGain = audioCtx.createGain();
+    subGain.gain.setValueAtTime(0.3, now);
+    subOsc.connect(subGain);
+    subGain.connect(filter);
+
+    sirenOsc.connect(filter);
+    filter.connect(mainGain);
+    mainGain.connect(audioCtx.destination);
+
+    sirenOsc.start(now);
+    subOsc.start(now);
+    lfo.start(now);
+
+    activeSirenOscillators.push(sirenOsc, subOsc, lfo);
+
+    // 2. Tono de atención bifrecuencial inicial (EAS Header: 853 Hz + 960 Hz en ráfagas de impacto)
+    const eas1 = audioCtx.createOscillator();
+    const eas2 = audioCtx.createOscillator();
+    const easGain = audioCtx.createGain();
+    eas1.type = 'sine';
+    eas2.type = 'sine';
+    eas1.frequency.setValueAtTime(853, now);
+    eas2.frequency.setValueAtTime(960, now);
+    easGain.gain.setValueAtTime(0.35, now);
+    easGain.gain.exponentialRampToValueAtTime(0.01, now + 1.2);
+    eas1.connect(easGain);
+    eas2.connect(easGain);
+    easGain.connect(audioCtx.destination);
+    eas1.start(now);
+    eas2.start(now);
+    eas1.stop(now + 1.2);
+    eas2.stop(now + 1.2);
+    activeSirenOscillators.push(eas1, eas2);
+
+    // 3. Vibración háptica continua en Android
+    if ('vibrate' in navigator) {
+      navigator.vibrate([600, 200, 600, 200, 600, 200, 1000]);
+    }
+
+    // 4. Locución de voz oficial ("¡Alerta Sísmica!")
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(`¡Alerta Sísmica! Sismo magnitud ${magnitude} detectado en ${place}. Busque una zona segura.`);
+        msg.lang = 'es-ES';
+        msg.rate = 1.05;
+        msg.pitch = 1.0;
+        msg.volume = 1.0;
+        window.speechSynthesis.speak(msg);
+      } catch (e) {
+        console.warn('Speech synthesis no soportado o bloqueado:', e);
+      }
+    }
+
+    // Autodesconexión de seguridad a los 28 segundos para no aturdir indefinidamente
+    activeSirenInterval = setTimeout(() => {
+      stopSeismicAlertSiren();
+    }, 28000);
+
+  } catch (err) {
+    console.error('Error generando sirena sísmica:', err);
+  }
+}
+window.playRealSeismicAlertSiren = playRealSeismicAlertSiren;
+
+// =========================================================================
+// POPUP MODAL EN VIVO DE ALERTA SÍSMICA Y TERREMOTOS
+// =========================================================================
+function showSeismicAlertPopup(quakeData) {
+  if (!quakeData) return;
+  activeAlertQuake = quakeData;
+
+  const modal = document.getElementById('modal-seismic-alert');
+  if (!modal) return;
+
+  const mag = typeof quakeData.mag === 'number' ? quakeData.mag :
+    (quakeData.properties && quakeData.properties.mag ? parseFloat(quakeData.properties.mag) : 5.0);
+  const magFormatted = mag.toFixed(1);
+
+  const place = (quakeData.properties && quakeData.properties.place) ? quakeData.properties.place :
+    (quakeData.place || 'Zona Sísmica en Monitoreo');
+  
+  const countryCode = (quakeData.properties && quakeData.properties.country_code) ? quakeData.properties.country_code :
+    (quakeData.target_country || 'ALL');
+
+  const flag = (quakeData.properties && quakeData.properties.country_flag) ? quakeData.properties.country_flag :
+    (countryCode === 'PA' ? '🇵🇦' :
+     countryCode === 'VE' ? '🇻🇪' :
+     countryCode === 'ES' ? '🇪🇸' :
+     countryCode === 'AR' ? '🇦🇷' :
+     countryCode === 'HN' ? '🇭🇳' : '🌐');
+
+  const countryName = (quakeData.properties && quakeData.properties.country_name) ? quakeData.properties.country_name :
+    (countryCode === 'PA' ? 'Panamá' :
+     countryCode === 'VE' ? 'Venezuela' :
+     countryCode === 'ES' ? 'España' :
+     countryCode === 'AR' ? 'Argentina' :
+     countryCode === 'HN' ? 'Honduras' : 'Monitoreo Regional');
+
+  let depth = 10;
+  if (quakeData.geometry && quakeData.geometry.coordinates && quakeData.geometry.coordinates.length > 2) {
+    depth = Math.abs(Math.round(quakeData.geometry.coordinates[2]));
+  } else if (quakeData.depth_km) {
+    depth = Math.round(quakeData.depth_km);
+  }
+
+  const source = (quakeData.properties && quakeData.properties.source_feed) ? quakeData.properties.source_feed : 'Clúster KorshQuake';
+
+  // Llenar campos del modal
+  const elMagVal = document.getElementById('alert-mag-val');
+  const elMagSev = document.getElementById('alert-mag-severity');
+  const elMagBlock = document.getElementById('alert-mag-block');
+  const elFlag = document.getElementById('alert-country-flag');
+  const elCountry = document.getElementById('alert-country-name');
+  const elPlace = document.getElementById('alert-place-name');
+  const elMeta = document.getElementById('alert-depth-meta');
+  const elTimer = document.getElementById('alert-elapsed-time');
+
+  if (elMagVal) elMagVal.textContent = `M ${magFormatted}`;
+  if (elFlag) elFlag.textContent = flag;
+  if (elCountry) elCountry.textContent = countryName;
+  if (elPlace) elPlace.textContent = place;
+  if (elMeta) elMeta.textContent = `Profundidad: ${depth} km • Red: ${source}`;
+
+  // Severidad de la sacudida
+  if (elMagSev && elMagBlock) {
+    if (mag >= 7.0) {
+      elMagSev.textContent = 'PELIGRO EXTREMO: DESTRUCTOR';
+      elMagBlock.className = 'seismic-mag-block mag-extreme';
+    } else if (mag >= 6.0) {
+      elMagSev.textContent = 'PELIGRO: SACUDIDA MUY FUERTE';
+      elMagBlock.className = 'seismic-mag-block mag-danger';
+    } else if (mag >= 4.5) {
+      elMagSev.textContent = 'ALERTA: SACUDIDA MODERADA';
+      elMagBlock.className = 'seismic-mag-block mag-warning';
+    } else {
+      elMagSev.textContent = 'ATENCIÓN: MOVIMIENTO LEVE';
+      elMagBlock.className = 'seismic-mag-block mag-info';
+    }
+  }
+
+  // Contador de tiempo transcurrido en vivo
+  const originTime = (quakeData.properties && quakeData.properties.time) ? quakeData.properties.time : Date.now();
+  if (activeAlertTimerInterval) clearInterval(activeAlertTimerInterval);
+  const updateElapsed = () => {
+    const elapsedSec = Math.max(1, Math.round((Date.now() - originTime) / 1000));
+    if (elTimer) elTimer.textContent = `Detectado hace ${elapsedSec}s`;
+  };
+  updateElapsed();
+  activeAlertTimerInterval = setInterval(updateElapsed, 1000);
+
+  // Resetear botón de silenciar
+  const silenceBtn = document.getElementById('btn-silence-seismic-siren');
+  const silenceLabel = document.getElementById('label-silence-btn');
+  if (silenceLabel) silenceLabel.textContent = 'SILENCIAR ALARMA';
+  if (silenceBtn) {
+    silenceBtn.style.opacity = '1.0';
+    silenceBtn.disabled = false;
+  }
+
+  // Mostrar el popup modal
+  modal.style.display = 'flex';
+  modal.classList.add('active');
+
+  // Disparar sirena de alerta real
+  playRealSeismicAlertSiren(magFormatted, place);
+}
+window.showSeismicAlertPopup = showSeismicAlertPopup;
+
+function closeSeismicAlertPopup() {
+  const modal = document.getElementById('modal-seismic-alert');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+  }
+  if (activeAlertTimerInterval) {
+    clearInterval(activeAlertTimerInterval);
+    activeAlertTimerInterval = null;
+  }
+  stopSeismicAlertSiren();
+}
+window.closeSeismicAlertPopup = closeSeismicAlertPopup;
+
+window.triggerTestSeismicAlertPopup = function() {
+  unlockAudioContext(true);
+  const mockAlert = {
+    id: 'test-eew-alert-' + Date.now(),
+    geometry: {
+      type: 'Point',
+      coordinates: [-87.45, 13.25, 10.0]
+    },
+    properties: {
+      mag: 6.4,
+      place: 'Golfo de Fonseca, Honduras (Región Sur)',
+      country_code: 'HN',
+      country_name: 'Honduras',
+      country_flag: '🇭🇳',
+      time: Date.now() - 2000,
+      source_feed: 'COPECO / USGS Clúster'
+    }
+  };
+  showSeismicAlertPopup(mockAlert);
+  showToast('Simulación de Alerta Sísmica Real y Sirena Activa', 'warning');
+};
+
+// =========================================================================
+// ENLACE NATIVO APK Y ENRUTAMIENTO INTELIGENTE DE API
+// =========================================================================
+const API_BASE = (typeof window !== 'undefined' && (window.location.protocol === 'file:' || !window.location.hostname || window.IS_NATIVE_ANDROID))
+  ? 'https://quake.korsh.online'
+  : '';
+
+if (API_BASE && typeof window !== 'undefined') {
+  const _origFetch = window.fetch;
+  window.fetch = function(input, init) {
+    if (typeof input === 'string' && input.startsWith('/api/')) {
+      input = API_BASE + input;
+    }
+    return _origFetch.call(this, input, init);
+  };
+  const _OrigEventSource = window.EventSource;
+  if (_OrigEventSource) {
+    window.EventSource = function(url, eventSourceInitDict) {
+      if (typeof url === 'string' && url.startsWith('/api/')) {
+        url = API_BASE + url;
+      }
+      return new _OrigEventSource(url, eventSourceInitDict);
+    };
+  }
+}
+
 let currentMagFilter = 'all';
 window.openQuakeDetailById = function(featureId) {
   if (!allQuakes) return;
@@ -289,6 +605,10 @@ if (typeof window !== 'undefined') {
 // Función global de sirena de alarma sísmica (Alerta Temprana EEW)
 window.playAlarmAudio = function() {
   if (!soundEnabled) return;
+  if (typeof playRealSeismicAlertSiren === 'function') {
+    playRealSeismicAlertSiren(5.5, 'Zona Sísmica');
+    return;
+  }
   try {
     unlockAudioContext();
     if (!audioCtx) return;
@@ -995,7 +1315,9 @@ function createTacticalQuakeMarker(lat, lon, mag, isConsensus, featureId, isRece
   return L.marker([lat, lon], { icon: icon });
 }
 
-function renderQuakes() {
+let lastRenderStateKey = '';
+
+function renderQuakes(force = false) {
   if (!map || !allQuakes) return;
 
   const filterEl = document.getElementById('filter-mag');
@@ -1027,6 +1349,16 @@ function renderQuakes() {
     if (magFilter === '6.0' || magFilter === '6') return mag >= 6.0;
     return true;
   });
+
+  // OPTIMIZACIÓN VITAL DE RENDIMIENTO: DIFFING DE ESTADO
+  const topId = (filtered.length > 0 && filtered[0]) ? filtered[0].id : '';
+  const topTime = (filtered.length > 0 && filtered[0].properties) ? filtered[0].properties.time : 0;
+  const currentKey = `${filtered.length}_${topId}_${topTime}_${magFilter}_${currentCountryFilter}_${currentSearchTerm}`;
+
+  if (!force && currentKey === lastRenderStateKey) {
+    return; // Evita destruir y recrear 150 marcadores de Leaflet innecesariamente
+  }
+  lastRenderStateKey = currentKey;
 
   quakeLayerGroup.clearLayers();
   waveLayerGroup.clearLayers();
@@ -1497,8 +1829,11 @@ function triggerEarlyWarning(quake) {
   const originTime = quake.properties.time || now;
   // REGLA VITAL: Solo activar advertencia si ocurrió hace menos de 60 segundos
   if ((now - originTime) > MAX_LIVE_ALERT_AGE_MS) return;
-  // Emitir sonido de alerta temprana inmediatamente
-  if (typeof playAlarmAudio === 'function') {
+
+  // DISPARAR POPUP DE ALERTA SÍSMICA EN VIVO
+  if (typeof showSeismicAlertPopup === 'function') {
+    showSeismicAlertPopup(quake);
+  } else if (typeof playAlarmAudio === 'function') {
     playAlarmAudio();
   } else {
     playAlertSound('major');
@@ -2238,6 +2573,12 @@ function initCitizenSeismographNode() {
     if (fftFrameCounter % 6 === 0) {
       updateFftSpectrumDisplay(points, midY);
     }
+    if (document.hidden || (window.innerWidth <= 1024 && document.body.getAttribute('data-mobile-view') !== 'waves')) {
+      setTimeout(() => {
+        requestAnimationFrame(renderSeismographCanvas);
+      }, 500);
+      return;
+    }
     requestAnimationFrame(renderSeismographCanvas);
   }
 
@@ -2702,6 +3043,73 @@ document.addEventListener('DOMContentLoaded', () => {
   startWaveAnimation();
 
   // Country Quick Tabs
+  
+  // Wire Seismic Alert Popup Buttons
+  const btnQuickTestAlert = document.getElementById('btn-quick-test-alert');
+  if (btnQuickTestAlert) {
+    btnQuickTestAlert.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.triggerTestSeismicAlertPopup();
+    });
+  }
+
+  const btnCloseSeismicAlert = document.getElementById('btn-close-seismic-alert');
+  if (btnCloseSeismicAlert) {
+    btnCloseSeismicAlert.addEventListener('click', closeSeismicAlertPopup);
+  }
+
+  const btnSilenceSeismic = document.getElementById('btn-silence-seismic-siren');
+  if (btnSilenceSeismic) {
+    btnSilenceSeismic.addEventListener('click', stopSeismicAlertSiren);
+  }
+
+  const btnViewEpicenter = document.getElementById('btn-view-seismic-epicenter');
+  if (btnViewEpicenter) {
+    btnViewEpicenter.addEventListener('click', () => {
+      if (activeAlertQuake && map) {
+        let lat = null, lon = null;
+        if (activeAlertQuake.geometry && activeAlertQuake.geometry.coordinates) {
+          lon = activeAlertQuake.geometry.coordinates[0];
+          lat = activeAlertQuake.geometry.coordinates[1];
+        } else if (activeAlertQuake.latitude && activeAlertQuake.longitude) {
+          lat = activeAlertQuake.latitude;
+          lon = activeAlertQuake.longitude;
+        }
+        if (lat !== null && lon !== null) {
+          if (typeof setMobileView === 'function') setMobileView('map');
+          map.flyTo([lat, lon], 8.5, { duration: 1.2 });
+          const waveCircle = L.circle([lat, lon], {
+            radius: 15000,
+            color: '#ef4444',
+            fillColor: '#ef4444',
+            fillOpacity: 0.35,
+            weight: 3
+          }).addTo(map);
+          let r = 15000;
+          const waveTimer = setInterval(() => {
+            r += 20000;
+            waveCircle.setRadius(r);
+            if (r > 250000) {
+              clearInterval(waveTimer);
+              map.removeLayer(waveCircle);
+            }
+          }, 300);
+        }
+      }
+      closeSeismicAlertPopup();
+    });
+  }
+
+  // Close seismic modal on ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('modal-seismic-alert');
+      if (modal && modal.classList.contains('active')) {
+        closeSeismicAlertPopup();
+      }
+    }
+  });
+
   const countryTabs = document.querySelectorAll('.country-pill');
   countryTabs.forEach(pill => {
     pill.addEventListener('click', () => {
@@ -2928,8 +3336,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnTestSound) {
     btnTestSound.addEventListener('click', () => {
-      playAlertSound('major');
-      showToast('Sirena de alerta sísmica de prueba emitida', 'warning');
+      if (typeof window.triggerTestSeismicAlertPopup === 'function') {
+        window.triggerTestSeismicAlertPopup();
+      } else {
+        playAlertSound('major');
+        showToast('Sirena de alerta sísmica de prueba emitida', 'warning');
+      }
     });
   }
 
