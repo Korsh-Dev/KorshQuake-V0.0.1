@@ -213,12 +213,13 @@
                 <th>Ruido Basal</th>
                 <th>Último Ping</th>
                 <th>Plataforma</th>
+                <th>GPS / Precisión</th>
                 <th>Estado</th>
               </tr>
             </thead>
             <tbody id="nodes-tbody">
               <tr>
-                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">
                   Conectando con el clúster de telemetría de nodos...
                 </td>
               </tr>
@@ -313,7 +314,7 @@
         document.getElementById('stat-nodes-count').textContent = data.total || 0;
 
         if (!data.nodes || data.nodes.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">No hay nodos activos en este momento. Abre la APK o WebApp en tu celular para conectar como nodo.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">No hay nodos activos en este momento. Abre la APK o WebApp en tu celular para conectar como nodo.</td></tr>`;
           return;
         }
 
@@ -327,6 +328,7 @@
               <td class="font-mono">${n.noise_floor ? n.noise_floor.toFixed(2) : '0.00'} gal</td>
               <td class="font-mono">${ago}s</td>
               <td>${n.platform || 'Android'}</td>
+              <td class="font-mono">${n.gps_enabled ? `<span style="color: var(--green); font-weight:600;">📍 ±${Math.round(n.accuracy_m || 10)}m</span>` : `<span style="color: var(--orange); font-weight:600;">⚠️ Sin GPS</span>`}</td>
               <td><span class="status-dot"></span> <span style="color: var(--green);">ONLINE</span></td>
             </tr>
           `;

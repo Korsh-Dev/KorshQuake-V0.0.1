@@ -17,13 +17,25 @@ class TestKorshQuakeServer(unittest.TestCase):
         cls.server_thread.start()
         time.sleep(1.2) # Wait for server to bind
 
+    def test_version_endpoint(self):
+        url = f"http://127.0.0.1:{self.port}/api/version"
+        req = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(req.status, 200)
+        data = json.loads(req.read().decode('utf-8'))
+        self.assertEqual(data["version"], "1.1.4 PRO")
+        self.assertEqual(data["version_code"], 114)
+        self.assertTrue(data["ota_update_available"])
+        self.assertIn("changelog", data)
+        self.assertIsInstance(data["changelog"], list)
+        self.assertGreater(len(data["changelog"]), 0)
+
     def test_status_endpoint(self):
         url = f"http://127.0.0.1:{self.port}/api/status"
         req = urllib.request.urlopen(url, timeout=5)
         self.assertEqual(req.status, 200)
         data = json.loads(req.read().decode('utf-8'))
         self.assertIn("version", data)
-        self.assertEqual(data["version"], "1.1.2")
+        self.assertEqual(data["version"], "1.1.4 PRO")
         self.assertEqual(data["software_name"], "KorshQuake")
         self.assertIn("apk_url", data)
         self.assertIn("target_countries", data)
@@ -256,7 +268,7 @@ class TestKorshQuakeServer(unittest.TestCase):
 
 
     def test_mesh_node_registration_and_list(self):
-        # 1. Registrar un nodo mvil va POST /api/nodes/ping
+        # 1. Registrar un nodo móvil con GPS activo vía POST /api/nodes/ping
         url_ping = f"http://127.0.0.1:{self.port}/api/nodes/ping"
         payload = json.dumps({
             "node_id": "test-phone-caracas-01",
@@ -267,7 +279,9 @@ class TestKorshQuakeServer(unittest.TestCase):
             "sta_lta": 1.1,
             "noise_floor": 0.02,
             "platform": "apk",
-            "device": "Samsung Galaxy S23"
+            "device": "Samsung Galaxy S23",
+            "gps_enabled": True,
+            "location_mode": "gps_fine"
         }).encode("utf-8")
 
         req = urllib.request.Request(url_ping, data=payload, headers={"Content-Type": "application/json"})
@@ -276,16 +290,35 @@ class TestKorshQuakeServer(unittest.TestCase):
         data = json.loads(resp.read().decode("utf-8"))
         self.assertEqual(data["node_id"], "test-phone-caracas-01")
         self.assertEqual(data["country"], "VE")
+        self.assertEqual(data["status"], "active_node")
+        self.assertTrue(data["gps_enabled"])
+        self.assertEqual(data["accuracy_m"], 8.5)
         self.assertGreaterEqual(data["total_network_nodes"], 1)
 
-        # 2. Verificar que aparece listado en GET /api/nodes/list
+        # 2. Verificar que aparece listado en GET /api/nodes/list con metadatos GPS
         url_list = f"http://127.0.0.1:{self.port}/api/nodes/list"
         req_list = urllib.request.urlopen(url_list, timeout=5)
         self.assertEqual(req_list.status, 200)
         list_data = json.loads(req_list.read().decode("utf-8"))
         self.assertIn("nodes", list_data)
-        found = any(n["node_id"] == "test-phone-caracas-01" for n in list_data["nodes"])
-        self.assertTrue(found, "El nodo registrado debe aparecer en la lista de nodos activos")
+        node_item = next((n for n in list_data["nodes"] if n["node_id"] == "test-phone-caracas-01"), None)
+        self.assertIsNotNone(node_item, "El nodo registrado debe aparecer en la lista de nodos activos")
+        self.assertTrue(node_item["gps_enabled"])
+
+        # 3. Registrar un nodo sin GPS activo y verificar que exige ubicación
+        payload_nogps = json.dumps({
+            "node_id": "test-phone-nogps",
+            "lat": 0.0,
+            "lon": 0.0,
+            "accuracy": 999.0,
+            "gps_enabled": False,
+            "location_mode": "denied"
+        }).encode("utf-8")
+        req_nogps = urllib.request.Request(url_ping, data=payload_nogps, headers={"Content-Type": "application/json"})
+        resp_nogps = urllib.request.urlopen(req_nogps, timeout=5)
+        data_nogps = json.loads(resp_nogps.read().decode("utf-8"))
+        self.assertEqual(data_nogps["status"], "location_required")
+        self.assertFalse(data_nogps["gps_enabled"])
 
     def test_mesh_single_node_trigger_avoids_false_alarm(self):
         # Un solo telfono movindose (sacudida accidental) NO debe disparar alerta de sismo

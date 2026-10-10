@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>KorshQuake v1.1.2 PRO - Monitor Sísmico en Tiempo Real</title>
+  <title>KorshQuake v1.1.4 PRO - Monitor Sísmico en Tiempo Real</title>
   
   <!-- PWA & Mobile Meta Tags -->
   <link rel="manifest" href="/manifest.json">
@@ -37,10 +37,14 @@
       <div class="brand-text">
         <div class="brand-title-row">
           <h1 class="app-title">KorshQuake</h1>
-          <span class="badge-version">v1.1.2 PRO</span>
+          <span class="badge-version">v1.1.4 PRO</span>
           <span class="live-status-pill" title="Ingesta continua cada 2.8s">
             <span class="stat-dot pulse-green"></span>
             <span class="live-text">EN VIVO</span>
+          </span>
+          <span class="top-gps-pill gps-warn" id="top-gps-pill" title="Estado de Ubicación GPS para Sismos">
+            <span class="stat-dot" id="top-gps-dot"></span>
+            <span class="gps-pill-text" id="top-gps-text">GPS: Comprobando...</span>
           </span>
         </div>
         <p class="app-subtitle">Panamá 🇵🇦 • Venezuela 🇻🇪 • España 🇪🇸 • Argentina 🇦🇷</p>
@@ -130,6 +134,56 @@
       </button>
     </div>
   </header>
+
+  <!-- OTA Push In-App Update Banner (Zero Install Instant Refresh) -->
+  <div class="ota-update-banner" id="ota-update-banner" style="display: none;">
+    <div class="ota-update-content">
+      <div class="ota-update-icon-wrap">
+        <span class="ota-icon">🚀</span>
+      </div>
+      <div class="ota-update-text">
+        <div class="ota-title-row">
+          <strong id="ota-version-title">Nueva Versión Disponible (v1.1.4 PRO)</strong>
+          <span class="ota-badge">OTA Push</span>
+        </div>
+        <p class="ota-desc" id="ota-changelog-preview">Mejoras en sensor GPS obligatorio, precisión de red y sincronización instantánea.</p>
+      </div>
+      <div class="ota-actions">
+        <button class="ota-btn-update" id="btn-ota-apply" title="Actualizar instantáneamente sin descargas">
+          <span>⚡ Actualizar Ahora</span>
+        </button>
+        <button class="ota-btn-dismiss" id="btn-ota-dismiss" title="Posponer actualización">&times;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GPS Mandatory Requirement Banner for Mobile Phones -->
+  <div class="gps-status-banner" id="gps-status-banner" style="display: none;">
+    <div class="gps-banner-content">
+      <div class="gps-icon-wrap">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9"></circle>
+          <circle cx="12" cy="12" r="3"></circle>
+          <line x1="12" y1="1" x2="12" y2="4"></line>
+          <line x1="12" y1="20" x2="12" y2="23"></line>
+          <line x1="1" y1="12" x2="4" y2="12"></line>
+          <line x1="20" y1="12" x2="23" y2="12"></line>
+        </svg>
+      </div>
+      <div class="gps-banner-text">
+        <div class="gps-title-row">
+          <strong id="gps-banner-title">📍 Ubicación GPS Requerida</strong>
+          <span class="gps-badge-status" id="gps-banner-badge">Desactivada</span>
+        </div>
+        <p class="gps-banner-desc" id="gps-banner-desc">Tu teléfono debe tener la ubicación activada para actuar como nodo sismográfico y recibir alertas tempranas en tu ciudad.</p>
+      </div>
+      <div class="gps-actions">
+        <button class="btn-enable-gps" id="btn-enable-gps" title="Activar y Conceder Ubicación GPS">
+          <span>📍 Activar GPS</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Early Warning Banner -->
   <div class="eew-banner" id="eew-banner" style="display: none;">
@@ -451,7 +505,7 @@
       <div class="modal-header">
         <div class="modal-title-box">
           <span class="terminal-dot pulse-green"></span>
-          <h3>Consola en Tiempo Real - KorshQuake v1.1.2 PRO</h3>
+          <h3>Consola en Tiempo Real - KorshQuake v1.1.4 PRO</h3>
         </div>
         <button class="modal-close" id="btn-close-logs">&times;</button>
       </div>
@@ -478,6 +532,56 @@
         <button class="modal-close" id="btn-close-menu">&times;</button>
       </div>
       <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <!-- Diagnóstico y Estado GPS Obligatorio -->
+        <div class="settings-card" id="card-settings-gps" style="border-left: 3px solid #ff9100;">
+          <div class="settings-card-header">
+            <span class="settings-icon">📍</span>
+            <div>
+              <div class="settings-title">Ubicación GPS del Sensor Móvil</div>
+              <div class="settings-desc" id="gps-settings-desc">Obligatorio para correlación de sismos y cálculo de epicentro regional</div>
+            </div>
+          </div>
+          <div style="margin-top: 10px; background: rgba(0, 0, 0, 0.35); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); font-family: var(--font-mono); font-size: 0.78rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: #94a3b8;">Estado GPS:</span>
+              <span id="gps-modal-status-text" style="color: #ff9100; font-weight: 700;">Comprobando...</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: #94a3b8;">Precisión Satelital:</span>
+              <span id="gps-modal-accuracy-text" style="color: #fff;">--</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #94a3b8;">Coordenadas:</span>
+              <span id="gps-modal-coords-text" style="color: #00e5ff;">--</span>
+            </div>
+          </div>
+          <div style="margin-top: 10px;">
+            <button class="btn btn-secondary btn-sm" id="btn-modal-request-gps" style="width: 100%; justify-content: center;">
+              📍 Reintentar / Conceder Permiso GPS
+            </button>
+          </div>
+        </div>
+
+        <!-- Actualizaciones Push OTA (In-App Zero Reinstall) -->
+        <div class="settings-card highlight-card" style="border-color: rgba(0, 229, 255, 0.45);">
+          <div class="settings-card-header">
+            <span class="settings-icon">🚀</span>
+            <div>
+              <div class="settings-title">Actualizaciones Push OTA (Sin Reinstalar)</div>
+              <div class="settings-desc">Los celulares con la APK se actualizan al instante en 1 clic sin descargar archivos</div>
+            </div>
+          </div>
+          <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px;">
+            <span style="font-size: 0.8rem; color: #94a3b8;">Versión Local:</span>
+            <span class="badge-version" id="settings-local-version">v1.1.4 PRO</span>
+          </div>
+          <div style="margin-top: 10px;">
+            <button class="btn btn-primary" id="btn-check-updates-manual" style="width: 100%; justify-content: center;">
+              ⚡ Buscar Actualizaciones y Sincronizar
+            </button>
+          </div>
+        </div>
+
         <!-- Configuración de Alertas Sonoras -->
         <div class="settings-card">
           <div class="settings-card-header">

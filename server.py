@@ -23,6 +23,10 @@ from datetime import datetime
 
 _server_start_time = time.time()
 
+CURRENT_VERSION = "1.1.4 PRO"
+CURRENT_VERSION_CODE = 114
+
+
 PORT = 8080
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(BASE_DIR, "web")
@@ -966,7 +970,7 @@ def calculate_haversine_distance(lat1, lon1, lat2, lon2):
     except Exception:
         return 999999.0
 
-def register_mesh_node(node_id, lat, lon, accuracy=10.0, pga=0.0, sta_lta=1.0, noise_floor=0.02, platform="mobile", device="Mobile Sensor"):
+def register_mesh_node(node_id, lat, lon, accuracy=10.0, pga=0.0, sta_lta=1.0, noise_floor=0.02, platform="mobile", device="Mobile Sensor", gps_enabled=True, location_mode="gps_fine"):
     """Registra o actualiza el latido de un teléfono o aplicación activa como nodo sismográfico."""
     now = time.time()
     with _mesh_nodes_lock:
@@ -980,6 +984,7 @@ def register_mesh_node(node_id, lat, lon, accuracy=10.0, pga=0.0, sta_lta=1.0, n
             country_code = "VE"
         country_name = TARGET_COUNTRIES[country_code]["name"]
 
+        is_real_gps = bool(gps_enabled and (float(lat) != 0.0 or float(lon) != 0.0) and location_mode != "denied")
         _mesh_nodes[node_id] = {
             "node_id": node_id,
             "lat": float(lat),
@@ -991,10 +996,11 @@ def register_mesh_node(node_id, lat, lon, accuracy=10.0, pga=0.0, sta_lta=1.0, n
             "country": country_code,
             "country_name": country_name,
             "country_code": country_code,
-            "country_name": country_name,
-            "country_code": country_code,
             "platform": platform,
             "device": device,
+            "gps_enabled": is_real_gps,
+            "location_mode": location_mode if is_real_gps else "denied_or_missing",
+            "accuracy_m": round(float(accuracy), 1),
             "last_seen": now
         }
         
@@ -1006,10 +1012,13 @@ def register_mesh_node(node_id, lat, lon, accuracy=10.0, pga=0.0, sta_lta=1.0, n
                 
         return {
             "node_id": node_id,
-            "status": "active_node",
+            "status": "active_node" if is_real_gps else "location_required",
             "country": country_code,
             "country_code": country_code,
             "country_name": country_name,
+            "gps_enabled": is_real_gps,
+            "location_mode": location_mode if is_real_gps else "denied_or_missing",
+            "accuracy_m": round(float(accuracy), 1),
             "total_network_nodes": len(_mesh_nodes),
             "nearby_nodes_count": nearby_count,
             "timestamp": int(now * 1000)
@@ -1032,6 +1041,9 @@ def get_mesh_nodes_list():
                     "sta_lta": n.get("sta_lta", 1.0),
                     "platform": n.get("platform", "mobile"),
                     "device": n.get("device", "Phone"),
+                    "gps_enabled": n.get("gps_enabled", True),
+                    "location_mode": n.get("location_mode", "gps_fine"),
+                    "accuracy_m": n.get("accuracy_m", 15.0),
                     "age_sec": age_sec,
                     "status": "monitoring" if n.get("sta_lta", 1.0) < 3.5 else "trigger_spike"
                 })
@@ -1279,8 +1291,10 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             noise_floor = float(body.get("noise_floor", 0.02))
             platform = str(body.get("platform", "mobile"))
             device = str(body.get("device", "Phone Sensor"))
+            gps_enabled = bool(body.get("gps_enabled", True))
+            location_mode = str(body.get("location_mode", "gps_fine"))
             
-            result = register_mesh_node(node_id, lat, lon, accuracy, pga, sta_lta, noise_floor, platform, device)
+            result = register_mesh_node(node_id, lat, lon, accuracy, pga, sta_lta, noise_floor, platform, device, gps_enabled, location_mode)
             send_json(result)
             return
 
@@ -1420,12 +1434,32 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             send_json(stats)
             return
 
+        # API: Version y Actualizacion OTA Push (/api/version)
+        if path == "/api/version":
+            version_data = {
+                "version": CURRENT_VERSION,
+                "version_code": CURRENT_VERSION_CODE,
+                "software_name": "KorshQuake",
+                "release_date": "2026-10-09",
+                "ota_update_available": True,
+                "changelog": [
+                    "Geolocalización GPS obligatoria para detección de sismos en tiempo real",
+                    "Sistema de actualizaciones automáticas Push OTA sin reinstalar APK",
+                    "Telemetría y precisión de nodos móviles (±metros) con diagnóstico en vivo",
+                    "Diseño móvil optimizado y modo de alta fidelidad HSL"
+                ],
+                "min_supported_version": "1.0.0",
+                "timestamp": int(time.time() * 1000)
+            }
+            send_json(version_data)
+            return
+
         # 1. API: Estado General del Sistema
         if path == "/api/status":
             running, cmd = is_globalquake_running()
             ram_age = int((time.time() - _last_ram_update_time) * 1000) if _last_ram_update_time else 0
             status_data = {
-                "version": "1.1.2",
+                "version": CURRENT_VERSION,
                 "software_name": "KorshQuake",
                 "target_countries": ["Panamá", "Venezuela", "España", "Argentina"],
                 "streaming_mode": "ACTIVE_RAM_STREAMING",

@@ -1,3 +1,87 @@
+
+// =========================================================================
+// SISTEMA DE ACTUALIZACIÓN AUTOMÁTICA PUSH OTA (Sin reinstalar APK)
+// =========================================================================
+const APP_CURRENT_VERSION = '1.1.4 PRO';
+let latestDetectedVersion = null;
+
+async function checkAppVersion(isManual = false) {
+  try {
+    const res = await fetch('/api/version?_t=' + Date.now());
+    if (!res.ok) return;
+    const data = await res.json();
+    latestDetectedVersion = data.version;
+
+    const storedVer = localStorage.getItem('korsh_app_version') || APP_CURRENT_VERSION;
+    const settingsLocal = document.getElementById('settings-local-version');
+    if (settingsLocal) settingsLocal.textContent = storedVer;
+
+    // Si la versión del servidor difiere de la versión local activa
+    if (data.version && data.version !== storedVer) {
+      showOtaUpdateBanner(data);
+    } else if (isManual) {
+      showToast(`✅ Ya tienes la última versión instalada (${data.version})`, 'info');
+    }
+  } catch (err) {
+    if (isManual) showToast('Error al verificar versiones: ' + err.message, 'error');
+  }
+}
+
+function showOtaUpdateBanner(vData) {
+  const banner = document.getElementById('ota-update-banner');
+  if (!banner) return;
+  const title = document.getElementById('ota-version-title');
+  const desc = document.getElementById('ota-changelog-preview');
+  if (title) title.textContent = `🚀 Nueva Versión Disponible (${vData.version})`;
+  if (desc && vData.changelog && vData.changelog.length > 0) {
+    desc.textContent = vData.changelog[0] + ' • Toca para actualizar con 1 clic.';
+  }
+  banner.style.display = 'block';
+  if (navigator.vibrate) navigator.vibrate([80, 50, 100]);
+}
+
+async function applyOtaUpdate() {
+  const btn = document.getElementById('btn-ota-apply');
+  if (btn) {
+    btn.innerHTML = '<span>⚡ Actualizando...</span>';
+    btn.disabled = true;
+  }
+  showToast('⚡ Aplicando actualización instantánea sin descargas...', 'info');
+
+  try {
+    // 1. Limpiar caches de Service Worker
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    // 2. Notificar al Service Worker para omitir espera y actualizar
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (let reg of registrations) {
+        if (reg.active) reg.active.postMessage({ action: 'clearCache' });
+        if (reg.waiting) reg.waiting.postMessage({ action: 'skipWaiting' });
+        await reg.update();
+      }
+    }
+  } catch (e) {
+    console.warn('[OTA] Excepción controlada limpiando cache:', e);
+  }
+
+  // 3. Registrar nueva versión local
+  if (latestDetectedVersion) {
+    localStorage.setItem('korsh_app_version', latestDetectedVersion);
+  } else {
+    localStorage.setItem('korsh_app_version', APP_CURRENT_VERSION);
+  }
+
+  // 4. Recargar interfaz con cache-busting
+  setTimeout(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('_v', Date.now());
+    window.location.href = url.toString();
+  }, 400);
+}
+
 // GlobalQuake v1.1.2 Web Hub Engine - Edición Focalizada: Panamá, Venezuela, España y Argentina
 let map;
 let currentTileLayers = [];
@@ -829,6 +913,9 @@ let meshNodeState = {
   lat: null,
   lon: null,
   accuracy: 15.0,
+  hasGpsLocation: false,
+  locationPermission: 'prompt',
+  locationMode: 'pending',
   country: 'VE',
   currentPga: 0.0,
   maxPga: 0.0,
@@ -858,26 +945,150 @@ function getOrCreateNodeId() {
   return id;
 }
 
+function updateGpsUIState(status, accuracy, coords) {
+  const topPill = document.getElementById('top-gps-pill');
+  const topText = document.getElementById('top-gps-text');
+  const banner = document.getElementById('gps-status-banner');
+  const bannerBadge = document.getElementById('gps-banner-badge');
+  const bannerTitle = document.getElementById('gps-banner-title');
+  const modalStatus = document.getElementById('gps-modal-status-text');
+  const modalAcc = document.getElementById('gps-modal-accuracy-text');
+  const modalCoords = document.getElementById('gps-modal-coords-text');
+
+  if (status === 'granted') {
+    const accStr = accuracy ? `±${Math.round(accuracy)}m` : 'Fina';
+    if (topPill) {
+      topPill.className = 'top-gps-pill gps-ok';
+      if (topText) topText.textContent = `GPS: ${accStr}`;
+    }
+    if (banner) banner.style.display = 'none';
+    if (modalStatus) {
+      modalStatus.textContent = 'ACTIVO (Satélite OK)';
+      modalStatus.style.color = 'var(--green)';
+    }
+    if (modalAcc) modalAcc.textContent = accuracy ? `±${Math.round(accuracy)} metros (Satélite)` : 'Alta Precisión';
+    if (modalCoords && coords) {
+      modalCoords.textContent = `${coords.lat.toFixed(4)}°, ${coords.lon.toFixed(4)}°`;
+    }
+  } else if (status === 'denied') {
+    if (topPill) {
+      topPill.className = 'top-gps-pill gps-error';
+      if (topText) topText.textContent = 'GPS Requerido';
+    }
+    if (banner) {
+      banner.style.display = 'block';
+      if (bannerBadge) {
+        bannerBadge.textContent = 'Permiso Denegado';
+        bannerBadge.className = 'gps-badge-status';
+      }
+      if (bannerTitle) bannerTitle.textContent = '📍 Activa la Ubicación en tu Teléfono';
+    }
+    if (modalStatus) {
+      modalStatus.textContent = 'DENEGADO / APAGADO';
+      modalStatus.style.color = 'var(--red)';
+    }
+    if (modalAcc) modalAcc.textContent = 'Sin señal satelital';
+    if (modalCoords) modalCoords.textContent = 'Desconocidas (GPS Requerido)';
+  } else {
+    if (topPill) {
+      topPill.className = 'top-gps-pill gps-warn';
+      if (topText) topText.textContent = 'Buscando GPS...';
+    }
+    if (banner) {
+      banner.style.display = 'block';
+      if (bannerBadge) {
+        bannerBadge.textContent = 'Requerido';
+        bannerBadge.className = 'gps-badge-status';
+      }
+      if (bannerTitle) bannerTitle.textContent = '📍 Ubicación GPS Requerida';
+    }
+    if (modalStatus) {
+      modalStatus.textContent = 'Buscando satélites...';
+      modalStatus.style.color = 'var(--orange)';
+    }
+    if (modalAcc) modalAcc.textContent = 'Obteniendo señal...';
+  }
+}
+
+function requestGpsPermission(isUserAction = false) {
+  if (!('geolocation' in navigator)) {
+    updateGpsUIState('denied', null, null);
+    if (isUserAction) {
+      showToast('Tu navegador o dispositivo no soporta geolocalización satelital.', 'error');
+    }
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      meshNodeState.lat = pos.coords.latitude;
+      meshNodeState.lon = pos.coords.longitude;
+      meshNodeState.accuracy = pos.coords.accuracy || 15.0;
+      meshNodeState.hasGpsLocation = true;
+      meshNodeState.locationPermission = 'granted';
+      meshNodeState.locationMode = (pos.coords.accuracy && pos.coords.accuracy < 80) ? 'gps_fine' : 'gps_coarse';
+      updateGpsUIState('granted', pos.coords.accuracy, { lat: pos.coords.latitude, lon: pos.coords.longitude });
+      if (isUserAction) {
+        showToast(`📍 Ubicación fijada con éxito (Precisión: ±${Math.round(pos.coords.accuracy || 10)}m)`, 'success');
+      }
+    },
+    (err) => {
+      console.warn('[KORSH-MESH] Error o rechazo de GPS:', err.message);
+      meshNodeState.hasGpsLocation = false;
+      meshNodeState.locationPermission = (err.code === 1) ? 'denied' : 'unavailable';
+      meshNodeState.locationMode = 'denied';
+      updateGpsUIState('denied', null, null);
+      if (isUserAction) {
+        showToast('⚠️ No se pudo acceder al GPS. Asegúrate de encender la Ubicación en los ajustes de tu teléfono y permitir el acceso.', 'warning');
+      }
+    },
+    { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 }
+  );
+}
+
 function initNodeGeolocation() {
   if ('geolocation' in navigator) {
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+        if (result.state === 'granted') {
+          requestGpsPermission(false);
+        } else if (result.state === 'denied') {
+          updateGpsUIState('denied', null, null);
+        } else {
+          updateGpsUIState('prompt', null, null);
+          requestGpsPermission(false);
+        }
+        result.onchange = () => {
+          if (result.state === 'granted') requestGpsPermission(false);
+          else if (result.state === 'denied') updateGpsUIState('denied', null, null);
+        };
+      }).catch(() => {
+        requestGpsPermission(false);
+      });
+    } else {
+      requestGpsPermission(false);
+    }
+
     navigator.geolocation.watchPosition(
       (pos) => {
         meshNodeState.lat = pos.coords.latitude;
         meshNodeState.lon = pos.coords.longitude;
         meshNodeState.accuracy = pos.coords.accuracy || 15.0;
+        meshNodeState.hasGpsLocation = true;
+        meshNodeState.locationPermission = 'granted';
+        meshNodeState.locationMode = (pos.coords.accuracy && pos.coords.accuracy < 80) ? 'gps_fine' : 'gps_coarse';
+        updateGpsUIState('granted', pos.coords.accuracy, { lat: pos.coords.latitude, lon: pos.coords.longitude });
       },
       (err) => {
-        console.warn('[KORSH-MESH] Geolocalización usando coordenadas regionales de fallback:', err.message);
-        if (meshNodeState.lat === null) {
-          meshNodeState.lat = 10.4806;
-          meshNodeState.lon = -66.9036;
+        console.warn('[KORSH-MESH] Error de seguimiento GPS:', err.message);
+        if (!meshNodeState.hasGpsLocation) {
+          updateGpsUIState((err.code === 1) ? 'denied' : 'unavailable', null, null);
         }
       },
-      { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 }
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 25000 }
     );
   } else {
-    meshNodeState.lat = 10.4806;
-    meshNodeState.lon = -66.9036;
+    updateGpsUIState('denied', null, null);
   }
 }
 
@@ -992,14 +1203,16 @@ async function sendNodeTelemetryPing() {
   try {
     const payload = {
       node_id: meshNodeState.nodeId,
-      lat: meshNodeState.lat || 10.4806,
-      lon: meshNodeState.lon || -66.9036,
-      accuracy: meshNodeState.accuracy,
+      lat: meshNodeState.lat || 0.0,
+      lon: meshNodeState.lon || 0.0,
+      accuracy: meshNodeState.accuracy || 999.0,
       pga: Math.round(meshNodeState.currentPga * 100) / 100,
       sta_lta: Math.round(meshNodeState.staLtaRatio * 10) / 10,
       noise_floor: Math.round(meshNodeState.lta * 100) / 100,
       platform: navigator.userAgent.includes('KorshQuake') ? 'apk' : 'web',
-      device: navigator.userAgent.includes('Android') ? 'Android Phone' : (navigator.userAgent.includes('iPhone') ? 'iPhone' : 'Web Browser')
+      device: navigator.userAgent.includes('Android') ? 'Android Phone' : (navigator.userAgent.includes('iPhone') ? 'iPhone' : 'Web Browser'),
+      gps_enabled: meshNodeState.hasGpsLocation,
+      location_mode: meshNodeState.locationMode
     };
 
     const resp = await fetch('/api/nodes/ping', {
@@ -1947,6 +2160,40 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.target === modalDiag) modalDiag.classList.remove('active');
     });
   }
+
+  // =========================================================================
+  // VINCULACIÓN DE LISTENERS PARA GPS Y ACTUALIZACIONES PUSH OTA
+  // =========================================================================
+  const btnEnableGps = document.getElementById('btn-enable-gps');
+  const topGpsPill = document.getElementById('top-gps-pill');
+  const btnModalGps = document.getElementById('btn-modal-request-gps');
+
+  if (btnEnableGps) btnEnableGps.addEventListener('click', () => requestGpsPermission(true));
+  if (topGpsPill) topGpsPill.addEventListener('click', () => requestGpsPermission(true));
+  if (btnModalGps) btnModalGps.addEventListener('click', () => requestGpsPermission(true));
+
+  const btnOtaApply = document.getElementById('btn-ota-apply');
+  const btnOtaDismiss = document.getElementById('btn-ota-dismiss');
+  const btnCheckUpdates = document.getElementById('btn-check-updates-manual');
+
+  if (btnOtaApply) btnOtaApply.addEventListener('click', applyOtaUpdate);
+  if (btnOtaDismiss) {
+    btnOtaDismiss.addEventListener('click', () => {
+      const banner = document.getElementById('ota-update-banner');
+      if (banner) banner.style.display = 'none';
+    });
+  }
+  if (btnCheckUpdates) btnCheckUpdates.addEventListener('click', () => checkAppVersion(true));
+
+  // Comprobar actualizaciones OTA al inicio y al volver de segundo plano
+  checkAppVersion(false);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkAppVersion(false);
+      if (!meshNodeState.hasGpsLocation) requestGpsPermission(false);
+    }
+  });
+  setInterval(() => checkAppVersion(false), 90000);
 
   // Service Worker Registration for Android PWA / WebAPK
   if ('serviceWorker' in navigator) {
