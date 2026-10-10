@@ -4792,3 +4792,48 @@ body {
     padding: 6px 8px !important;
   }
 }
+
+
+/* Floating Audio Activation Pill */
+.audio-prompt-pill {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(13, 22, 38, 0.92);
+  border: 1px solid rgba(0, 230, 255, 0.45);
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+  color: #00e5ff;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 12px rgba(0, 230, 255, 0.25);
+  transition: all 0.25s ease;
+  animation: audioPromptPulse 2s infinite ease-in-out;
+}
+
+.audio-prompt-pill:hover {
+  background: rgba(0, 230, 255, 0.15);
+  border-color: #00e5ff;
+  transform: translateY(-2px);
+}
+
+@keyframes audioPromptPulse {
+  0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.4), 0 0 8px rgba(0, 230, 255, 0.2); }
+  50% { box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 16px rgba(0, 230, 255, 0.45); }
+}
+
+@media (max-width: 768px) {
+  .audio-prompt-pill {
+    bottom: 74px;
+    right: 12px;
+    padding: 7px 12px;
+    font-size: 0.74rem;
+  }
+}

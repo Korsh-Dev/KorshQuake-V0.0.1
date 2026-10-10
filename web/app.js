@@ -250,6 +250,83 @@ const TILE_LAYERS = {
   }
 };
 
+
+// =========================================================================
+// SISTEMA DE AUDIO ROBUSTO Y DESBLOQUEO DE AUTOPLAY
+// =========================================================================
+let isAudioUnlocked = false;
+
+function unlockAudioContext(fromPrompt = false) {
+  initAudio();
+  if (audioCtx) {
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().then(() => {
+        isAudioUnlocked = true;
+        const prompt = document.getElementById('audio-enable-prompt');
+        if (prompt) prompt.style.display = 'none';
+        if (fromPrompt) {
+          playAlertSound('beep');
+          showToast('Sonido de alertas ssmicas activado', 'info');
+        }
+      }).catch(() => {});
+    } else if (audioCtx.state === 'running') {
+      isAudioUnlocked = true;
+      const prompt = document.getElementById('audio-enable-prompt');
+      if (prompt) prompt.style.display = 'none';
+    }
+  }
+}
+
+// Desbloquear audio en el primer toque, clic o interacción del usuario
+if (typeof window !== 'undefined') {
+  ['click', 'touchstart', 'touchend', 'pointerdown', 'keydown'].forEach(evt => {
+    window.addEventListener(evt, unlockAudioContext, { passive: true });
+  });
+}
+
+// Función global de sirena de alarma sísmica (Alerta Temprana EEW)
+window.playAlarmAudio = function() {
+  if (!soundEnabled) return;
+  try {
+    unlockAudioContext();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    // Dos osciladores armónicos entrelazados para máxima penetración auditiva
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc1.type = 'sawtooth';
+    osc2.type = 'sine';
+
+    // Patrón sismológico de alerta de 2.2 segundos (ráfagas de 880 Hz / 587 Hz)
+    const tones = [880, 587, 880, 587, 880, 587, 880, 587];
+    tones.forEach((freq, idx) => {
+      osc1.frequency.setValueAtTime(freq, now + idx * 0.25);
+      osc2.frequency.setValueAtTime(freq / 2, now + idx * 0.25);
+    });
+
+    gain.gain.setValueAtTime(0.35, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 2.2);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 2.2);
+    osc2.stop(now + 2.2);
+
+    if ('vibrate' in navigator) {
+      navigator.vibrate([400, 150, 400, 150, 600]);
+    }
+  } catch (err) {
+    console.warn('Error en playAlarmAudio:', err);
+  }
+};
+
 // Audio Synthesizer (Web Audio API)
 function initAudio() {
   if (!audioCtx) {
@@ -275,23 +352,28 @@ function playAlertSound(type = 'beep') {
     gain.connect(audioCtx.destination);
 
     if (type === 'major') {
+      // Alarma penetrante para sismos mayores (M 4.5+)
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-      osc.frequency.setValueAtTime(440, audioCtx.currentTime + 0.18);
-      osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.36);
-      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.65);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.65);
+      const t = audioCtx.currentTime;
+      osc.frequency.setValueAtTime(880, t);
+      osc.frequency.setValueAtTime(587, t + 0.22);
+      osc.frequency.setValueAtTime(880, t + 0.44);
+      osc.frequency.setValueAtTime(587, t + 0.66);
+      osc.frequency.setValueAtTime(880, t + 0.88);
+      gain.gain.setValueAtTime(0.35, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 1.25);
+      osc.start(t);
+      osc.stop(t + 1.25);
     } else if (type === 'moderate') {
-      // Tono suave y discreto para sismos moderados en vivo
+      // Tono claro para sismos moderados (M 3.0 - 4.4)
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(750, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(500, audioCtx.currentTime + 0.18);
-      gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.18);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.18);
+      const t = audioCtx.currentTime;
+      osc.frequency.setValueAtTime(780, t);
+      osc.frequency.exponentialRampToValueAtTime(520, t + 0.35);
+      gain.gain.setValueAtTime(0.25, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.55);
+      osc.start(t);
+      osc.stop(t + 0.55);
     } else {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(900, audioCtx.currentTime);
@@ -959,7 +1041,7 @@ function renderQuakes() {
 let seenQuakeIds = new Set();
 let alertedQuakesSet = new Set();
 let isFirstLoad = true;
-const MAX_LIVE_ALERT_AGE_MS = 60 * 1000; // FILTRO ESTRICTO EN TIEMPO REAL: Solo sismos ocurridos en los últimos 60 segundos
+const MAX_LIVE_ALERT_AGE_MS = 15 * 60 * 1000; // 15 minutos en vivo: tolera la latencia real de propagación y cálculo de redes sísmicas
 
 // Cargar historial de sismos alertados para evitar duplicación
 try {
@@ -1012,7 +1094,7 @@ function handleLiveEarthquakePush(feature) {
     // Solo emitir sonido de alarma si el evento ocurrió hace MENOS de 60 segundos
     // NUNCA asustar con sismos antiguos ni actualizaciones de catálogo pasadas
     let shouldSound = false;
-    if (thresholdMode !== 'off' && ageMs >= -15000 && ageMs <= 60000) {
+    if (thresholdMode !== 'off' && ageMs >= -60000 && ageMs <= MAX_LIVE_ALERT_AGE_MS) {
       const minMag = parseFloat(thresholdMode) || 3.5;
       if (mag >= minMag) shouldSound = true;
     }
@@ -1229,7 +1311,13 @@ function triggerEarlyWarning(quake) {
   const now = Date.now();
   const originTime = quake.properties.time || now;
   // REGLA VITAL: Solo activar advertencia si ocurrió hace menos de 60 segundos
-  if ((now - originTime) > 60000) return;
+  if ((now - originTime) > MAX_LIVE_ALERT_AGE_MS) return;
+  // Emitir sonido de alerta temprana inmediatamente
+  if (typeof playAlarmAudio === 'function') {
+    playAlarmAudio();
+  } else {
+    playAlertSound('major');
+  }
 
   const banner = document.getElementById('eew-banner');
   const title = document.getElementById('eew-title');
@@ -2390,8 +2478,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnSound) {
     btnSound.addEventListener('click', () => {
       soundEnabled = !soundEnabled;
-      document.getElementById('sound-label').textContent = soundEnabled ? 'Audio: ON' : 'Audio: OFF';
-      showToast(soundEnabled ? 'Sonidos de alerta sísmica activados' : 'Sonidos de alerta silenciados');
+      unlockAudioContext();
+      const soundLabel = document.getElementById('sound-label');
+      if (soundLabel) soundLabel.textContent = soundEnabled ? 'Audio: ON' : 'Audio: OFF';
+      btnSound.style.opacity = soundEnabled ? '1.0' : '0.45';
+      btnSound.title = soundEnabled ? 'Sonidos activados (Clic para silenciar)' : 'Sonidos silenciados (Clic para activar)';
+      showToast(soundEnabled ? 'Alertas sonoras activadas' : 'Alertas sonoras silenciadas', soundEnabled ? 'info' : 'warning');
       if (soundEnabled) playAlertSound('beep');
     });
   }
@@ -2833,6 +2925,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // VINCULACIÓN DE BOTÓN DE SIRENA DE PC Y PESTAÑAS DE BARRA LATERAL DESKTOP
   // =========================================================================
   setupDeviceNodeRole();
+
+  // Verificación y listener del prompt flotante de audio
+  const audioPromptEl = document.getElementById('audio-enable-prompt');
+  if (audioPromptEl) {
+    audioPromptEl.addEventListener('click', () => unlockAudioContext(true));
+    setTimeout(() => {
+      if (!isAudioUnlocked && audioCtx && audioCtx.state === 'suspended') {
+        audioPromptEl.style.display = 'flex';
+      }
+    }, 1500);
+  }
+
 
   const btnTestSiren = document.getElementById('btn-test-room-siren');
   if (btnTestSiren) {

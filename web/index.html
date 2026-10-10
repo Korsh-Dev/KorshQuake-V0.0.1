@@ -759,13 +759,14 @@
           </div>
           <div style="margin-top: 10px;">
             <select id="select-audio-threshold-menu" class="select-dark font-mono" style="width: 100%; padding: 10px;">
+              <option value="3.0">M 3.0+ Todos los Sismos Detectados</option>
               <option value="3.5" selected>M 3.5+ Moderados y Mayores (Recomendado)</option>
               <option value="4.5">M 4.5+ Solo Sismos Fuertes</option>
               <option value="6.0">M 6.0+ Solo Terremotos Mayores</option>
               <option value="off">Silencio Total (Mudo)</option>
             </select>
             <select id="select-audio-threshold" style="display: none;">
-              <option value="3.5">3.5</option><option value="4.5">4.5</option><option value="6.0">6.0</option><option value="off">off</option>
+              <option value="3.0">3.0</option><option value="3.5">3.5</option><option value="4.5">4.5</option><option value="6.0">6.0</option><option value="off">off</option>
             </select>
           </div>
           <div style="margin-top: 8px;">
@@ -1199,6 +1200,15 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Floating Audio Prompt Pill (Auto-desaparece al primer toque) -->
+  <div id="audio-enable-prompt" class="audio-prompt-pill" style="display: none;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+    </svg>
+    <span>Activar Sonido de Alertas</span>
   </div>
 
 </body>
