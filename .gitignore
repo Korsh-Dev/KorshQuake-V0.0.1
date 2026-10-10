@@ -20,3 +20,11 @@ gods-eye-view/.git/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Base de datos SQLite local
+data/*.db*
+data/*.json
+!data/.gitkeep
+data/*.db*
+data/*.json
+!data/.gitkeep-journal

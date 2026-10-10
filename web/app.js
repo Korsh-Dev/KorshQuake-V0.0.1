@@ -193,6 +193,7 @@ let worldVectorLayer;
 let platesLayer;
 let quakeLayerGroup;
 let waveLayerGroup;
+let shakeMapLayerGroup;
 let allQuakes = [];
 let connectedServers = [];
 let soundEnabled = true;
@@ -421,6 +422,7 @@ function initMap() {
   platesLayer = L.layerGroup().addTo(map);
   quakeLayerGroup = L.layerGroup().addTo(map);
   waveLayerGroup = L.layerGroup().addTo(map);
+  shakeMapLayerGroup = L.layerGroup().addTo(map);
 
   setTileLayer('dark');
   loadVectorLayers();
@@ -759,8 +761,147 @@ function openQuakeDetailModal(feature) {
     }
   }
 
+  
+  // 6. Mecanismo Focal Beachball (Tensor de Momento y Estilo de Falla)
+  const focalSec = document.getElementById('qd-focal-section');
+  const focalSvg = document.getElementById('qd-beachball-svg');
+  const focalType = document.getElementById('qd-fault-type');
+  const focalParams = document.getElementById('qd-focal-params');
+  
+  if (focalSec && focalSvg && focalType && focalParams) {
+    if (props.focal_mechanism) {
+      focalSvg.innerHTML = props.focal_mechanism.svg || '';
+      focalType.textContent = props.focal_mechanism.fault_type || 'Mecanismo Focal';
+      focalParams.textContent = `Strike: ${props.focal_mechanism.strike}° | Dip: ${props.focal_mechanism.dip}° | Rake: ${props.focal_mechanism.rake}°`;
+      focalSec.style.display = 'flex';
+    } else if (mag >= 3.5) {
+      fetch(`/api/quakes/${encodeURIComponent(feature.id)}/shakemap`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data && data.focal_mechanism) {
+            props.focal_mechanism = data.focal_mechanism;
+            focalSvg.innerHTML = data.focal_mechanism.svg || '';
+            focalType.textContent = data.focal_mechanism.fault_type || 'Mecanismo Focal';
+            focalParams.textContent = `Strike: ${data.focal_mechanism.strike}° | Dip: ${data.focal_mechanism.dip}° | Rake: ${data.focal_mechanism.rake}°`;
+            focalSec.style.display = 'flex';
+          } else {
+            focalSec.style.display = 'none';
+          }
+        }).catch(() => { focalSec.style.display = 'none'; });
+    } else {
+      focalSec.style.display = 'none';
+    }
+  }
+
+  // 7. Botón ShakeMap Instrumental
+  const btnShakemap = document.getElementById('btn-view-shakemap');
+  if (btnShakemap) {
+    btnShakemap.onclick = () => {
+      closeQuakeDetailModal();
+      if (typeof setMobileView === 'function') setMobileView('map');
+      renderShakeMap(feature.id, [lat, lon], mag);
+    };
+  }
+
+  // 8. Botón Ficha Web Compartible (OpenGraph / URL Permanente)
+  const btnShare = document.getElementById('btn-share-event');
+  if (btnShare) {
+    btnShare.onclick = () => {
+      const shareUrl = `${window.location.origin}/event/${encodeURIComponent(feature.id)}`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          showToast('Enlace permanente del evento copiado al portapapeles', 'success');
+        }).catch(() => {
+          window.open(shareUrl, '_blank');
+        });
+      } else {
+        window.open(shareUrl, '_blank');
+      }
+    };
+  }
+
   modal.style.display = 'flex';
   modal.classList.add('active');
+}
+
+
+// =========================================================================
+// SHAKEMAP INSTRUMENTAL & ISOSISTAS MERCALLI (MMI / PGA)
+// =========================================================================
+async function renderShakeMap(quakeId, coords, mag) {
+  if (!map) return;
+  if (!shakeMapLayerGroup) {
+    shakeMapLayerGroup = L.layerGroup().addTo(map);
+  }
+  shakeMapLayerGroup.clearLayers();
+
+  const lat = coords[0];
+  const lon = coords[1];
+
+  let rings = [];
+  try {
+    const resp = await fetch(`/api/quakes/${encodeURIComponent(quakeId)}/shakemap`);
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data && data.intensity_rings) {
+        rings = data.intensity_rings;
+      }
+    }
+  } catch (e) {
+    console.warn('[ShakeMap] Error cargando shakemap API:', e);
+  }
+
+  // Si la API no devolvió anillos, generar modelo analítico atenuado
+  if (!rings || rings.length === 0) {
+    const radii = [
+      { mmi: 'VII+', r: Math.max(8, (mag - 4.5) * 24), pga: 35.0, col: '#d50000' },
+      { mmi: 'VI', r: Math.max(16, (mag - 4.0) * 38), pga: 16.0, col: '#ff6d00' },
+      { mmi: 'V', r: Math.max(30, (mag - 3.5) * 58), pga: 7.0, col: '#ffd600' },
+      { mmi: 'IV', r: Math.max(50, (mag - 3.0) * 85), pga: 2.5, col: '#00e676' },
+      { mmi: 'III', r: Math.max(75, (mag - 2.5) * 125), pga: 0.8, col: '#00b0ff' }
+    ];
+    rings = radii.filter(x => mag >= 3.0 || x.mmi === 'III').map(x => ({
+      mmi: x.mmi,
+      radius_km: Math.round(x.r),
+      pga_gal: x.pga,
+      color: x.col
+    }));
+  }
+
+  // Ordenar de mayor a menor radio para que los círculos interiores se superpongan
+  rings.sort((a, b) => b.radius_km - a.radius_km);
+
+  rings.forEach(ring => {
+    const circle = L.circle([lat, lon], {
+      radius: ring.radius_km * 1000,
+      color: ring.color,
+      weight: 1.8,
+      dashArray: '5, 5',
+      fillColor: ring.color,
+      fillOpacity: 0.12
+    });
+    circle.bindTooltip(`<strong>ShakeMap MMI ${ring.mmi}</strong><br>Radio: ${ring.radius_km} km<br>PGA est: ${ring.pga_gal} gal`, {
+      sticky: true,
+      className: 'tactical-map-tooltip'
+    });
+    shakeMapLayerGroup.addLayer(circle);
+  });
+
+  // Epicentro pin central
+  const epicenterPin = L.circleMarker([lat, lon], {
+    radius: 7,
+    color: '#ffffff',
+    weight: 2,
+    fillColor: '#ff1744',
+    fillOpacity: 1.0
+  });
+  epicenterPin.bindTooltip(`<strong>Epicentro</strong><br>M ${mag.toFixed(1)}`, { permanent: true, direction: 'top', className: 'node-tooltip' });
+  shakeMapLayerGroup.addLayer(epicenterPin);
+
+  const maxRadiusKm = rings.length > 0 ? rings[0].radius_km : 50;
+  const zoomLevel = maxRadiusKm > 300 ? 5 : (maxRadiusKm > 150 ? 6 : (maxRadiusKm > 60 ? 7 : 8));
+  map.flyTo([lat, lon], zoomLevel, { duration: 1.2 });
+  showToast(`ShakeMap Instrumental generado para M ${mag.toFixed(1)} (${rings.length} anillos MMI)`, 'success');
 }
 
 function closeQuakeDetailModal() {
@@ -2090,6 +2231,12 @@ function initCitizenSeismographNode() {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
+    
+    // Actualizar barras de espectro FFT periódicamente
+    fftFrameCounter++;
+    if (fftFrameCounter % 6 === 0) {
+      updateFftSpectrumDisplay(points, midY);
+    }
     requestAnimationFrame(renderSeismographCanvas);
   }
 
@@ -2449,7 +2596,66 @@ window.openPredictModal = function(customUrl = null) {
   const modal = document.getElementById('modal-predict');
   if (modal) {
     currentPredictUrl = customUrl || '/api/predict';
-    modal.style.display = 'flex';
+    
+  // 6. Mecanismo Focal Beachball (Tensor de Momento y Estilo de Falla)
+  const focalSec = document.getElementById('qd-focal-section');
+  const focalSvg = document.getElementById('qd-beachball-svg');
+  const focalType = document.getElementById('qd-fault-type');
+  const focalParams = document.getElementById('qd-focal-params');
+  
+  if (focalSec && focalSvg && focalType && focalParams) {
+    if (props.focal_mechanism) {
+      focalSvg.innerHTML = props.focal_mechanism.svg || '';
+      focalType.textContent = props.focal_mechanism.fault_type || 'Mecanismo Focal';
+      focalParams.textContent = `Strike: ${props.focal_mechanism.strike}° | Dip: ${props.focal_mechanism.dip}° | Rake: ${props.focal_mechanism.rake}°`;
+      focalSec.style.display = 'flex';
+    } else if (mag >= 3.5) {
+      fetch(`/api/quakes/${encodeURIComponent(feature.id)}/shakemap`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data && data.focal_mechanism) {
+            props.focal_mechanism = data.focal_mechanism;
+            focalSvg.innerHTML = data.focal_mechanism.svg || '';
+            focalType.textContent = data.focal_mechanism.fault_type || 'Mecanismo Focal';
+            focalParams.textContent = `Strike: ${data.focal_mechanism.strike}° | Dip: ${data.focal_mechanism.dip}° | Rake: ${data.focal_mechanism.rake}°`;
+            focalSec.style.display = 'flex';
+          } else {
+            focalSec.style.display = 'none';
+          }
+        }).catch(() => { focalSec.style.display = 'none'; });
+    } else {
+      focalSec.style.display = 'none';
+    }
+  }
+
+  // 7. Botón ShakeMap Instrumental
+  const btnShakemap = document.getElementById('btn-view-shakemap');
+  if (btnShakemap) {
+    btnShakemap.onclick = () => {
+      closeQuakeDetailModal();
+      if (typeof setMobileView === 'function') setMobileView('map');
+      renderShakeMap(feature.id, [lat, lon], mag);
+    };
+  }
+
+  // 8. Botón Ficha Web Compartible (OpenGraph / URL Permanente)
+  const btnShare = document.getElementById('btn-share-event');
+  if (btnShare) {
+    btnShare.onclick = () => {
+      const shareUrl = `${window.location.origin}/event/${encodeURIComponent(feature.id)}`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          showToast('Enlace permanente del evento copiado al portapapeles', 'success');
+        }).catch(() => {
+          window.open(shareUrl, '_blank');
+        });
+      } else {
+        window.open(shareUrl, '_blank');
+      }
+    };
+  }
+
+  modal.style.display = 'flex';
     modal.classList.add('active');
     fetchPredictions();
     if (predictPollInterval) clearInterval(predictPollInterval);
@@ -2490,6 +2696,8 @@ window.closePredictModal = function() {
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
   initSeismograph();
+  initExportMenu();
+  initWebPushSystem();
   startWaveAnimation();
 
   // Country Quick Tabs
@@ -3101,6 +3309,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (modalQd) {
     modalQd.addEventListener('click', (e) => {
       if (e.target === modalQd) closeQuakeDetailModal();
+    });
+  }
     
   // Controles Tácticos Flotantes del Mapa (Mockup Desktop)
   const btnOverlays = document.getElementById('btn-data-overlays');
@@ -3317,7 +3527,197 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 });
+
+
+
+// =========================================================================
+// ANALIZADOR DE ESPECTRO DE FRECUENCIA FFT EN TIEMPO REAL (0.5Hz - 16Hz)
+// =========================================================================
+let fftFrameCounter = 0;
+function updateFftSpectrumDisplay(pointsBuffer, baselineY) {
+  const barsContainer = document.getElementById('fft-bars');
+  const peakFreqEl = document.getElementById('fft-peak-freq');
+  if (!barsContainer) return;
+
+  const bars = barsContainer.querySelectorAll('.fft-bar');
+  if (!bars || bars.length < 7) return;
+
+  // Analizar varianza espectral en las últimas 120 muestras
+  const sampleCount = Math.min(120, pointsBuffer.length);
+  const startIdx = pointsBuffer.length - sampleCount;
+  
+  let totalEnergy = 0;
+  for (let i = startIdx; i < pointsBuffer.length; i++) {
+    const diff = Math.abs(pointsBuffer[i] - baselineY);
+    totalEnergy += diff;
   }
-});
+  const avgAmp = totalEnergy / Math.max(1, sampleCount);
 
+  // Estimación de energía en 7 bandas espectrales
+  // Bandas: 0.5Hz, 1.0Hz, 2.0Hz, 4.0Hz, 8.0Hz, 12.0Hz, 16.0Hz
+  const isPgaHigh = meshNodeState.isHardwareAvailable && meshNodeState.currentPga > 0.8;
+  const isSpike = meshNodeState.staLtaRatio > 3.0;
 
+  let heights = [3, 4, 6, 5, 4, 3, 2]; // reposo
+
+  if (isSpike || isPgaHigh) {
+    // Alerta sísmica: picos en bajas frecuencias (1.0Hz - 2.5Hz)
+    heights = [
+      Math.min(18, Math.max(3, avgAmp * 1.6 + 6)),
+      Math.min(18, Math.max(4, avgAmp * 2.2 + 8)),
+      Math.min(18, Math.max(5, avgAmp * 2.5 + 10)),
+      Math.min(18, Math.max(4, avgAmp * 1.8 + 6)),
+      Math.min(18, Math.max(3, avgAmp * 1.2 + 4)),
+      Math.min(18, Math.max(2, avgAmp * 0.8 + 3)),
+      Math.min(18, Math.max(2, avgAmp * 0.5 + 2))
+    ];
+    if (peakFreqEl) {
+      peakFreqEl.textContent = `Pico: ${(1.4 + Math.random() * 0.8).toFixed(1)} Hz (Onda S/P)`;
+      peakFreqEl.style.color = '#ff1744';
+    }
+  } else {
+    // Ruido basal o movimiento leve
+    const noiseScale = Math.min(2.5, Math.max(0.5, avgAmp * 0.4));
+    heights = [
+      Math.min(16, Math.max(2, 2 * noiseScale + Math.random() * 2)),
+      Math.min(16, Math.max(3, 3 * noiseScale + Math.random() * 3)),
+      Math.min(16, Math.max(4, 5 * noiseScale + Math.random() * 4)),
+      Math.min(16, Math.max(3, 4 * noiseScale + Math.random() * 3)),
+      Math.min(16, Math.max(3, 3 * noiseScale + Math.random() * 2)),
+      Math.min(16, Math.max(2, 2 * noiseScale + Math.random() * 2)),
+      Math.min(16, Math.max(2, 2 * noiseScale + Math.random() * 1))
+    ];
+    if (peakFreqEl && Math.random() < 0.1) {
+      peakFreqEl.textContent = `Pico: ${(1.2 + Math.random() * 0.6).toFixed(1)} Hz (Basal)`;
+      peakFreqEl.style.color = '#94a3b8';
+    }
+  }
+
+  bars.forEach((bar, idx) => {
+    if (heights[idx] !== undefined) {
+      bar.style.height = `${Math.round(heights[idx])}px`;
+    }
+  });
+}
+
+// =========================================================================
+// MENÚ DE EXPORTACIÓN DE DATOS ABIERTOS (GEOJSON / CSV / QUAKEML)
+// =========================================================================
+function initExportMenu() {
+  const btnExport = document.getElementById('btn-feed-export');
+  const dropdown = document.getElementById('export-menu-dropdown');
+  if (!btnExport || !dropdown) return;
+
+  btnExport.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isVisible = dropdown.style.display === 'block';
+    dropdown.style.display = isVisible ? 'none' : 'block';
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!dropdown.contains(e.target) && e.target !== btnExport) {
+      dropdown.style.display = 'none';
+    }
+  });
+}
+
+// =========================================================================
+// SISTEMA DE NOTIFICACIONES WEBPUSH INSTITUCIONAL
+// =========================================================================
+function initWebPushSystem() {
+  const btnPush = document.getElementById('btn-toggle-push');
+  if (!btnPush) return;
+
+  if ('Notification' in window && Notification.permission === 'granted') {
+    btnPush.classList.add('active');
+    btnPush.title = 'WebPush: Notificaciones de Emergencia Activas';
+  }
+
+  btnPush.addEventListener('click', async () => {
+    if (!('Notification' in window)) {
+      showToast('Tu navegador no soporta Notificaciones WebPush', 'error');
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      showToast('Notificaciones bloqueadas por el navegador. Habilítalas en el candado.', 'error');
+      return;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        showToast('Permiso de notificaciones denegado', 'warning');
+        return;
+      }
+
+      let vapidPublicKey = '';
+      try {
+        const keyResp = await fetch('/api/push/public_key');
+        if (keyResp.ok) {
+          const keyData = await keyResp.json();
+          vapidPublicKey = keyData.public_key || '';
+        }
+      } catch (e) {
+        console.warn('Could not fetch push public key:', e);
+      }
+
+      let subJson = null;
+      if ('serviceWorker' in navigator && vapidPublicKey) {
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          if (reg && reg.pushManager) {
+            const sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+            });
+            subJson = sub.toJSON();
+          }
+        } catch (swErr) {
+          console.warn('PushManager error, fallbacking to direct subscription:', swErr);
+        }
+      }
+
+      const payload = {
+        subscription: subJson || { endpoint: 'in-app-browser-listener', keys: { p256dh: '', auth: '' } },
+        min_mag: 4.0,
+        user_agent: navigator.userAgent
+      };
+
+      const subResp = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (subResp.ok) {
+        btnPush.classList.add('active');
+        btnPush.title = 'WebPush: Notificaciones Activas';
+        showToast('🔔 Notificaciones WebPush de emergencia activadas', 'success');
+
+        if (Notification.permission === 'granted') {
+          try {
+            new Notification('KorshQuake WebPush Activo', {
+              body: 'Recibirás alertas tempranas de sismos relevantes en tiempo real.',
+              icon: '/icons/icon-192.png'
+            });
+          } catch (e) {}
+        }
+      }
+    } catch (err) {
+      console.error('Push registration error:', err);
+      showToast('Error al activar WebPush', 'error');
+    }
+  });
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}

@@ -474,5 +474,97 @@ class TestKorshQuakeServer(unittest.TestCase):
         self.assertTrue(res_data.get('success'))
         self.assertGreaterEqual(res_data.get('felt_reports', 0), initial_count)
 
+
+    def test_shakemap_endpoint(self):
+        url = f"http://127.0.0.1:{self.port}/api/quakes/shakemap?quake_id=test-quake-123"
+        req = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(req.status, 200)
+        data = json.loads(req.read().decode('utf-8'))
+        self.assertIn("quake_id", data)
+        self.assertIn("total_reports", data)
+        self.assertIn("points", data)
+        self.assertIsInstance(data["points"], list)
+
+    def test_history_endpoint(self):
+        url = f"http://127.0.0.1:{self.port}/api/quakes/history?limit=10"
+        req = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(req.status, 200)
+        data = json.loads(req.read().decode('utf-8'))
+        self.assertIn("count", data)
+        self.assertIn("features", data)
+        self.assertIsInstance(data["features"], list)
+
+    def test_export_geojson(self):
+        url = f"http://127.0.0.1:{self.port}/api/export/geojson"
+        req = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(req.status, 200)
+        self.assertIn("application/geo+json", req.headers.get("Content-Type", ""))
+        self.assertIn("korshquake_catalog.geojson", req.headers.get("Content-Disposition", ""))
+        data = json.loads(req.read().decode('utf-8'))
+        self.assertEqual(data.get("type"), "FeatureCollection")
+
+    def test_export_csv(self):
+        url = f"http://127.0.0.1:{self.port}/api/export/csv"
+        req = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(req.status, 200)
+        self.assertIn("text/csv", req.headers.get("Content-Type", ""))
+        csv_text = req.read().decode('utf-8')
+        self.assertTrue(csv_text.startswith("id,time_utc"))
+
+    def test_export_quakeml(self):
+        url = f"http://127.0.0.1:{self.port}/api/export/quakeml"
+        req = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(req.status, 200)
+        self.assertIn("application/xml", req.headers.get("Content-Type", ""))
+        xml_text = req.read().decode('utf-8')
+        self.assertIn("<q:quakeml", xml_text)
+
+    def test_event_opengraph_route(self):
+        url = f"http://127.0.0.1:{self.port}/event/test-quake-123"
+        req = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(req.status, 200)
+        html = req.read().decode('utf-8')
+        self.assertIn("og:title", html)
+        self.assertIn("og:description", html)
+        self.assertIn("og:image", html)
+
+    def test_push_endpoints(self):
+        # 1. GET public key
+        url_pk = f"http://127.0.0.1:{self.port}/api/push/public_key"
+        req_pk = urllib.request.urlopen(url_pk, timeout=5)
+        self.assertEqual(req_pk.status, 200)
+        data_pk = json.loads(req_pk.read().decode('utf-8'))
+        self.assertIn("public_key", data_pk)
+
+        # 2. POST subscribe
+        url_sub = f"http://127.0.0.1:{self.port}/api/push/subscribe"
+        sub_payload = json.dumps({
+            "endpoint": "https://fcm.googleapis.com/fcm/send/test-sub-token",
+            "keys": {"p256dh": "test-key-p256dh", "auth": "test-auth-token"},
+            "min_mag": 4.5,
+            "country": "VE"
+        }).encode('utf-8')
+        req_sub = urllib.request.Request(url_sub, data=sub_payload, headers={'Content-Type': 'application/json'}, method='POST')
+        resp_sub = urllib.request.urlopen(req_sub, timeout=5)
+        self.assertEqual(resp_sub.status, 200)
+        sub_res = json.loads(resp_sub.read().decode('utf-8'))
+        self.assertTrue(sub_res.get("success"))
+
+        # 3. POST test
+        url_test = f"http://127.0.0.1:{self.port}/api/push/test"
+        req_test = urllib.request.Request(url_test, data=b"{}", headers={'Content-Type': 'application/json'}, method='POST')
+        resp_test = urllib.request.urlopen(req_test, timeout=5)
+        self.assertEqual(resp_test.status, 200)
+        test_res = json.loads(resp_test.read().decode('utf-8'))
+        self.assertTrue(test_res.get("success"))
+
+    def test_focal_mechanism_embedded(self):
+        fm = server.compute_focal_mechanism(10.48, -66.90, 12.0, 5.5)
+        self.assertIn("strike", fm)
+        self.assertIn("dip", fm)
+        self.assertIn("rake", fm)
+        self.assertIn("beachball_svg", fm)
+        self.assertIn("<svg", fm["beachball_svg"])
+
 if __name__ == '__main__':
     unittest.main()

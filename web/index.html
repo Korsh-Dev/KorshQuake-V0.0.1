@@ -95,6 +95,24 @@
 
     <!-- Actions Bar: Sleek, Decluttered, Native App Style -->
     <div class="header-actions">
+      <!-- Botón Acceso God's Eye 3D Tactical Globe -->
+      <a href="/gods-eye" class="btn btn-secondary btn-icon-round" id="btn-gods-eye" title="God's Eye - Globo 3D Táctico Global" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="2" y1="12" x2="22" y2="12"></line>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        </svg>
+      </a>
+
+      <!-- Botón Notificaciones WebPush -->
+      <button class="btn btn-secondary btn-icon-round" id="btn-toggle-push" title="Notificaciones WebPush del Sistema">
+        <svg id="icon-push" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+      </button>
+
+
       <!-- Botón Rápido de Audio (Mute/Unmute) -->
       <button class="btn btn-secondary btn-icon-round" id="btn-toggle-sound" title="Alternar Sonido">
         <svg id="icon-sound" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -449,7 +467,24 @@
         </div>
 
         <!-- Mobile EEW Quick Status Card (Matching Mockup 3) -->
-        <div class="mobile-eew-instrument-card" id="mobile-eew-instrument-card">
+                  <!-- FFT Frequency Spectrum Analyzer -->
+          <div class="oscilloscope-spectrum-bar" id="seismo-spectrum-bar">
+            <div class="fft-label-group">
+              <span class="text-cyan font-mono" style="font-size: 0.68rem; font-weight: 600;">FFT ESPECTRO:</span>
+            </div>
+            <div id="fft-bars" class="fft-bars-container">
+              <span class="fft-bar" style="height: 4px;" title="0.5 Hz (Ondas Rayleigh)"></span>
+              <span class="fft-bar" style="height: 8px;" title="1.0 Hz (Ondas S)"></span>
+              <span class="fft-bar" style="height: 14px;" title="2.0 Hz (Ondas P)"></span>
+              <span class="fft-bar" style="height: 10px;" title="4.0 Hz (Suelo)"></span>
+              <span class="fft-bar" style="height: 6px;" title="8.0 Hz (Microtremores)"></span>
+              <span class="fft-bar" style="height: 5px;" title="12.0 Hz (Ruido Urbano)"></span>
+              <span class="fft-bar" style="height: 3px;" title="16.0 Hz (Alta Frecuencia)"></span>
+            </div>
+            <span id="fft-peak-freq" class="font-mono text-muted" style="font-size: 0.68rem;">Pico: 1.5 Hz (Onda S/P)</span>
+          </div>
+
+          <div class="mobile-eew-instrument-card" id="mobile-eew-instrument-card">
           <div class="meew-header">
             <div class="meew-badge-alert">
               <span class="live-dot pulse-red"></span>
@@ -496,6 +531,20 @@
           </div>
           <div class="widget-header-actions">
             <span class="feed-count-pill font-mono" id="feed-count">0</span>
+                        <div class="export-dropdown-wrap" style="position: relative; display: inline-block;">
+              <button class="btn-dots-menu" id="btn-feed-export" title="Exportar Datos Abiertos (GeoJSON, CSV, QuakeML)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              </button>
+              <div class="export-menu-dropdown glass-panel" id="export-menu-dropdown" style="display:none; position: absolute; right: 0; top: 100%; margin-top: 6px; z-index: 1000; min-width: 175px; padding: 6px; border-radius: 8px;">
+                <a href="/api/export/geojson" target="_blank" class="export-menu-item"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg> GeoJSON Oficial</a>
+                <a href="/api/export/csv" target="_blank" class="export-menu-item"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg> CSV Tabular</a>
+                <a href="/api/export/quakeml" target="_blank" class="export-menu-item"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> QuakeML XML</a>
+              </div>
+            </div>
             <button class="btn-dots-menu" id="btn-feed-menu" title="Filtro de Magnitud"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
           </div>
         </div>
@@ -616,7 +665,19 @@
         </div>
 
         <!-- Botones de Acción Táctica -->
-        <div class="tactical-actions-row">
+                  <!-- Mecanismo Focal Beachball (Tensor de Momento) -->
+          <div class="tactical-focal-section" id="qd-focal-section" style="display:none;">
+            <div id="qd-beachball-svg" class="beachball-container"></div>
+            <div class="focal-info-container">
+              <div class="focal-title-row">
+                <span class="font-mono text-cyan focal-header-tag">MECANISMO FOCAL</span>
+                <span class="badge font-mono focal-badge" id="qd-fault-type">--</span>
+              </div>
+              <div class="font-mono focal-params-text" id="qd-focal-params">Strike: --° | Dip: --° | Rake: --°</div>
+            </div>
+          </div>
+
+          <div class="tactical-actions-row">
           <button class="tactical-btn-report" id="btn-report-felt">
             <span class="btn-report-content">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -627,6 +688,25 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
             <span>Centrar y Ver en Mapa</span>
           </button>
+            <button class="tactical-btn-map" id="btn-view-shakemap" title="Cargar Isosistas de Aceleración ShakeMap">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff9100" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="6"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+              </svg>
+              <span>ShakeMap</span>
+            </button>
+            <button class="tactical-btn-map" id="btn-share-event" title="Ficha Web Compartible (OpenGraph)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2">
+                <circle cx="18" cy="5" r="3"></circle>
+                <circle cx="6" cy="12" r="3"></circle>
+                <circle cx="18" cy="19" r="3"></circle>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+              </svg>
+              <span>Ficha Web</span>
+            </button>
+
         </div>
 
         <!-- Tabla Glass de Llegada de Ondas a Ciudades -->
