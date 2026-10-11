@@ -4952,17 +4952,17 @@ body {
 /* 1. Tarjeta Flotante Inferior en Mapa (Mockup 1) */
 .mobile-floating-quake-card {
   position: absolute;
-  bottom: 68px;
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   left: 12px;
   right: 12px;
   z-index: 800;
-  background: rgba(6, 14, 26, 0.94);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 30, 66, 0.35);
-  border-radius: 14px;
+  background: rgba(12, 18, 32, 0.72) !important;
+  backdrop-filter: blur(24px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 16px !important;
   padding: 12px 14px;
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.75), 0 0 18px rgba(255, 30, 66, 0.18);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
   cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
   animation: slideUpMobileCard 0.35s cubic-bezier(0.16, 1, 0.3, 1);

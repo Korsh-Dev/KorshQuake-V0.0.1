@@ -3361,7 +3361,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnDlApk) {
     btnDlApk.addEventListener('click', () => {
-      showToast('Descargando KorshQuake.apk (0.25 MB)...', 'info');
+      showToast('Descargando KorshQuake.apk (3.6 MB)...', 'info');
     });
   }
 
