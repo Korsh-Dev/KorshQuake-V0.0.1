@@ -262,19 +262,6 @@ body {
   filter: brightness(1.1);
 }
 
-.btn-godseye {
-  background: linear-gradient(135deg, #0284c7, #1d4ed8);
-  color: #fff;
-  border: 1px solid rgba(0, 229, 255, 0.4);
-  box-shadow: 0 0 14px rgba(2, 132, 199, 0.45);
-}
-
-.btn-godseye:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 20px rgba(0, 229, 255, 0.65);
-  filter: brightness(1.15);
-}
-
 .pulse-tag {
   display: inline-block;
   animation: pulseTagAnim 1.4s infinite ease-in-out;

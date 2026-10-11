@@ -117,7 +117,6 @@ Todos los tests deben pasar con código de salida `0`.
 El servicio esta contenerizado con Docker Compose y conectado a Nginx con proxy inverso SSL:
 
 - **Dominio Publico:** `https://quake.korsh.online`
-- **Globo 3D:** `https://quake.korsh.online/gods-eye`
 - **Healthcheck:** `https://quake.korsh.online/api/health`
 - **SSE Stream en Vivo:** `https://quake.korsh.online/api/events/live`
 

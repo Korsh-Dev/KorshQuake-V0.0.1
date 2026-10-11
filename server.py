@@ -31,7 +31,6 @@ CURRENT_VERSION_CODE = 116
 PORT = 8080
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(BASE_DIR, "web")
-GODS_EYE_DIST = os.path.join(BASE_DIR, "gods-eye-view", "dist")
 ROAMING_GQ = os.path.join(os.environ.get("APPDATA", ""), "GlobalQuake")
 LOCAL_APP_PATH = os.path.join(BASE_DIR, "GlobalQuakeApp")
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -2534,53 +2533,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
                 })
             return
 
-        # 11. Ruta informativa /gods-eye (Desacoplado por Rendimiento a favor del motor EEW)
-        if path in ["/gods-eye", "/gods-eye/"]:
-            index_file = os.path.join(GODS_EYE_DIST, "index.html")
-            if os.path.isfile(index_file):
-                try:
-                    with open(index_file, "rb") as f:
-                        content = f.read()
-                    self.send_response(200)
-                    self.send_header("Content-Type", "text/html; charset=utf-8")
-                    self.send_header("Content-Length", str(len(content)))
-                    self.end_headers()
-                    self.wfile.write(content)
-                    return
-                except Exception:
-                    pass
-
-            html_notice = """<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <title>God's Eye View - Optimizado por KorshQuake</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { background: #050b14; color: #e2e8f0; font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; }
-    .card { background: rgba(13,27,46,0.92); border: 1px solid #1e3a5f; padding: 36px; border-radius: 14px; max-width: 620px; box-shadow: 0 10px 40px rgba(0,0,0,0.7); }
-    h1 { color: #00e5ff; margin-top: 0; font-size: 1.6rem; }
-    p { line-height: 1.6; color: #94a3b8; font-size: 0.95rem; }
-    .btn { display: inline-block; background: #00e5ff; color: #020b14; padding: 12px 24px; border-radius: 8px; font-weight: bold; text-decoration: none; margin-top: 20px; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h1>Centro de Monitoreo Global</h1>
-    <p>El globo 3D de Cesium consumía recursos excesivos de CPU, GPU y RAM. KorshQuake ahora integra un <strong>Motor de Predicciones y Alerta Temprana en Tiempo Real (EEW)</strong> con propagación física de ondas P y S a latencia cero (< 1 ms).</p>
-    <a href="/" class="btn">Abrir KorshQuake en Vivo</a>
-  </div>
-</body>
-</html>"""
-            payload = html_notice.encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(payload)))
-            self.end_headers()
-            self.wfile.write(payload)
-            return
-
-        # 12. Consola Administrativa /admin para Monitoreo de Nodos y Pruebas Sismicas
+        # 11. Consola Administrativa /admin para Monitoreo de Nodos y Pruebas Sismicas
         if path in ["/admin", "/admin/"]:
             admin_file = os.path.join(WEB_DIR, "admin.html")
             if os.path.isfile(admin_file):

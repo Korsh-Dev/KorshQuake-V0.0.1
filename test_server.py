@@ -159,15 +159,6 @@ class TestKorshQuakeServer(unittest.TestCase):
             self.assertIn("is_live_alert", data)
             self.assertIn("alert_level", data)
 
-    def test_gods_eye_view_route(self):
-        url = f"http://127.0.0.1:{self.port}/gods-eye"
-        req = urllib.request.urlopen(url, timeout=5)
-        self.assertEqual(req.status, 200)
-        content_type = req.headers.get("Content-Type")
-        self.assertIn("text/html", content_type)
-        html = req.read().decode('utf-8')
-        self.assertIn("God's Eye View", html)
-
     def test_predict_endpoint_latest(self):
         url = f"http://127.0.0.1:{self.port}/api/predict"
         req = urllib.request.urlopen(url, timeout=5)

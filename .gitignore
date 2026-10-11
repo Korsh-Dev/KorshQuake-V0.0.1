@@ -12,8 +12,6 @@ GlobalQuakeApp/
 
 # Node.js
 node_modules/
-gods-eye-view/node_modules/
-gods-eye-view/.git/
 
 # IDEs y sistemas operativos
 .vscode/

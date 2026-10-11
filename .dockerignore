@@ -12,7 +12,3 @@ __pycache__
 *.exe
 GlobalQuakeApp
 node_modules
-gods-eye-view/node_modules
-gods-eye-view/.git
-gods-eye-view/qa-artifacts
-gods-eye-view/screenshots

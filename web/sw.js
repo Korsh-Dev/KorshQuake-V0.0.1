@@ -10,7 +10,6 @@ const STATIC_ASSETS = [
   '/vendor/leaflet/leaflet.css',
   '/vendor/leaflet/leaflet.js',
   '/vendor/plates.json',
-  '/vendor/world.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/logo.png',
