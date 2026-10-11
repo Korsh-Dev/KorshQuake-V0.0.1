@@ -8,28 +8,12 @@ let activeSirenNodes = [];
 let activeSirenInterval = null;
 let activeAlertTimerInterval = null;
 let activeAlertQuake = null;
+let sirenMasterGainNode = null;
 
 function stopSeismicAlertSiren() {
   if (activeSirenInterval) {
-    clearInterval(activeSirenInterval);
+    clearTimeout(activeSirenInterval);
     activeSirenInterval = null;
-  }
-  if (activeSirenOscillators && activeSirenOscillators.length > 0) {
-    activeSirenOscillators.forEach(osc => {
-      try {
-        osc.stop();
-        osc.disconnect();
-      } catch (e) {}
-    });
-    activeSirenOscillators = [];
-  }
-  if (activeSirenNodes && activeSirenNodes.length > 0) {
-    activeSirenNodes.forEach(node => {
-      try {
-        node.disconnect();
-      } catch (e) {}
-    });
-    activeSirenNodes = [];
   }
   if ('speechSynthesis' in window) {
     try { window.speechSynthesis.cancel(); } catch (e) {}
@@ -37,6 +21,37 @@ function stopSeismicAlertSiren() {
   if ('vibrate' in navigator) {
     try { navigator.vibrate(0); } catch (e) {}
   }
+
+  // Desvanecimiento suave en 40ms para evitar 'clicks' o 'pops' acústicos
+  if (sirenMasterGainNode && audioCtx && audioCtx.state === 'running') {
+    try {
+      const now = audioCtx.currentTime;
+      sirenMasterGainNode.gain.cancelScheduledValues(now);
+      sirenMasterGainNode.gain.linearRampToValueAtTime(0.001, now + 0.04);
+    } catch (e) {}
+  }
+
+  setTimeout(() => {
+    if (activeSirenOscillators && activeSirenOscillators.length > 0) {
+      activeSirenOscillators.forEach(osc => {
+        try {
+          osc.stop();
+          osc.disconnect();
+        } catch (e) {}
+      });
+      activeSirenOscillators = [];
+    }
+    if (activeSirenNodes && activeSirenNodes.length > 0) {
+      activeSirenNodes.forEach(node => {
+        try {
+          node.disconnect();
+        } catch (e) {}
+      });
+      activeSirenNodes = [];
+    }
+    sirenMasterGainNode = null;
+  }, 45);
+
   const silenceBtn = document.getElementById('btn-silence-seismic-siren');
   const silenceLabel = document.getElementById('label-silence-btn');
   if (silenceLabel) silenceLabel.textContent = 'ALARMA SILENCIADA';
@@ -62,52 +77,15 @@ function playRealSeismicAlertSiren(magnitude = 5.5, place = 'Zona Sísmica') {
 
     const now = audioCtx.currentTime;
 
-    // 1. Sirena Acústica de Emergencia (Oscilador Doble con Filtro Resonante y Modulación de Frecuencia)
-    const mainGain = audioCtx.createGain();
-    mainGain.gain.setValueAtTime(0.42, now);
+    // 1. Master Gain Node con rampa de volumen y soporte para Audio Ducking
+    const masterGain = audioCtx.createGain();
+    masterGain.gain.setValueAtTime(0.42, now);
+    masterGain.connect(audioCtx.destination);
+    sirenMasterGainNode = masterGain;
+    activeSirenNodes.push(masterGain);
 
-    // Filtro pasa-bajos resonante que emula la trompeta metálica de altavoz público
-    const filter = audioCtx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(2200, now);
-    filter.Q.setValueAtTime(4.0, now);
-
-    // Oscilador de onda de diente de sierra (Sawtooth) para riqueza armónica penetrante
-    const sirenOsc = audioCtx.createOscillator();
-    sirenOsc.type = 'sawtooth';
-
-    // Oscilador de subgraves (Sine) para impacto físico (Rumble)
-    const subOsc = audioCtx.createOscillator();
-    subOsc.type = 'sine';
-    subOsc.frequency.setValueAtTime(130, now);
-
-    // Modulador LFO para el barrido cíclico de frecuencia de la sirena (0.6s periodo)
-    const lfo = audioCtx.createOscillator();
-    const lfoGain = audioCtx.createGain();
-    lfo.type = 'sine';
-    lfo.frequency.setValueAtTime(1.6, now);
-    lfoGain.gain.setValueAtTime(260, now);
-
-    sirenOsc.frequency.setValueAtTime(840, now);
-    lfo.connect(lfoGain);
-    lfoGain.connect(sirenOsc.frequency);
-
-    const subGain = audioCtx.createGain();
-    subGain.gain.setValueAtTime(0.3, now);
-    subOsc.connect(subGain);
-    subGain.connect(filter);
-
-    sirenOsc.connect(filter);
-    filter.connect(mainGain);
-    mainGain.connect(audioCtx.destination);
-
-    sirenOsc.start(now);
-    subOsc.start(now);
-    lfo.start(now);
-
-    activeSirenOscillators.push(sirenOsc, subOsc, lfo);
-
-    // 2. Tono de atención bifrecuencial inicial (EAS Header: 853 Hz + 960 Hz en ráfagas de impacto)
+    // 2. Tono de Atención Bifrecuencial Oficial EAS (853 Hz + 960 Hz)
+    // Ráfaga limpia de 0.85s con ataque y decaimiento suaves
     const eas1 = audioCtx.createOscillator();
     const eas2 = audioCtx.createOscillator();
     const easGain = audioCtx.createGain();
@@ -115,39 +93,127 @@ function playRealSeismicAlertSiren(magnitude = 5.5, place = 'Zona Sísmica') {
     eas2.type = 'sine';
     eas1.frequency.setValueAtTime(853, now);
     eas2.frequency.setValueAtTime(960, now);
-    easGain.gain.setValueAtTime(0.35, now);
-    easGain.gain.exponentialRampToValueAtTime(0.01, now + 1.2);
+    
+    easGain.gain.setValueAtTime(0.001, now);
+    easGain.gain.exponentialRampToValueAtTime(0.38, now + 0.02);
+    easGain.gain.setValueAtTime(0.38, now + 0.78);
+    easGain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+
     eas1.connect(easGain);
     eas2.connect(easGain);
     easGain.connect(audioCtx.destination);
+
     eas1.start(now);
     eas2.start(now);
-    eas1.stop(now + 1.2);
-    eas2.stop(now + 1.2);
+    eas1.stop(now + 0.85);
+    eas2.stop(now + 0.85);
     activeSirenOscillators.push(eas1, eas2);
-    activeSirenNodes.push(mainGain, filter, lfoGain, subGain, easGain);
+    activeSirenNodes.push(easGain);
 
-    // 3. Vibración háptica continua en Android
+    // 3. Sirena Acústica Sismológica Wailing (Sawtooth + LFO + Filtro Resonante + Subgraves)
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2200, now);
+    filter.Q.setValueAtTime(3.8, now);
+
+    const sirenOsc = audioCtx.createOscillator();
+    sirenOsc.type = 'sawtooth';
+    sirenOsc.frequency.setValueAtTime(840, now);
+
+    const subOsc = audioCtx.createOscillator();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(120, now);
+
+    const subGain = audioCtx.createGain();
+    subGain.gain.setValueAtTime(0.32, now);
+    subOsc.connect(subGain);
+    subGain.connect(filter);
+
+    const lfo = audioCtx.createOscillator();
+    const lfoGain = audioCtx.createGain();
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(1.5, now);
+    lfoGain.gain.setValueAtTime(260, now);
+    lfo.connect(lfoGain);
+    lfoGain.connect(sirenOsc.frequency);
+
+    sirenOsc.connect(filter);
+
+    // Fade-in de la sirena tras la ráfaga EAS
+    const sirenSubGain = audioCtx.createGain();
+    sirenSubGain.gain.setValueAtTime(0.05, now);
+    sirenSubGain.gain.linearRampToValueAtTime(1.0, now + 0.9);
+    filter.connect(sirenSubGain);
+    sirenSubGain.connect(masterGain);
+
+    sirenOsc.start(now);
+    subOsc.start(now);
+    lfo.start(now);
+
+    activeSirenOscillators.push(sirenOsc, subOsc, lfo);
+    activeSirenNodes.push(filter, subGain, lfoGain, sirenSubGain);
+
+    // 4. Vibración háptica en dispositivos móviles
     if ('vibrate' in navigator) {
       navigator.vibrate([600, 200, 600, 200, 600, 200, 1000]);
     }
 
-    // 4. Locución de voz oficial ("¡Alerta Sísmica!")
+    // 5. Locución de Voz Oficial con Audio Ducking
     if ('speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
-        const msg = new SpeechSynthesisUtterance(`¡Alerta Sísmica! Sismo magnitud ${magnitude} detectado en ${place}. Busque una zona segura.`);
+        const cleanPlace = String(place).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}]/gu, '').trim() || 'Zona Sísmica';
+        const numMag = typeof magnitude === 'number' ? magnitude.toFixed(1) : parseFloat(magnitude).toFixed(1);
+        const msg = new SpeechSynthesisUtterance(
+          `¡Alerta Sísmica! Sismo magnitud ${numMag} detectado en ${cleanPlace}. Mantenga la calma y busque una zona segura.`
+        );
         msg.lang = 'es-ES';
-        msg.rate = 1.05;
+        msg.rate = 1.02;
         msg.pitch = 1.0;
         msg.volume = 1.0;
-        window.speechSynthesis.speak(msg);
+
+        // Selección de voz natural en español
+        const availableVoices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+        if (availableVoices && availableVoices.length > 0) {
+          const esVoice = availableVoices.find(v => v.lang && (v.lang.startsWith('es') || v.lang.includes('ES')));
+          if (esVoice) msg.voice = esVoice;
+        }
+
+        // Dynamic Ducking: Atenúa la sirena a 0.12 en 50ms para que la voz sea perfectamente nítida
+        msg.onstart = () => {
+          if (sirenMasterGainNode && audioCtx && audioCtx.state === 'running') {
+            sirenMasterGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+            sirenMasterGainNode.gain.setTargetAtTime(0.12, audioCtx.currentTime, 0.05);
+          }
+        };
+
+        // Recuperación post-voz: Restaura el volumen de sirena a 0.42 en 250ms
+        msg.onend = () => {
+          if (sirenMasterGainNode && audioCtx && audioCtx.state === 'running') {
+            sirenMasterGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+            sirenMasterGainNode.gain.setTargetAtTime(0.42, audioCtx.currentTime, 0.25);
+          }
+        };
+
+        msg.onerror = () => {
+          if (sirenMasterGainNode && audioCtx && audioCtx.state === 'running') {
+            sirenMasterGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+            sirenMasterGainNode.gain.setTargetAtTime(0.42, audioCtx.currentTime, 0.15);
+          }
+        };
+
+        // Comenzar la locución al concluir el tono EAS inicial (850ms)
+        setTimeout(() => {
+          if (activeSirenOscillators.length > 0) {
+            window.speechSynthesis.speak(msg);
+          }
+        }, 850);
       } catch (e) {
         console.warn('Speech synthesis no soportado o bloqueado:', e);
       }
     }
 
-    // Autodesconexión de seguridad a los 28 segundos para no aturdir indefinidamente
+    // Autodesconexión de seguridad a los 28 segundos
     activeSirenInterval = setTimeout(() => {
       stopSeismicAlertSiren();
     }, 28000);
@@ -2387,12 +2453,40 @@ function initCitizenSeismographNode() {
   const canvas = document.getElementById('seismograph-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  const width = canvas.width;
-  const height = canvas.height;
-  const midY = height / 2;
+  let logicalWidth = 450;
+  let logicalHeight = 110;
+  let midY = logicalHeight / 2;
 
-  let points = new Array(width).fill(midY);
+  let points = new Array(logicalWidth).fill(midY);
   let synthPhase = 0;
+
+  function syncCanvasDpi() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    const rect = canvas.getBoundingClientRect();
+    const cssW = Math.max(200, Math.floor(rect.width || 450));
+    const cssH = Math.max(60, Math.floor(rect.height || 110));
+
+    if (canvas.width !== Math.floor(cssW * dpr) || canvas.height !== Math.floor(cssH * dpr)) {
+      canvas.width = Math.floor(cssW * dpr);
+      canvas.height = Math.floor(cssH * dpr);
+      logicalWidth = cssW;
+      logicalHeight = cssH;
+      midY = logicalHeight / 2;
+
+      if (points.length !== logicalWidth) {
+        const oldPoints = points;
+        points = new Array(logicalWidth).fill(midY);
+        const copyCount = Math.min(oldPoints.length, logicalWidth);
+        for (let i = 0; i < copyCount; i++) {
+          points[logicalWidth - 1 - i] = oldPoints[oldPoints.length - 1 - i];
+        }
+      }
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  window.addEventListener('resize', syncCanvasDpi, { passive: true });
+  syncCanvasDpi();
 
   const statusBadge = document.getElementById('sensor-hardware-badge');
   const statusText = document.getElementById('sensor-status-text');
@@ -2519,14 +2613,16 @@ function initCitizenSeismographNode() {
     };
   }
 
-  // Bucle de renderizado de la forma de onda en Canvas a 60 FPS
+  // Bucle de renderizado de la forma de onda en Canvas a 60 FPS (High-DPI Retina + Retícula Calibrada)
   function renderSeismographCanvas() {
+    syncCanvasDpi();
+
     points.shift();
 
     let targetY = midY;
     if (meshNodeState.isHardwareAvailable) {
       // Escalar aceleración física: ±50 gal llena ~42% de la altura del canvas
-      const scale = (height * 0.42) / 50.0;
+      const scale = (logicalHeight * 0.42) / 50.0;
       const dynOffset = (meshNodeState.currentPga * (Math.sin(Date.now() * 0.04) > 0 ? 1 : -1));
       targetY = midY + Math.max(-midY * 0.88, Math.min(midY * 0.88, dynOffset * scale));
     } else {
@@ -2545,34 +2641,51 @@ function initCitizenSeismographNode() {
 
     points.push(targetY);
 
-    // Fondo del canvas con rastro suave
-    ctx.fillStyle = 'rgba(5, 11, 20, 0.45)';
-    ctx.fillRect(0, 0, width, height);
+    // 1. Fondo del canvas con rastro suave de fósforo
+    ctx.fillStyle = 'rgba(6, 10, 18, 0.42)';
+    ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
-    // Línea base central
-    ctx.strokeStyle = 'rgba(0, 229, 255, 0.12)';
+    // 2. Retícula Sismográfica Calibrada (Graticule con marcas de aceleración)
+    const y25 = (logicalHeight * 0.42) / 2;
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
     ctx.lineWidth = 1;
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    ctx.moveTo(0, midY - y25);
+    ctx.lineTo(logicalWidth, midY - y25);
+    ctx.moveTo(0, midY + y25);
+    ctx.lineTo(logicalWidth, midY + y25);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Línea base central (0 gal)
+    ctx.strokeStyle = 'hsla(190, 100%, 50%, 0.16)';
     ctx.beginPath();
     ctx.moveTo(0, midY);
-    ctx.lineTo(width, midY);
+    ctx.lineTo(logicalWidth, midY);
     ctx.stroke();
 
-    // Línea de señal sísmica
-    const isSpike = meshNodeState.staLtaRatio > 3.5;
-    ctx.strokeStyle = isSpike ? '#ff1744' : '#ff1e42';
+    // Etiquetas de retícula en fuente mono
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+    ctx.font = '8px "JetBrains Mono", monospace';
+    ctx.fillText('+25', 4, midY - y25 - 2);
+    ctx.fillText('-25', 4, midY + y25 + 9);
+
+    // 3. Línea de señal sísmica luminiscente
+    const isSpike = meshNodeState.staLtaRatio > 3.2 || meshNodeState.currentPga > 5.0;
+    ctx.strokeStyle = isSpike ? '#ff1744' : '#00e5ff';
     ctx.lineWidth = isSpike ? 2.2 : 1.6;
-    ctx.shadowColor = isSpike ? 'rgba(255, 23, 68, 0.8)' : 'rgba(255, 30, 66, 0.6)';
+    ctx.shadowColor = isSpike ? 'rgba(255, 23, 68, 0.85)' : 'rgba(0, 229, 255, 0.55)';
     ctx.shadowBlur = isSpike ? 10 : 5;
 
     ctx.beginPath();
-    for (let x = 0; x < width; x++) {
+    for (let x = 0; x < logicalWidth; x++) {
       if (x === 0) ctx.moveTo(x, points[x]);
       else ctx.lineTo(x, points[x]);
     }
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    
     // Actualizar barras de espectro FFT periódicamente
     fftFrameCounter++;
     if (fftFrameCounter % 6 === 0) {
@@ -2680,14 +2793,24 @@ function updateWavefronts() {
     const opacityP = Math.max(0.18, 0.88 - (ageSec / 1200));
     const opacityS = Math.max(0.22, 0.95 - (ageSec / 1200));
 
+    // 0. Epicentro Radar Ping Táctico Animado
+    const epicIcon = L.divIcon({
+      className: 'epicenter-radar-container',
+      html: `<div class="epicenter-radar-ping ${mag >= 5.0 ? 'severe' : ''}"><span class="ping-core"></span><span class="ping-ring ring-1"></span><span class="ping-ring ring-2"></span></div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+    const epicMarker = L.marker([lat, lon], { icon: epicIcon, interactive: false });
+    waveLayerGroup.addLayer(epicMarker);
+
     // 1. Frente de Onda P (Compresional primaria, Azul Eléctrico / Cian brillante con trazo discontinuo táctico)
     const pWave = L.circle([lat, lon], {
       radius: pWaveMeters,
       color: '#00e5ff',
-      weight: 1.6,
+      weight: 1.8,
       opacity: opacityP,
       fillColor: '#00e5ff',
-      fillOpacity: 0.035,
+      fillOpacity: 0.038,
       dashArray: '6, 6'
     });
 
@@ -2709,10 +2832,10 @@ function updateWavefronts() {
     const sWave = L.circle([lat, lon], {
       radius: sWaveMeters,
       color: sColor,
-      weight: 2.2,
+      weight: 2.4,
       opacity: opacityS,
       fillColor: sColor,
-      fillOpacity: 0.075
+      fillOpacity: 0.08
     });
 
     waveLayerGroup.addLayer(pWave);
@@ -2724,8 +2847,8 @@ function updateWavefronts() {
       const pBadgeIcon = L.divIcon({
         className: 'wave-crest-container',
         html: '<div class="wave-crest-badge crest-p">P</div>',
-        iconSize: [20, 20],
-        iconAnchor: [10, 10]
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
       });
       const pBadgeMarker = L.marker([latTopP, lon], { icon: pBadgeIcon, interactive: false });
       waveLayerGroup.addLayer(pBadgeMarker);
@@ -2736,8 +2859,8 @@ function updateWavefronts() {
       const sBadgeIcon = L.divIcon({
         className: 'wave-crest-container',
         html: '<div class="wave-crest-badge crest-s">S</div>',
-        iconSize: [20, 20],
-        iconAnchor: [10, 10]
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
       });
       const sBadgeMarker = L.marker([latTopS, lon], { icon: sBadgeIcon, interactive: false });
       waveLayerGroup.addLayer(sBadgeMarker);
