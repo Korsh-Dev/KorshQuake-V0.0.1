@@ -2654,7 +2654,9 @@ function initCitizenSeismographNode() {
     if (fftFrameCounter % 6 === 0) {
       updateFftSpectrumDisplay(points, midY);
     }
-    if (document.hidden || (window.innerWidth <= 1024 && document.body.getAttribute('data-mobile-view') !== 'waves')) {
+    const mainLayout = document.querySelector('.main-layout');
+    const curMobileView = mainLayout ? mainLayout.getAttribute('data-mobile-view') : 'map';
+    if (document.hidden || (window.innerWidth <= 1024 && curMobileView !== 'waves')) {
       setTimeout(() => {
         requestAnimationFrame(renderSeismographCanvas);
       }, 500);
@@ -3188,12 +3190,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Close seismic modal on ESC
+  // Close any active modal on ESC (Accesibilidad y UX estándar)
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      const modal = document.getElementById('modal-seismic-alert');
-      if (modal && modal.classList.contains('active')) {
-        closeSeismicAlertPopup();
+      const activeModal = document.querySelector('.modal-overlay.active, .modal-sheet.active');
+      if (activeModal) {
+        if (activeModal.id === 'modal-seismic-alert') {
+          closeSeismicAlertPopup();
+        } else if (activeModal.id === 'modal-quake-detail') {
+          closeQuakeDetailModal();
+        } else if (activeModal.id === 'modal-predict') {
+          closePredictModal();
+        } else {
+          activeModal.classList.remove('active');
+        }
       }
     }
   });
@@ -3521,6 +3531,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 250);
     }
   };
+  window.switchMobileView = window.setMobileView;
 
   const tabNavMap = document.getElementById('tab-nav-map');
   const tabNavFeed = document.getElementById('tab-nav-feed');
@@ -4050,7 +4061,16 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnSeismoMenu) {
     btnSeismoMenu.addEventListener('click', () => {
       const diagModal = document.getElementById('modal-diagnostics');
-      if (diagModal) diagModal.style.display = 'flex';
+      if (diagModal) {
+        diagModal.classList.add('active');
+        const diagSensorDetail = document.getElementById('diag-sensor-detail');
+        const diagSensorBadge = document.getElementById('diag-sensor-badge');
+        if (diagSensorDetail && diagSensorBadge) {
+          diagSensorDetail.textContent = `Acelerómetro 3D: X=${sensorCurrentX.toFixed(2)}, Y=${sensorCurrentY.toFixed(2)}, Z=${sensorCurrentZ.toFixed(2)} gal`;
+          diagSensorBadge.textContent = 'ACTIVO';
+          diagSensorBadge.style.color = 'var(--green)';
+        }
+      }
     });
   }
 
