@@ -10,6 +10,8 @@ services:
     environment:
       - PORT=8080
       - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
     logging:
       driver: "json-file"
       options:

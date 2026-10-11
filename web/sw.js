@@ -1,6 +1,6 @@
-// KorshQuake Service Worker v1.1.8 PRO
+// KorshQuake Service Worker v1.1.9 PRO
 // Arquitectura OTA Push Instantánea con Network-First para código de interfaz
-const CACHE_NAME = 'korshquake-v1.1.8';
+const CACHE_NAME = 'korshquake-v1.1.9';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

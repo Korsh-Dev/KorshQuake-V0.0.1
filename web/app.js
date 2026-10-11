@@ -432,7 +432,7 @@ function playRoomEmergencySiren() {
 // =========================================================================
 // SISTEMA DE ACTUALIZACIÓN AUTOMÁTICA PUSH OTA (Sin reinstalar APK)
 // =========================================================================
-const APP_CURRENT_VERSION = '1.1.5 PRO';
+const APP_CURRENT_VERSION = '1.1.9 PRO';
 let latestDetectedVersion = null;
 
 async function checkAppVersion(isManual = false) {

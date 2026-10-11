@@ -24,8 +24,8 @@ from datetime import datetime, timezone
 
 _server_start_time = time.time()
 
-CURRENT_VERSION = "1.1.7 PRO"
-CURRENT_VERSION_CODE = 116
+CURRENT_VERSION = "1.1.9 PRO"
+CURRENT_VERSION_CODE = 119
 
 
 PORT = 8080
@@ -2551,6 +2551,13 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
 
         # Archivos estáticos de la carpeta web (KorshQuake)
         return super().do_GET()
+
+    def end_headers(self):
+        # Evitar cacheo heurístico obsoleto en navegadores para código de interfaz dinámico
+        req_path = getattr(self, "path", "")
+        if any(req_path.endswith(ext) for ext in [".html", ".js", ".css", ".json"]) or req_path in ["", "/", "/admin"]:
+            self.send_header("Cache-Control", "no-cache, must-revalidate")
+        super().end_headers()
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     daemon_threads = True
