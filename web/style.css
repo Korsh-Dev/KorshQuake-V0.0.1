@@ -1442,35 +1442,36 @@ body {
     flex-direction: column !important;
   }
 
-  /* Header ultra-limpio y compacto con Safe Areas nativas */
+  /* Header ultra-limpio y compacto con Safe Areas nativas para Isla Dinámica */
   .app-header {
-    height: calc(48px + env(safe-area-inset-top, 0px)) !important;
-    min-height: calc(48px + env(safe-area-inset-top, 0px)) !important;
-    padding-top: env(safe-area-inset-top, 0px) !important;
-    padding-left: calc(10px + env(safe-area-inset-left, 0px)) !important;
-    padding-right: calc(10px + env(safe-area-inset-right, 0px)) !important;
-    padding-bottom: 0 !important;
+    height: auto !important;
+    min-height: calc(48px + max(8px, env(safe-area-inset-top, 0px))) !important;
+    padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
+    padding-left: max(10px, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(10px, env(safe-area-inset-right, 0px)) !important;
+    padding-bottom: 6px !important;
     flex-shrink: 0 !important;
     z-index: 1000;
   }
 
   .logo-container {
-  position: relative;
-  width: 44px;
-  height: 44px;
-  background: transparent !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: none !important;
-  border: none !important;
-  flex-shrink: 0;
-  margin-right: 2px;
-}
+    position: relative;
+    width: 36px !important;
+    height: 36px !important;
+    background: transparent !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none !important;
+    border: none !important;
+    flex-shrink: 0;
+    margin-right: 2px;
+  }
 
-  .logo-icon {
-    width: 16px;
-    height: 16px;
+  .brand-logo-img {
+    width: 30px !important;
+    height: 30px !important;
+    object-fit: contain;
   }
 
   .app-title {
@@ -1946,7 +1947,7 @@ body {
    ========================================================================== */
 .ota-update-banner {
   position: fixed;
-  top: 12px;
+  top: calc(12px + max(env(safe-area-inset-top, 0px), 0px));
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 24px);
@@ -4775,27 +4776,29 @@ body {
    ADAPTABILIDAD RESPONSIVE MÓVIL PARA POPUPS TÁCTICOS
    ========================================================================== */
 @media (max-width: 768px) {
-  .tactical-modal-overlay {
+  .tactical-modal-overlay,
+  .modal-overlay,
+  .seismic-alert-modal-overlay {
     z-index: 10500 !important;
-    padding: 10px !important;
+    padding-top: max(env(safe-area-inset-top, 0px), 24px) !important;
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 24px) !important;
+    padding-left: max(env(safe-area-inset-left, 0px), 12px) !important;
+    padding-right: max(env(safe-area-inset-right, 0px), 12px) !important;
     align-items: center !important;
     justify-content: center !important;
+    box-sizing: border-box !important;
   }
 
-  .tactical-popup-dialog {
+  .tactical-popup-dialog,
+  .eew-predict-dialog,
+  .modal-content,
+  .seismic-alert-modal-card {
     width: 95vw !important;
     max-width: 95vw !important;
-    max-height: 88vh !important;
+    max-height: calc(100dvh - max(env(safe-area-inset-top, 0px), 24px) - max(env(safe-area-inset-bottom, 0px), 24px) - 20px) !important;
     border-radius: 20px !important;
     margin: auto !important;
-  }
-
-  .eew-predict-dialog {
-    width: 95vw !important;
-    max-width: 95vw !important;
-    max-height: 88vh !important;
-    border-radius: 20px !important;
-    margin: auto !important;
+    overflow: hidden !important;
   }
 
   .tactical-popup-header {
@@ -5639,21 +5642,41 @@ header.app-header .btn-icon-round:hover {
   100% { transform: scale(0.9); opacity: 0.7; }
 }
 
-/* Adaptación Mobile Estricta (< 768px) */
+/* Adaptación Mobile Estricta (< 768px) - Compatible al 100% con Isla Dinámica */
 @media (max-width: 768px) {
   header.app-header {
-    height: calc(48px + max(0px, env(safe-area-inset-top))) !important;
-    min-height: calc(48px + max(0px, env(safe-area-inset-top))) !important;
-    max-height: calc(48px + max(0px, env(safe-area-inset-top))) !important;
-    padding-top: max(4px, env(safe-area-inset-top)) !important;
-    padding-left: 8px !important;
-    padding-right: 8px !important;
-    padding-bottom: 4px !important;
-    gap: 6px !important;
+    height: auto !important;
+    min-height: calc(48px + max(8px, env(safe-area-inset-top, 0px))) !important;
+    max-height: none !important;
+    padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
+    padding-left: max(10px, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(10px, env(safe-area-inset-right, 0px)) !important;
+    padding-bottom: 6px !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    row-gap: 6px !important;
+    background: rgba(5, 11, 20, 0.96) !important;
+    backdrop-filter: blur(24px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Fila 1 - Izquierda: Marca y Logo (Ubicados a la izquierda, fuera del centro donde reside la Dynamic Island) */
+  header.app-header .header-left {
+    order: 1 !important;
+    height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    max-width: calc(50% - 35px) !important;
+    flex: 0 1 auto !important;
   }
 
   header.app-header .app-title {
     font-size: 0.98rem !important;
+    letter-spacing: -0.01em !important;
   }
 
   header.app-header .brand-ecg-svg {
@@ -5677,24 +5700,59 @@ header.app-header .btn-icon-round:hover {
     display: none !important;
   }
 
-  /* Country pills on mobile: Ultra compact icon + code */
-  .header-country-scroll {
-    gap: 4px !important;
-    padding: 1px 2px !important;
-  }
-  .header-country-scroll .country-pill {
-    padding: 3px 7px !important;
-    font-size: 0.70rem !important;
-  }
-  .header-country-scroll .country-pill .pill-name {
-    display: none !important;
+  /* Fila 1 - Derecha: Botones de Acción Táctiles (A la derecha, fuera de la Dynamic Island) */
+  header.app-header .header-actions {
+    order: 2 !important;
+    height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex: 0 0 auto !important;
   }
 
   header.app-header .btn-icon-round {
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    min-height: 32px !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+  }
+
+  /* Fila 2 - Completa: Selector Deslizable Táctil de Países (Completamente debajo de la Isla Dinámica) */
+  header.app-header .header-country-bar {
+    order: 3 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 0 100% !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    margin-top: 2px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+
+  .header-country-scroll {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 2px 0 !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .header-country-scroll .country-pill {
+    padding: 4px 10px !important;
+    font-size: 0.72rem !important;
+    border-radius: 20px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .header-country-scroll .country-pill .pill-name {
+    display: inline !important;
   }
 
   /* Ocultar elementos desktop */
