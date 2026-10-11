@@ -560,6 +560,15 @@
           </div>
         </div>
 
+        <!-- Segmented Glass Magnitude Filter Pills -->
+        <div class="feed-filter-pills" id="feed-filter-pills">
+          <button class="filter-pill active" data-mag="all">Todos</button>
+          <button class="filter-pill" data-mag="3.0">M 3.0+</button>
+          <button class="filter-pill" data-mag="4.5">M 4.5+</button>
+          <button class="filter-pill" data-mag="6.0">M 6.0+</button>
+          <button class="filter-pill" data-mag="consensus">Consenso</button>
+        </div>
+
         <!-- Quake List Container -->
         <div class="quake-list" id="quake-list">
           <div class="loading-state">
@@ -1000,9 +1009,13 @@
               <div class="settings-desc">Telemetría interna y trazas del motor sísmico</div>
             </div>
           </div>
-          <div style="margin-top: 10px;">
+          <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+            <button class="btn btn-primary btn-sm" id="btn-open-diagnostics" style="width: 100%;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              Calibración y Diagnóstico de Sensores
+            </button>
             <button class="btn btn-secondary btn-sm" id="btn-open-logs" style="width: 100%;">
-              Abrir Consola de Logs
+              Abrir Consola de Logs SSE
             </button>
             <button id="btn-menu-open-logs" style="display: none;"></button>
           </div>
@@ -1341,7 +1354,15 @@
           </div>
         </div>
 
-        <div style="margin-top: 18px; text-align: center;">
+        <div style="margin-top: 18px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" id="btn-calibrate-sensor" style="flex: 1; justify-content: center;">
+              Calibrar Acelerómetro
+            </button>
+            <button class="btn btn-primary btn-sm" id="btn-test-cluster" style="flex: 1; justify-content: center;">
+              Probar Alerta Multi-Nodo
+            </button>
+          </div>
           <button class="btn btn-secondary btn-sm" id="btn-close-diagnostics-alt" style="width: 100%;">
             Entendido • Nodo Protegido
           </button>
