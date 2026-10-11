@@ -1431,6 +1431,10 @@ body {
     margin: 0 !important;
     padding: 0 !important;
     touch-action: manipulation;
+    overscroll-behavior: none !important;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
@@ -1438,11 +1442,14 @@ body {
     flex-direction: column !important;
   }
 
-  /* Header ultra-limpio y compacto */
+  /* Header ultra-limpio y compacto con Safe Areas nativas */
   .app-header {
-    height: 48px !important;
-    min-height: 48px !important;
-    padding: 0 10px !important;
+    height: calc(48px + env(safe-area-inset-top, 0px)) !important;
+    min-height: calc(48px + env(safe-area-inset-top, 0px)) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    padding-left: calc(10px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(10px + env(safe-area-inset-right, 0px)) !important;
+    padding-bottom: 0 !important;
     flex-shrink: 0 !important;
     z-index: 1000;
   }
@@ -1754,8 +1761,8 @@ body {
   .bottom-nav-bar {
     display: flex !important;
     position: relative !important;
-    height: 56px !important;
-    min-height: 56px !important;
+    height: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+    min-height: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
     flex-shrink: 0 !important;
     background: rgba(5, 11, 20, 0.98) !important;
     backdrop-filter: blur(20px) !important;
@@ -1767,6 +1774,11 @@ body {
     padding-bottom: env(safe-area-inset-bottom, 0px) !important;
     justify-content: space-around !important;
     align-items: center !important;
+  }
+
+  .modal-body, .tactical-popup-body, .quake-detail-table, code, pre {
+    -webkit-user-select: text !important;
+    user-select: text !important;
   }
 
   .nav-tab {
@@ -2375,7 +2387,7 @@ body {
 }
 
 /* ==========================================================================
-   IPHONE LIQUID GLASSMORPHISM & NATIVE MOBILE APP COMPONENTS (v1.1.7 PRO)
+   IPHONE LIQUID GLASSMORPHISM & NATIVE MOBILE APP COMPONENTS (v1.1.9 PRO)
    ========================================================================== */
 
 /* 1. iOS Search Bar */
