@@ -1,7 +1,7 @@
 {
   "name": "KorshQuake - Monitor Sísmico en Tiempo Real",
   "short_name": "KorshQuake",
-  "description": "Sistema de detección, monitoreo y alerta temprana de terremotos en tiempo real para Panamá, Venezuela, España y Argentina.",
+  "description": "Sistema de detección, monitoreo y alerta temprana de terremotos en tiempo real para Panamá, Venezuela, España, Argentina y Honduras.",
   "id": "/?source=pwa",
   "start_url": "/?source=pwa",
   "scope": "/",
@@ -38,6 +38,13 @@
       "short_name": "Argentina",
       "description": "Monitoreo sísmico en Argentina",
       "url": "/?country=AR",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Honduras 🇭🇳",
+      "short_name": "Honduras",
+      "description": "Monitoreo sísmico en Honduras",
+      "url": "/?country=HN",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ],

@@ -4,6 +4,7 @@
 // =========================================================================
 let activeSeismicSirenContext = null;
 let activeSirenOscillators = [];
+let activeSirenNodes = [];
 let activeSirenInterval = null;
 let activeAlertTimerInterval = null;
 let activeAlertQuake = null;
@@ -21,6 +22,14 @@ function stopSeismicAlertSiren() {
       } catch (e) {}
     });
     activeSirenOscillators = [];
+  }
+  if (activeSirenNodes && activeSirenNodes.length > 0) {
+    activeSirenNodes.forEach(node => {
+      try {
+        node.disconnect();
+      } catch (e) {}
+    });
+    activeSirenNodes = [];
   }
   if ('speechSynthesis' in window) {
     try { window.speechSynthesis.cancel(); } catch (e) {}
@@ -116,6 +125,7 @@ function playRealSeismicAlertSiren(magnitude = 5.5, place = 'Zona Sísmica') {
     eas1.stop(now + 1.2);
     eas2.stop(now + 1.2);
     activeSirenOscillators.push(eas1, eas2);
+    activeSirenNodes.push(mainGain, filter, lfoGain, subGain, easGain);
 
     // 3. Vibración háptica continua en Android
     if ('vibrate' in navigator) {
@@ -584,7 +594,7 @@ function unlockAudioContext(fromPrompt = false) {
         if (prompt) prompt.style.display = 'none';
         if (fromPrompt) {
           playAlertSound('beep');
-          showToast('Sonido de alertas ssmicas activado', 'info');
+          showToast('Sonido de alertas sísmicas activado', 'info');
         }
       }).catch(() => {});
     } else if (audioCtx.state === 'running') {
@@ -1617,25 +1627,20 @@ function handleLiveEarthquakePush(feature) {
     }
 
     if (shouldSound) {
-      playAlertSound(mag >= 4.5 ? 'major' : 'moderate');
-      showToast(`SISMO EN VIVO: M ${mag.toFixed(1)} en ${place} (${countryName})`, 'danger');
-      if (mag >= 4.5) {
+      if (mag >= 5.0) {
+        // Alerta sísmica crítica con sirena institucional y modal de emergencia
         triggerEarlyWarning(feature);
+      } else {
+        // Alerta moderada o leve con tono acústico y toast informativo
+        playAlertSound(mag >= 4.0 ? 'major' : 'moderate');
+        showToast(`SISMO EN VIVO: M ${mag.toFixed(1)} en ${place} (${countryName})`, 'warning');
       }
-    }
-
-    if ('vibrate' in navigator) {
-      navigator.vibrate(mag >= 5.0 ? [400, 150, 400, 150, 600] : [200, 100, 200]);
-    }
-
-    showToast(`¡ONDA SÍSMICA EN VIVO! M ${mag.toFixed(1)} - ${place}`, 'danger');
-
-    // Disparar banner EEW de alerta temprana
-    triggerEarlyWarning(feature);
-
-    // Si es moderado o fuerte, abrir modal de propagación de onda P y S
-    if (mag >= 4.0) {
-      openPredictForEvent(feature.id);
+      if ('vibrate' in navigator) {
+        navigator.vibrate(mag >= 5.0 ? [400, 150, 400, 150, 600] : [200, 100, 200]);
+      }
+    } else {
+      // Notificación discreta sin romper el silencio configurado por el usuario
+      showToast(`Sismo detectado: M ${mag.toFixed(1)} • ${place} (${countryName})`, 'info');
     }
   }
 
