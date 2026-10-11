@@ -97,8 +97,8 @@
 
     <!-- Right: Header Actions -->
     <div class="header-actions">
-      <!-- Botón Prueba Inmediata de Alarma Sísmica Real y Popup -->
-      <button class="btn btn-secondary btn-icon-round btn-siren-test" id="btn-quick-test-alert" title="Probar Alarma Sísmica Real y Popup">
+      <!-- Botón Prueba Inmediata de Alarma Sísmica Real y Popup (Solo visible en Desktop) -->
+      <button class="btn btn-secondary btn-icon-round btn-siren-test desktop-only" id="btn-quick-test-alert" title="Probar Alarma Sísmica Real y Popup">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.2">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
           <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
@@ -221,7 +221,7 @@
       </div>
       <div class="metric-data">
         <span class="metric-num font-mono" id="stat-total-quakes">--</span>
-        <span class="metric-title">Sismos en 4 Países</span>
+        <span class="metric-title">Sismos (24h)</span>
       </div>
     </div>
 
@@ -251,51 +251,18 @@
       </div>
       <div class="metric-data">
         <span class="metric-num font-mono text-green" id="stat-system-health">FILTRADO ESTRICTO</span>
-        <span class="metric-title">PA • VE • ES • AR Activos</span>
+        <span class="metric-title">Ventana 24h Activa</span>
       </div>
     </div>
   </section>
 
-  <!-- Interactive Country Quick Tabs Bar -->
-  <section class="country-nav-bar">
-    <div class="country-tabs-label font-mono">Región Focalizada:</div>
-    <div class="country-tabs-group" id="country-tabs">
-      <button class="country-pill active" data-country="all">
-        <span class="country-pill-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
-        <span>Todos (4 Países)</span>
-        <span class="country-pill-count font-mono" id="count-pill-all">0</span>
-      </button>
-      <button class="country-pill" data-country="PA">
-        <span class="country-pill-code pan">PA</span>
-        <span>Panamá</span>
-        <span class="country-pill-count font-mono" id="count-pill-pa">0</span>
-      </button>
-      <button class="country-pill" data-country="VE">
-        <span class="country-pill-code ven">VE</span>
-        <span>Venezuela</span>
-        <span class="country-pill-count font-mono" id="count-pill-ve">0</span>
-      </button>
-      <button class="country-pill" data-country="ES">
-        <span class="country-pill-code esp">ES</span>
-        <span>España</span>
-        <span class="country-pill-count font-mono" id="count-pill-es">0</span>
-      </button>
-      <button class="country-pill" data-country="AR">
-        <span class="country-pill-code arg">AR</span>
-        <span>Argentina</span>
-        <span class="country-pill-count font-mono" id="count-pill-ar">0</span>
-      </button>
-    </div>
-  </section>
-
-  <!-- Main View Container -->
-    <!-- Main View Container: Tactical 2-Column Split Matching Mockup -->
+  <!-- Main View Container: Tactical 2-Column Split Matching Mockup -->
   <main class="main-layout" data-mobile-view="map">
     <!-- Center Left: High-Tech Interactive Seismic Map (Full Panel) -->
     <section class="map-section">
       <div class="map-wrapper">
-        <!-- Floating Glass Title Badge (Top-Left) -->
-        <div class="map-floating-badge top-left">
+        <!-- Floating Glass Title Badge (Top-Left, Desktop Only) -->
+        <div class="map-floating-badge top-left desktop-only">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="22" y1="12" x2="18" y2="12"></line>
@@ -527,12 +494,13 @@
       <!-- Widget 2 (Bottom): Live Earthquakes Feed with Mockup Cards -->
       <div class="live-quakes-widget glass-panel">
         <div class="panel-header widget-header">
-          <div class="panel-title-wrap">
+          <div class="panel-title-wrap" style="display: flex; align-items: center; gap: 8px;">
             <h3 id="feed-panel-title">Sismos en Tiempo Real</h3>
+            <span class="badge-24h-pill font-mono" style="font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.15); color: var(--cyan); border: 1px solid rgba(56, 189, 248, 0.3); font-weight: 700;">24H</span>
           </div>
           <div class="widget-header-actions">
             <span class="feed-count-pill font-mono" id="feed-count">0</span>
-                        <div class="export-dropdown-wrap" style="position: relative; display: inline-block;">
+            <div class="export-dropdown-wrap desktop-only" style="position: relative; display: inline-block;">
               <button class="btn-dots-menu" id="btn-feed-export" title="Exportar Datos Abiertos (GeoJSON, CSV, QuakeML)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -546,7 +514,7 @@
                 <a href="/api/export/quakeml" target="_blank" class="export-menu-item"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> QuakeML XML</a>
               </div>
             </div>
-            <button class="btn-dots-menu" id="btn-feed-menu" title="Filtro de Magnitud"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+            <button class="btn-dots-menu desktop-only" id="btn-feed-menu" title="Filtro de Magnitud"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
           </div>
         </div>
 

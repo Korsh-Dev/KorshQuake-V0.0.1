@@ -1335,7 +1335,7 @@ function createTacticalQuakeMarker(lat, lon, mag, isConsensus, featureId, isRece
 
   const center = Math.round(size / 2);
   const consensusBorder = isConsensus ? 'border-color: #00e676 !important; box-shadow: 0 0 12px rgba(0,230,118,0.7) !important;' : '';
-  const pulseClass = (mag >= 6.0 || isRecent) ? 'pulse-sonar-beacon' : '';
+  const pulseClass = isRecent ? 'pulse-sonar-beacon' : '';
 
   const html = `
     <div class="quake-map-badge ${badgeClass} ${pulseClass}" style="${consensusBorder}" title="M ${mag.toFixed(1)} - ${lat.toFixed(2)}°, ${lon.toFixed(2)}°">
@@ -1361,11 +1361,19 @@ function renderQuakes(force = false) {
 
   const filterEl = document.getElementById('filter-mag');
   const magFilter = filterEl ? filterEl.value : currentMagFilter;
+  const MAX_FEED_AGE_MS = 24 * 60 * 60 * 1000; // Máximo 24 Horas Estrictas
+  const now = Date.now();
 
   const filtered = allQuakes.filter(f => {
     if (!f || !f.properties || !f.geometry || !f.geometry.coordinates) return false;
     const mag = f.properties.mag || 0;
     const country = f.properties.country_code;
+    const eventTime = f.properties.time || 0;
+
+    // Límite estricto: máximo 24 horas para no saturar información ni mostrar sismos antiguos
+    if ((now - eventTime) > MAX_FEED_AGE_MS) {
+      return false;
+    }
 
     // Filtro estricto por país
     if (currentCountryFilter !== 'all' && country !== currentCountryFilter) {
@@ -1785,13 +1793,15 @@ async function fetchQuakes() {
         saveAlertedIds();
       }
 
+      const MAX_24H_MS = 24 * 60 * 60 * 1000;
+      const quakes24h = allQuakes.filter(f => f && f.properties && (now - (f.properties.time || 0)) <= MAX_24H_MS);
       const totalEl = document.getElementById('stat-total-quakes');
-      if (totalEl) totalEl.textContent = allQuakes.length;
+      if (totalEl) totalEl.textContent = quakes24h.length;
       
       let maxMag = 0;
       let newest = 0;
 
-      allQuakes.forEach(f => {
+      quakes24h.forEach(f => {
         if (!f || !f.properties) return;
         const m = f.properties.mag || 0;
         if (m > maxMag) maxMag = m;

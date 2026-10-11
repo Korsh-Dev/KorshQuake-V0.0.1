@@ -131,8 +131,13 @@ def load_quakes_from_db(limit=200):
         with _db_lock:
             with sqlite3.connect(DB_PATH) as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT raw_json FROM quakes ORDER BY time DESC LIMIT ?;", (limit,))
+                cutoff_24h = int((time.time() - 86400) * 1000)
+                cursor.execute("SELECT raw_json FROM quakes WHERE time >= ? ORDER BY time DESC LIMIT ?;", (cutoff_24h, limit))
                 rows = cursor.fetchall()
+                if not rows:
+                    # Fallback defensivo a los más recientes si no hay sismos en las últimas 24h
+                    cursor.execute("SELECT raw_json FROM quakes ORDER BY time DESC LIMIT ?;", (limit,))
+                    rows = cursor.fetchall()
                 loaded = []
                 for (r_json,) in rows:
                     try:
@@ -2379,13 +2384,18 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
                 except ValueError:
                     pass
 
-            # Filtro por tiempo (since timestamp ms)
+            # Filtro por tiempo (máximo 24 horas por defecto para no saturar información antigua)
+            cutoff_24h = int(time.time() * 1000) - (24 * 3600 * 1000)
             if since_param:
                 try:
                     since_val = float(since_param)
                     filtered = [f for f in filtered if float(f.get("properties", {}).get("time") or 0) >= since_val]
                 except ValueError:
-                    pass
+                    filtered = [f for f in filtered if float(f.get("properties", {}).get("time") or 0) >= cutoff_24h]
+            else:
+                filtered_24h = [f for f in filtered if float(f.get("properties", {}).get("time") or 0) >= cutoff_24h]
+                # Si hay eventos en las últimas 24h se devuelven exclusivamente esos; si el entorno de pruebas está vacío, mantener los más recientes
+                filtered = filtered_24h if filtered_24h else filtered[:20]
 
             # Filtro solo consenso
             if consensus_param and consensus_param.lower() in ["true", "1", "yes"]:
