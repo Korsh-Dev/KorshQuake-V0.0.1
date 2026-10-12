@@ -84,7 +84,7 @@ Regla del repo: **cada bug arreglado entra con su test de regresión**. Los test
 ## Backlog conocido
 
 - [ ] Enviar notificaciones push reales (nada envía a `push_subscriptions` todavía; haría falta un emisor VAPID con JWT ES256 — stdlib-only es posible pero trabajoso).
-- [ ] Configurar `GITHUB_WEBHOOK_SECRET` end-to-end (requiere admin del repo en GitHub para crear/editar el webhook; ELPilotPR solo tiene push).
+- [ ] Configurar `GITHUB_WEBHOOK_SECRET` end-to-end (requiere admin del repo en GitHub para crear/editar el webhook; ELPilotPR solo tiene push — la API de hooks responde 404 sin admin). El timer de 60 s hace el despliegue igual, así que esto es solo latencia.
 - [ ] Activar `ADMIN_TOKEN` en producción (generar token, ponerlo en compose + pasarlo al admin.html).
-- [ ] Historial de git pesado (~110 MB por el módulo `gods-eye-view` borrado): `git filter-repo --path gods-eye-view --invert-paths && git push --force` — requiere OK del dueño y re-clonar otros copies.
-- [ ] `web/index.html` dice "3.6 MB" para el APK (pesa ~3.4 MB) — cosmético.
+- [x] ~~Historial de git pesado~~ — **hecho 2026-10-11**: `git filter-repo --path gods-eye-view --invert-paths` + force-push; clon pasó de 110 MB a 19 MB. Ojo: si alguien tiene un clon viejo, necesita `git fetch && git reset --hard origin/main` (historial reescrito). Backup del historial original en poder del mantenedor.
+- [x] ~~`web/index.html` dice "3.6 MB" para el APK~~ — corregido a 3.4 MB (2026-10-11).
