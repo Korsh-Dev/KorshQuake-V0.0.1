@@ -20,6 +20,7 @@ import socket
 import ssl
 import struct
 import base64
+import hmac
 import html as html_lib
 from xml.sax.saxutils import escape as xml_escape
 from datetime import datetime, timezone
@@ -137,16 +138,16 @@ def save_quake_to_db(feature):
                 """, (
                     q_id,
                     props.get("place", "Epicentro Sísmico"),
-                    float(props.get("mag", 0.0)),
-                    float(depth),
-                    int(props.get("time", int(time.time() * 1000))),
+                    _safe_float(props.get("mag"), 0.0),
+                    _safe_float(depth, 10.0),
+                    _safe_int(props.get("time"), int(time.time() * 1000)),
                     props.get("country_code", "GLOBAL"),
                     props.get("country_name", "Internacional"),
-                    float(lat),
-                    float(lon),
+                    _safe_float(lat, 0.0),
+                    _safe_float(lon, 0.0),
                     1 if props.get("is_consensus") else 0,
                     props.get("source_feed", "USGS"),
-                    int(props.get("felt_reports", 0)),
+                    _safe_int(props.get("felt_reports"), 0),
                     json.dumps(feature, ensure_ascii=False),
                     int(time.time() * 1000)
                 ))
@@ -323,7 +324,12 @@ def compute_focal_mechanism(lat, lon, depth, mag, event_props=None):
         "beachball_svg": svg
     }
 
-VAPID_PUBLIC_KEY = "BN0QJ2_KorshQuake_Public_VAPID_Key_Production_Secp256r1_Seismic_Alerts_2026"
+# Clave pública VAPID real (secp256r1/prime256v1, generada 2026-10-11).
+# La clave PRIVADA vive en /opt/korshquake/data/vapid_private.pem en la VPS (montado en /app/data, NUNCA en git).
+VAPID_PUBLIC_KEY = "BDZqe9nfQ4g3U0P663g5PmuBvn18hMR_eN5o4J-F7i1L5D0iF5Q5Kx_stJ4N0rEXF5W0hklXuEMts_LZ9S9_7TY"
+# Token opcional para /admin y /api/admin/* (header X-Admin-Token o ?token=***
+# Si ADMIN_TOKEN no está definido en el entorno, la consola queda abierta (comportamiento histórico).
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
 _community_reports_lock = threading.Lock()
 _community_reports = {}
 _community_report_ips = {}  # f"{quake_id}:{ip}" -> timestamp
@@ -992,6 +998,21 @@ class EMSCRealtimeWebSocketStreamer(threading.Thread):
                 time.sleep(3.5)
 
 def is_globalquake_running():
+    """Resultado cacheado 10 s: evita lanzar un subprocess pgrep/powershell en cada request."""
+    now = time.time()
+    with _gq_running_lock:
+        if now - _gq_running_cache["ts"] < 10.0:
+            return _gq_running_cache["result"]
+    result = _is_globalquake_running_raw()
+    with _gq_running_lock:
+        _gq_running_cache["result"] = result
+        _gq_running_cache["ts"] = now
+    return result
+
+_gq_running_cache = {"result": (False, None), "ts": 0.0}
+_gq_running_lock = threading.Lock()
+
+def _is_globalquake_running_raw():
     try:
         if sys.platform == "win32":
             output = subprocess.check_output(
@@ -1079,7 +1100,7 @@ def fetch_emsc_region(region):
                         country_meta = TARGET_COUNTRIES[country_code]
                         events.append({
                             "id": f"emsc-{f.get('id') or props.get('unid')}",
-                            "mag": float(props.get("mag") or 0.0),
+                            "mag": _safe_float(props.get("mag"), 0.0),
                             "place": f"{place} ({auth})",
                             "time": time_ms,
                             "coords": [lon, lat, depth],
@@ -1115,16 +1136,16 @@ def fetch_usgs_feed():
                         country_meta = TARGET_COUNTRIES[country_code]
                         events.append({
                             "id": f.get("id"),
-                            "mag": float(props.get("mag") or 0.0),
+                            "mag": _safe_float(props.get("mag"), 0.0),
                             "place": place,
-                            "time": int(props.get("time") or 0),
+                            "time": _safe_int(props.get("time"), 0),
                             "coords": [lon, lat, depth],
                             "source": "USGS",
                             "country_code": country_code,
                             "country_name": country_meta["name"],
                             "country_flag": country_meta["flag"],
                             "pga": None,
-                            "felt": int(props.get("felt")) if props.get("felt") is not None else 0
+                            "felt": _safe_int(props.get("felt"), 0)
                         })
             _server_telemetry["usgs_regional"]["latency_ms"] = dt
             _server_telemetry["usgs_regional"]["status"] = "ONLINE"
@@ -1203,7 +1224,7 @@ def merge_and_triangulate_events(raw_events):
         country_code = primary_ref["country_code"]
         country_meta = TARGET_COUNTRIES[country_code]
 
-        cluster_felt = max([int(ev.get("felt") or 0) for ev in matched_cluster]) if matched_cluster else 0
+        cluster_felt = max([_safe_int(ev.get("felt"), 0) for ev in matched_cluster]) if matched_cluster else 0
         comm_felt = get_felt_reports(primary_ref["id"])
         total_felt = cluster_felt + comm_felt
 
@@ -1746,6 +1767,13 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=WEB_DIR, **kwargs)
 
+    def _admin_authorized(self, query=None):
+        """True si ADMIN_TOKEN no está configurado o el token provisto coincide (timing-safe)."""
+        if not ADMIN_TOKEN:
+            return True
+        supplied = (query or {}).get("token", [""])[0] or self.headers.get("X-Admin-Token", "")
+        return hmac.compare_digest(str(supplied), ADMIN_TOKEN)
+
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -1757,6 +1785,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
+        post_query = urllib.parse.parse_qs(parsed_url.query)
 
         # Helper para responder JSON limpio
         def send_json(data, status=200):
@@ -1782,6 +1811,11 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             body = json.loads(post_body.decode("utf-8")) if post_body else {}
         except Exception as e:
             send_json({"error": "Invalid JSON payload", "details": str(e)}, 400)
+            return
+
+        # Puerta administrativa para /api/admin/* (solo aplica si ADMIN_TOKEN está configurado)
+        if path.startswith("/api/admin") and not self._admin_authorized(post_query):
+            send_json({"error": "Unauthorized", "message": "Requiere header X-Admin-Token o ?token=***"}, 401)
             return
 
         # 1. Telemetría / Ping periódico de nodo (APK / Web Móvil)
@@ -1916,6 +1950,17 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
         query = urllib.parse.parse_qs(parsed_url.query)
+
+        # Puerta administrativa para /admin y /api/admin/* (solo aplica si ADMIN_TOKEN está configurado)
+        if (path in ("/admin", "/admin/") or path.startswith("/api/admin")) and not self._admin_authorized(query):
+            payload = json.dumps({"error": "Unauthorized", "message": "Requiere header X-Admin-Token o ?token=***"}, ensure_ascii=False).encode("utf-8")
+            self.send_response(401)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return
+
         # API: Obtener conteo real de reportes de sismo sentido (/api/quakes/<id>/report)
         if path.startswith('/api/quakes/') and path.endswith('/report'):
             parts = path.strip('/').split('/')

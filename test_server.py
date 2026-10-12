@@ -615,5 +615,42 @@ class TestKorshQuakeServer(unittest.TestCase):
         for row in rows[1:]:
             self.assertEqual(len(row), 12, f"fila CSV con columnas rotas: {row}")
 
+    def test_vapid_public_key_is_real_p256(self):
+        import base64
+        key = server.VAPID_PUBLIC_KEY
+        self.assertEqual(len(key), 87, "clave VAPID debe ser 65 bytes en base64url sin padding")
+        raw = base64.urlsafe_b64decode(key + "=")
+        self.assertEqual(len(raw), 65)
+        self.assertEqual(raw[0], 0x04, "debe ser punto EC no comprimido")
+
+    def test_admin_open_when_no_token(self):
+        # Comportamiento histórico: sin ADMIN_TOKEN, /admin responde
+        resp = urllib.request.urlopen(f"http://127.0.0.1:{self.port}/admin", timeout=5)
+        self.assertEqual(resp.status, 200)
+
+    def test_admin_gate_when_token_configured(self):
+        original = server.ADMIN_TOKEN
+        try:
+            server.ADMIN_TOKEN = "audit-secret-123"
+            # Sin token -> 401 en API admin
+            with self.assertRaises(urllib.error.HTTPError) as ctx:
+                urllib.request.urlopen(f"http://127.0.0.1:{self.port}/api/admin/nodes", timeout=5)
+            self.assertEqual(ctx.exception.code, 401)
+            # Con header correcto -> 200
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{self.port}/api/admin/nodes",
+                headers={"X-Admin-Token": "audit-secret-123"})
+            resp = urllib.request.urlopen(req, timeout=5)
+            self.assertEqual(resp.status, 200)
+            # /admin HTML sin token -> 401
+            with self.assertRaises(urllib.error.HTTPError) as ctx2:
+                urllib.request.urlopen(f"http://127.0.0.1:{self.port}/admin", timeout=5)
+            self.assertEqual(ctx2.exception.code, 401)
+            # Rutas públicas no afectadas
+            resp_pub = urllib.request.urlopen(f"http://127.0.0.1:{self.port}/api/nodes/list", timeout=5)
+            self.assertEqual(resp_pub.status, 200)
+        finally:
+            server.ADMIN_TOKEN = original
+
 if __name__ == '__main__':
     unittest.main()

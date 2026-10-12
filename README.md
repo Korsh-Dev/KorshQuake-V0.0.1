@@ -129,3 +129,18 @@ El servicio esta contenerizado con Docker Compose y conectado a Nginx con proxy 
 - `deploy/korshquake-updater.service`: Servicio oneshot disparado por el timer.
 - `deploy/korshquake-webhook.service`: Servicio systemd persistente del listener de webhook.
 - `deploy/nginx-quake.korsh.online.conf`: Configuracion de Nginx con SSL y streaming HTTP/1.1 sin buffer (`proxy_buffering off`).
+
+## 🔐 Configuración y Operación
+
+Guía completa para gente nueva (arquitectura, despliegue, rollback, claves VAPID, convenciones y backlog):
+👉 **[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)**
+
+Variables de entorno soportadas:
+
+| Variable | Efecto |
+|---|---|
+| `PORT` | Puerto interno del server (default `8080`) |
+| `GITHUB_WEBHOOK_SECRET` | Si está puesta, el webhook exige firma `X-Hub-Signature-256` válida (403 si no) |
+| `ADMIN_TOKEN` | Si está puesta, `/admin` y `/api/admin/*` exigen `X-Admin-Token` o `?token=*** |
+
+> ⚠️ Regla de oro: **nunca edites `/opt/korshquake` en la VPS** — el auto-updater hace `git reset --hard` cada 60 s y descarta cualquier cambio manual. Todo entra por `git push` a `main`.

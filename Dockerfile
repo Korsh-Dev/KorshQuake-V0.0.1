@@ -19,4 +19,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health').read()" || exit 1
 
-CMD ["python", "server.py", "8080"]
+# Respeta la variable PORT del entorno (default 8080), coherente con docker-compose.yml
+CMD ["sh", "-c", "python server.py ${PORT:-8080}"]
