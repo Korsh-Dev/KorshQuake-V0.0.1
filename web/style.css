@@ -18,9 +18,9 @@
   /* Brand Official Palette: Obsidian Black, Vivid Crimson, Crisp White */
   --bg-dark: hsl(var(--hsl-bg-base));
   --bg-elevated: hsl(var(--hsl-surface));
-  --bg-card: hsla(var(--hsl-surface-card), 0.88);
-  --bg-card-hover: hsla(var(--hsl-surface-hover), 0.96);
-  --bg-header: hsla(var(--hsl-bg-base), 0.94);
+  --bg-card: hsla(var(--hsl-surface-card), 0.74);
+  --bg-card-hover: hsla(var(--hsl-surface-hover), 0.88);
+  --bg-header: hsla(var(--hsl-bg-base), 0.80);
   --border-subtle: hsla(var(--hsl-border-subtle), 0.10);
   --border-glow: hsla(var(--hsl-primary), 0.40);
   
@@ -47,9 +47,22 @@
   --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+
+  /* Apple Glass (VisionOS / Liquid Glass) tokens */
+  --glass-blur: 24px;
+  --glass-saturate: 180%;
+  --glass-sheen: linear-gradient(157deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 42%, rgba(255, 255, 255, 0.012) 100%);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --glass-hairline: rgba(255, 255, 255, 0.10);
+  --glass-top-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --glass-depth: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --ease-apple: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-fast: 180ms;
+  --dur-med: 260ms;
 }
 
 * {
@@ -68,30 +81,31 @@ body {
   overflow-x: hidden;
   background-image: 
     radial-gradient(circle at 12% 15%, rgba(255, 30, 66, 0.07) 0%, transparent 45%),
-    radial-gradient(circle at 88% 85%, rgba(184, 13, 40, 0.06) 0%, transparent 50%);
+    radial-gradient(circle at 88% 85%, rgba(184, 13, 40, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 78% 12%, rgba(0, 229, 255, 0.05) 0%, transparent 42%);
 }
 
 .font-mono {
   font-family: var(--font-mono);
 }
 
-/* Glassmorphic Panel Helper */
+/* Glassmorphic Panel Helper — Apple glass: frosted, saturated, lit from above */
 .glass-panel {
-  background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-sheen), var(--bg-card);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  box-shadow: var(--glass-depth), var(--glass-top-highlight);
 }
 
 /* App Header */
 .app-header {
   height: 64px;
   background: var(--bg-header);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border-subtle);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border-bottom: 1px solid var(--glass-hairline);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -259,22 +273,36 @@ body {
   font-weight: 600;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform var(--dur-fast) var(--ease-apple), box-shadow var(--dur-fast) ease, filter var(--dur-fast) ease, background var(--dur-fast) ease, border-color var(--dur-fast) ease;
   border: none;
   font-family: var(--font-main);
   white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
 }
 
 .btn-primary {
   background: linear-gradient(135deg, #ff1e42, #b80d28);
   color: #fff;
-  box-shadow: 0 4px 14px var(--cyan-glow);
+  box-shadow: 0 4px 14px var(--cyan-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px var(--cyan-glow);
+  box-shadow: 0 6px 20px var(--cyan-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
   filter: brightness(1.1);
+}
+
+.btn-primary:active {
+  transform: scale(0.96);
 }
 
 .pulse-tag {
@@ -289,14 +317,17 @@ body {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--glass-sheen), rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
   color: var(--text-main);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-top-highlight);
 }
 
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.24);
 }
 
 .btn-icon-round {
@@ -406,14 +437,17 @@ body {
 }
 
 .metric-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-sheen), var(--bg-card);
+  backdrop-filter: blur(16px) saturate(170%);
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+  border: 1px solid var(--glass-hairline);
   border-radius: var(--radius-md);
   padding: 14px 18px;
   display: flex;
   align-items: center;
   gap: 14px;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  box-shadow: var(--glass-depth), var(--glass-top-highlight);
+  transition: transform var(--dur-med) var(--ease-apple), border-color var(--dur-fast) ease;
 }
 
 .metric-card:hover {
@@ -825,21 +859,29 @@ body {
 
 /* Quake Card Item */
 .quake-item {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-sheen), rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid var(--glass-hairline);
   border-radius: var(--radius-md);
   padding: 10px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
-  transition: all 0.2s ease;
+  box-shadow: var(--glass-top-highlight);
+  transition: transform var(--dur-fast) var(--ease-apple), background var(--dur-fast) ease, border-color var(--dur-fast) ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .quake-item:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-glow);
   transform: translateX(2px);
+}
+
+.quake-item:active {
+  transform: scale(0.985);
 }
 
 .quake-left {
@@ -943,15 +985,16 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
+  background: rgba(2, 6, 13, 0.62);
+  backdrop-filter: blur(20px) saturate(120%);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.25s ease;
+  transition: opacity var(--dur-med) var(--ease-apple);
 }
 
 .modal-overlay.active {
@@ -965,6 +1008,12 @@ body {
   height: 520px;
   display: flex;
   flex-direction: column;
+  transform: scale(0.96) translateY(12px);
+  transition: transform var(--dur-med) var(--ease-apple);
+}
+
+.modal-overlay.active .modal-content {
+  transform: scale(1) translateY(0);
 }
 
 .modal-header {
@@ -997,7 +1046,7 @@ body {
   flex: 1;
   padding: 16px 20px;
   overflow: hidden;
-  background: #02060d;
+  background: transparent;
 }
 
 .terminal-view {
@@ -1034,17 +1083,18 @@ body {
 }
 
 .toast {
-  background: var(--bg-card);
-  backdrop-filter: blur(12px);
+  background: var(--glass-sheen), var(--bg-card);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   border: 1px solid var(--border-glow);
   padding: 12px 18px;
   border-radius: var(--radius-md);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), var(--glass-top-highlight);
   font-size: 0.82rem;
   display: flex;
   align-items: center;
   gap: 10px;
-  animation: toast-in 0.3s ease-out;
+  animation: toast-in 0.3s var(--ease-apple);
 }
 
 @keyframes toast-in {
@@ -1054,9 +1104,11 @@ body {
 
 /* Leaflet Custom Marker & Shockwave CSS */
 .leaflet-popup-content-wrapper {
-  background: rgba(8, 16, 28, 0.95) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid var(--border-glow) !important;
+  background: var(--glass-sheen), rgba(8, 16, 28, 0.82) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
   color: var(--text-main) !important;
   border-radius: var(--radius-md) !important;
 }
@@ -1121,28 +1173,41 @@ body {
   align-items: center;
   gap: 7px;
   padding: 6px 14px;
-  background: rgba(18, 30, 48, 0.75);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-sheen), rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid var(--glass-hairline);
   border-radius: 20px;
   color: var(--text-main);
   font-size: 0.82rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform var(--dur-fast) var(--ease-apple), background var(--dur-fast) ease, border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
   white-space: nowrap;
+  box-shadow: var(--glass-top-highlight);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.country-pill:active {
+  transform: scale(0.96);
+}
+
+.country-pill:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
 }
 
 .country-pill:hover {
-  background: rgba(28, 48, 76, 0.9);
+  background: rgba(255, 255, 255, 0.12);
   border-color: var(--border-glow);
   transform: translateY(-1px);
 }
 
 .country-pill.active {
-  background: linear-gradient(135deg, rgba(0, 180, 216, 0.3), rgba(0, 229, 255, 0.2));
+  background: linear-gradient(135deg, rgba(0, 180, 216, 0.35), rgba(0, 229, 255, 0.22));
   border-color: var(--cyan);
   color: #fff;
-  box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.3), var(--glass-top-highlight);
 }
 
 .country-pill-flag {
@@ -1268,16 +1333,19 @@ body {
 
 /* Settings Cards (Menu Modal) */
 .settings-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-sheen), rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid var(--glass-hairline);
   border-radius: var(--radius-md);
   padding: 14px;
-  transition: all 0.2s ease;
+  transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+  box-shadow: var(--glass-top-highlight);
 }
 
 .settings-card:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .settings-card.highlight-card {
@@ -6362,3 +6430,17 @@ header.app-header,
   background: rgba(12, 18, 32, 0.78) !important;
 }
 
+
+/* ============================================================
+   Apple Glass motion discipline — respeta prefers-reduced-motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
