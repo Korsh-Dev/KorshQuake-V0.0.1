@@ -26,3 +26,4 @@ data/*.json
 data/*.db*
 data/*.json
 !data/.gitkeep-journal
+data/*.pem
