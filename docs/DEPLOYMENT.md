@@ -22,10 +22,24 @@
                      proxy /api/github-webhook)  dispara auto-update.sh)
 ```
 
-- **`server.py`** — monolito stdlib-only (~2700 líneas). Sin requirements de producción.
+- **`server.py`** — monolito stdlib-only (~3200 líneas). Sin requirements de producción.
 - **`web/`** — frontend vanilla JS (`app.js`), PWA con service worker.
 - **`test_server.py`** — suite `unittest` (sube el server real en puerto 8899).
 - **`webhook_listener.py`** (+ copia en `deploy/`) — servicio aparte, NO vive en el contenedor.
+
+## Cobertura mundial ("todos los países del mundo")
+
+Desde la revisión de octubre 2026 el feed ya **no** se limita a los 5 países foco:
+
+- `classify_event_country(lat, lon, place, auth)` (en `server.py`) devuelve `(código ISO, nombre en español, bandera emoji)` para cualquier evento del planeta:
+  1. Los 5 países foco (PA/VE/ES/AR/HN) conservan la clasificación estricta por cajas de `identify_target_country()`.
+  2. El resto se clasifica escaneando el texto `place`/`flynn_region` contra `_COUNTRY_TERMS` (~700 nombres de país, regiones y ciudades sísmicas EN/ES → código ISO), con regex alternativa ordenada por longitud descendente.
+  3. Mar abierto / dorsales oceánicas sin nombre → `GLOBAL` / "Internacional" / 🌐.
+- **Umbral anti-inundación:** fuera de los 5 países foco solo se publican eventos con `mag >= GLOBAL_MIN_MAG` (4.0). Los países foco se publican con cualquier magnitud. Ajustar la constante si se quiere más/menos densidad.
+- **Ingesta:** `fetch_emsc_global()` añade la consulta EMSC sin bbox (`minmag=4.0&limit=100`, lo más nuevo primero). USGS `all_week` ya traía el mundo entero; ahora se conserva todo lo clasificado con M ≥ 4.0.
+- **Contadores:** `counts_by_country` arranca con las 5 claves foco en 0 y añade dinámicamente cualquier código que aparezca (JP, ID, CL, …). El frontend muestra el total con la suma de todos los valores.
+- **Mapa:** la vista "Todos" (`REGION_VIEWPORTS.all`) es ahora vista de planeta (centro [12, -30], zoom 2). Las pills de los 5 países siguen filtrando por código; "Todos" deja pasar todo.
+- **Nodos mesh:** un teléfono registrado fuera de los países foco ya no se fuerza a "VE"; se clasifica (o `GLOBAL`).
 
 ## Servidores systemd en la VPS (195.26.244.209, /opt/korshquake)
 

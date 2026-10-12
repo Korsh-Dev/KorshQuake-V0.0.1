@@ -493,11 +493,21 @@ _server_telemetry = {
         "events_count": 0,
         "last_sync": 0
     },
+    "emsc_global": {
+        "id": "emsc_global",
+        "name": "EMSC SeismicPortal Cobertura Mundial",
+        "host": "seismicportal.eu",
+        "region": "Todos los países del mundo (M ≥ 4.0)",
+        "status": "ONLINE",
+        "latency_ms": 400,
+        "events_count": 0,
+        "last_sync": 0
+    },
     "usgs_regional": {
         "id": "usgs_regional",
         "name": "USGS Earthquake Hazards Live Feed",
         "host": "earthquake.usgs.gov",
-        "region": "Américas & Red Global de Alta Precisión",
+        "region": "Cobertura Mundial (foco PA/VE/ES/AR/HN + M ≥ 4.0)",
         "status": "ONLINE",
         "latency_ms": 250,
         "events_count": 0,
@@ -657,8 +667,9 @@ def calculate_seismic_predictions(lat, lon, depth_km, mag, origin_time_ms):
 
 def identify_target_country(lat, lon, place, auth=""):
     """
-    Clasificador geográfico estricto: Solo acepta Panamá (PA), Venezuela (VE), España (ES) y Argentina (AR).
-    Cualquier otro territorio o sismo fuera de estos 4 países es estrictamente descartado (retorna None).
+    Clasificador geográfico estricto de los 5 países foco: Panamá (PA), Venezuela (VE),
+    España (ES), Argentina (AR) y Honduras (HN). Fuera de estas cajas retorna None;
+    classify_event_country() se encarga de clasificar el resto del mundo.
     """
     p = (place or "").lower()
     a = (auth or "").lower()
@@ -747,6 +758,612 @@ def identify_target_country(lat, lon, place, auth=""):
 
     return None
 
+# ============================================================================
+# CLASIFICADOR MUNDIAL — "Todos los países del mundo"
+# Los 5 países foco (PA/VE/ES/AR/HN) conservan su clasificación estricta.
+# El resto del planeta se clasifica escaneando nombres de país/regiones
+# (EN + ES) en el texto `place`/`flynn_region` de USGS/EMSC. Si no hay
+# coincidencia (mar abierto, dorsales oceánicas) se etiqueta GLOBAL.
+# Para no inundar el feed con microsismos ajenos al foco, fuera de los
+# 5 países foco solo se publican eventos con M >= GLOBAL_MIN_MAG.
+# ============================================================================
+GLOBAL_MIN_MAG = 4.0
+GLOBAL_CODE = "GLOBAL"
+GLOBAL_NAME = "Internacional"
+
+COUNTRY_NAMES_ES = {
+    "US": "Estados Unidos", "CA": "Canadá", "MX": "México", "GT": "Guatemala", "BZ": "Belice",
+    "SV": "El Salvador", "HN": "Honduras", "NI": "Nicaragua", "CR": "Costa Rica", "PA": "Panamá",
+    "CO": "Colombia", "VE": "Venezuela", "GY": "Guyana", "SR": "Surinam", "GF": "Guayana Francesa",
+    "EC": "Ecuador", "PE": "Perú", "BO": "Bolivia", "BR": "Brasil", "CL": "Chile", "AR": "Argentina",
+    "PY": "Paraguay", "UY": "Uruguay", "FK": "Islas Malvinas", "GS": "Georgia del Sur", "AQ": "Antártida",
+    "CU": "Cuba", "JM": "Jamaica", "HT": "Haití", "DO": "Rep. Dominicana", "PR": "Puerto Rico",
+    "VI": "Islas Vírgenes (EE.UU.)", "VG": "Islas Vírgenes (UK)", "BS": "Bahamas", "TC": "Turcas y Caicos",
+    "KY": "Caimán", "BM": "Bermudas", "AI": "Anguila", "MS": "Montserrat", "GP": "Guadalupe",
+    "MQ": "Martinica", "DM": "Dominica", "AG": "Antigua y Barbuda", "LC": "Santa Lucía",
+    "VC": "San Vicente", "GD": "Granada", "BB": "Barbados", "TT": "Trinidad y Tobago",
+    "AW": "Aruba", "CW": "Curazao", "BQ": "Bonaire", "SX": "Sint Maarten", "MF": "San Martín",
+    "BL": "San Bartolomé", "GL": "Groenlandia", "IS": "Islandia", "FO": "Islas Feroe",
+    "SJ": "Svalbard", "NO": "Noruega", "SE": "Suecia", "FI": "Finlandia", "DK": "Dinamarca",
+    "EE": "Estonia", "LV": "Letonia", "LT": "Lituania", "PL": "Polonia", "DE": "Alemania",
+    "NL": "Países Bajos", "BE": "Bélgica", "LU": "Luxemburgo", "GB": "Reino Unido",
+    "IE": "Irlanda", "IM": "Isla de Man", "FR": "Francia", "ES": "España", "PT": "Portugal",
+    "IT": "Italia", "MT": "Malta", "GR": "Grecia", "CH": "Suiza", "AT": "Austria",
+    "LI": "Liechtenstein", "MC": "Mónaco", "AD": "Andorra", "SM": "San Marino", "VA": "Vaticano",
+    "CZ": "Chequia", "SK": "Eslovaquia", "HU": "Hungría", "SI": "Eslovenia", "HR": "Croacia",
+    "BA": "Bosnia", "RS": "Serbia", "ME": "Montenegro", "XK": "Kosovo", "AL": "Albania",
+    "MK": "Macedonia del Norte", "BG": "Bulgaria", "RO": "Rumanía", "MD": "Moldavia",
+    "UA": "Ucrania", "BY": "Bielorrusia", "RU": "Rusia", "CY": "Chipre", "TR": "Turquía",
+    "SY": "Siria", "LB": "Líbano", "IL": "Israel", "PS": "Palestina", "JO": "Jordania",
+    "IQ": "Irak", "IR": "Irán", "AZ": "Azerbaiyán", "AM": "Armenia", "GE": "Georgia",
+    "KZ": "Kazajistán", "KG": "Kirguistán", "TJ": "Tayikistán", "UZ": "Uzbekistán", "TM": "Turkmenistán",
+    "AF": "Afganistán", "PK": "Pakistán", "IN": "India", "NP": "Nepal", "BT": "Bután",
+    "BD": "Bangladés", "MM": "Myanmar", "TH": "Tailandia", "LA": "Laos", "VN": "Vietnam",
+    "KH": "Camboya", "MY": "Malasia", "SG": "Singapur", "BN": "Brunéi", "ID": "Indonesia",
+    "TL": "Timor Oriental", "PH": "Filipinas", "TW": "Taiwán", "CN": "China", "HK": "Hong Kong",
+    "MN": "Mongolia", "KP": "Corea del Norte", "KR": "Corea del Sur", "JP": "Japón",
+    "AU": "Australia", "NF": "Norfolk", "NZ": "Nueva Zelanda", "PG": "Papúa Nueva Guinea",
+    "SB": "Islas Salomón", "VU": "Vanuatu", "NC": "Nueva Caledonia", "FJ": "Fiyi", "TO": "Tonga",
+    "WS": "Samoa", "AS": "Samoa Americana", "PF": "Polinesia Francesa", "PN": "Pitcairn",
+    "CK": "Islas Cook", "NU": "Niue", "TK": "Tokelau", "WF": "Wallis y Futuna", "KI": "Kiribati",
+    "NR": "Nauru", "TV": "Tuvalu", "MH": "Islas Marshall", "FM": "Micronesia", "PW": "Palaos",
+    "MP": "Marianas del Norte", "GU": "Guam", "UM": "Islas Ultramarinas EE.UU.", "CC": "Cocos",
+    "CX": "Isla Christmas", "HM": "Islas Heard", "TF": "Territorios Australes Franceses",
+    "BV": "Bouvet", "SH": "Santa Elena", "IO": "Territorio Británico Índico", "CV": "Cabo Verde",
+    "MA": "Marruecos", "EH": "Sahara Occidental", "DZ": "Argelia", "TN": "Túnez", "LY": "Libia",
+    "EG": "Egipto", "SD": "Sudán", "SS": "Sudán del Sur", "TD": "Chad", "NE": "Níger",
+    "ML": "Malí", "MR": "Mauritania", "SN": "Senegal", "GM": "Gambia", "GN": "Guinea",
+    "GW": "Guinea-Bisáu", "SL": "Sierra Leona", "LR": "Liberia", "CI": "Costa de Marfil",
+    "GH": "Ghana", "TG": "Togo", "BJ": "Benín", "BF": "Burkina Faso", "NG": "Nigeria",
+    "CM": "Camerún", "CF": "Rep. Centroafricana", "GQ": "Guinea Ecuatorial", "GA": "Gabón",
+    "CG": "Congo", "CD": "Rep. Dem. del Congo", "AO": "Angola", "ZM": "Zambia", "MW": "Malaui",
+    "MZ": "Mozambique", "ZW": "Zimbabue", "BW": "Botsuana", "NA": "Namibia", "ZA": "Sudáfrica",
+    "LS": "Lesoto", "SZ": "Esuatini", "MG": "Madagascar", "KM": "Comoras", "YT": "Mayotte",
+    "SC": "Seychelles", "MU": "Mauricio", "RE": "Reunión", "ER": "Eritrea", "DJ": "Yibuti",
+    "ET": "Etiopía", "SO": "Somalia", "KE": "Kenia", "TZ": "Tanzania", "UG": "Uganda",
+    "RW": "Ruanda", "BI": "Burundi",
+}
+
+# Términos de búsqueda (normalizados, minúsculas) → código ISO.
+# La alternativa se compila ordenada por longitud descendente para que
+# "papua new guinea" gane a "guinea", "state of georgia" a "georgia", etc.
+_COUNTRY_TERMS = {
+    # --- América del Norte / Centro ---
+    "united states": "US", "usa": "US", "alaska": "US", "hawaii": "US", "big island": "US",
+    "kilauea": "US", "mauna loa": "US", "california": "US", "san francisco": "US",
+    "los angeles": "US", "san andreas": "US", "long valley": "US", "ridgecrest": "US",
+    "parkfield": "US", "coalinga": "US", "holister": "US", "nevada": "US", "utah": "US",
+    "oregon": "US", "washington": "US", "montana": "US", "wyoming": "US", "idaho": "US",
+    "yellowstone": "US", "cascadia": "US", "juan de fuca": "US", "mendocino": "US",
+    "aleutian": "US", "fox islands": "US", "andreanof": "US", "semisopochnoi": "US",
+    "adak": "US", "anchorage": "US", "denali": "US", "fairbanks": "US", "juneau": "US",
+    "sitka": "US", "kodiak": "US", "unimak": "US", "sanak": "US", "atka": "US",
+    "amchitka": "US", "yakutat": "US", "new york": "US", "maine": "US", "virginia": "US",
+    "texas": "US", "missouri": "US", "arkansas": "US", "tennessee": "US", "kentucky": "US",
+    "carolina": "US", "florida": "US", "michigan": "US", "new jersey": "US", "georgia": "US",
+    "puerto rico": "PR", "mayaguez": "PR", "aguadilla": "PR", "hatillo": "PR", "ponce": "PR",
+    "virgin islands": "VI", "st croix": "VI", "saint croix": "VI", "st thomas": "VI",
+    "saint thomas": "VI", "british virgin": "VG", "guam": "GU", "agana": "GU",
+    "northern mariana": "MP", "mariana islands": "MP", "saipan": "MP", "tinian": "MP",
+    "wake island": "UM", "midway": "UM", "johnston": "UM", "palmyra": "UM", "kingman": "UM",
+    "baker island": "UM", "howland": "UM", "jarvis": "UM", "navassa": "UM", "desecheo": "UM",
+    "canada": "CA", "british columbia": "CA", "haida": "CA", "queen charlotte": "CA",
+    "sable island": "CA", "yukon": "CA", "nunavut": "CA", "baffin": "CA", "labrador": "CA",
+    "quebec": "CA", "ontario": "CA", "alberta": "CA", "manitoba": "CA", "saskatchewan": "CA",
+    "northwest territories": "CA", "greenland": "GL",
+    "mexico": "MX", "baja": "MX", "colima": "MX", "michoacan": "MX", "guerrero": "MX",
+    "oaxaca": "MX", "chiapas": "MX", "veracruz": "MX", "jalisco": "MX", "acapulco": "MX",
+    "tecpan": "MX", "zihuatanejo": "MX", "manzanillo": "MX", "puerto vallarta": "MX",
+    "tijuana": "MX", "mexicali": "MX", "hermosillo": "MX", "mazatlan": "MX", "guadalajara": "MX",
+    "puebla": "MX", "monterrey": "MX", "saltillo": "MX", "acambay": "MX", "pinotepa": "MX",
+    "salina cruz": "MX", "huateulco": "MX", "zacatecas": "MX", "nayarit": "MX", "sinaloa": "MX",
+    "chihuahua": "MX", "durango": "MX", "san luis potosi": "MX", "queretaro": "MX",
+    "guatemala": "GT", "escuintla": "GT", "quetzaltenango": "GT", "antigua guatemala": "GT",
+    "belize": "BZ", "el salvador": "SV", "san salvador": "SV", "san salvador de jujuy": "AR",
+    "nicaragua": "NI", "managua": "NI", "masaya": "NI", "chinandega": "NI",
+    "costa rica": "CR", "alajuela": "CR", "heredia": "CR", "puntarenas": "CR", "limon": "CR",
+    "tamarindo": "CR", "turrialba": "CR", "poas": "CR", "arenal": "CR",
+    "honduras": "HN", "panama": "PA", "colombia": "CO", "antioquia": "CO", "narino": "CO",
+    "cauca": "CO", "bucaramanga": "CO", "manizales": "CO", "pereira": "CO", "eje cafetero": "CO",
+    "medellin": "CO", "barranquilla": "CO", "sogamoso": "CO", "cucuta": "CO", "ipiales": "CO",
+    "chaparuro": "CO", "puerto asis": "CO", "tumaco": "CO", "barichara": "CO",
+    "venezuela": "VE", "guyana": "GY", "suriname": "SR", "french guiana": "GF", "cayenne": "GF",
+    "ecuador": "EC", "galapagos": "EC", "esmeraldas": "EC", "manabi": "EC", "loja": "EC",
+    "cotopaxi": "EC", "quito": "EC", "ambato": "EC", "riobamba": "EC", "guayaquil": "EC",
+    "muisne": "EC", "archidona": "EC", "pelileo": "EC",
+    "peru": "PE", "arequipa": "PE", "cusco": "PE", "iquitos": "PE", "nazca": "PE",
+    "mollendo": "PE", "chincheros": "PE", "abancay": "PE", "bagua": "PE", "cajamarca": "PE",
+    "huancavelica": "PE", "junin": "PE", "pisco": "PE", "ayacucho": "PE", "puerto maldonado": "PE",
+    "chimbote": "PE", "huaraz": "PE", "bagua grande": "PE",
+    "bolivia": "BO", "sucre": "BO", "cochabamba": "BO", "potosi": "BO", "oruro": "BO", "tarija": "BO",
+    "brazil": "BR", "brasil": "BR", "brasilia": "BR", "sao paulo": "BR", "rio de janeiro": "BR",
+    "bahia": "BR", "ceara": "BR", "amazonas": "BR", "acre": "BR", "rondonia": "BR",
+    "goias": "BR", "minas gerais": "BR", "parana": "BR", "rio grande": "BR",
+    "santa catarina": "BR", "tocantins": "BR", "pernambuco": "BR", "maranhao": "BR",
+    "manaus": "BR", "fortaleza": "BR", "recife": "BR", "belo horizonte": "BR", "cuiaba": "BR",
+    "campo grande": "BR", "belem": "BR", "santarem": "BR", "macapa": "BR", "boa vista": "BR",
+    "natal": "BR", "joao pessoa": "BR", "maceio": "BR", "aracaju": "BR", "uberaba": "BR",
+    "feira de santana": "BR", "petropolis": "BR", "campos dos goytacazes": "BR", "macae": "BR",
+    "camocim": "BR", "chile": "CL", "valparaiso": "CL", "antofagasta": "CL", "iquique": "CL",
+    "arica": "CL", "coquimbo": "CL", "atacama": "CL", "magallanes": "CL", "aysen": "CL",
+    "maule": "CL", "ohiggins": "CL", "biobio": "CL", "bio bio": "CL", "chiloe": "CL",
+    "easter island": "CL", "pascua island": "CL", "robinson crusoe": "CL", "san felix": "CL",
+    "tocopilla": "CL", "taltal": "CL", "chanaral": "CL", "putre": "CL", "pisagua": "CL",
+    "argentina": "AR", "jujuy": "AR", "salta": "AR", "tucuman": "AR", "catamarca": "AR",
+    "la rioja": "AR", "san juan argentina": "AR", "mendoza": "AR", "san luis": "AR", "cordoba": "AR",
+    "santiago del estero": "AR", "neuquen": "AR", "rio negro": "AR", "chubut": "AR",
+    "santa cruz": "AR", "tierra del fuego": "AR", "buenos aires": "AR", "la pampa": "AR",
+    "inpres": "AR", "paraguay": "PY", "asuncion": "PY", "uruguay": "UY", "montevideo": "UY",
+    "paysandu": "UY", "tacuarembo": "UY",
+    # --- Caribe ---
+    "cuba": "CU", "havana": "CU", "jamaica": "JM", "montego": "JM", "haiti": "HT",
+    "port au prince": "HT", "cap haitien": "HT", "les cayes": "HT", "mole st nicolas": "HT",
+    "dominican": "DO", "hispaniola": "DO", "santo domingo": "DO",
+    "santiago de los caballeros": "DO", "puerto plata": "DO", "la romana": "DO", "punta cana": "DO",
+    "bahamas": "BS", "turks and caicos": "TC", "grand turk": "TC", "caicos": "TC", "turks": "TC",
+    "cayman": "KY", "grand cayman": "KY", "bermuda": "BM", "harrington sound": "BM",
+    "anguilla": "AI", "montserrat": "MS", "antigua and barbuda": "AG", "barbuda": "AG",
+    "st kitts": "KN", "saint kitts": "KN", "nevis": "KN", "brimstone": "KN", "dominica": "DM",
+    "roseau": "DM", "martinique": "MQ", "guadeloupe": "GP", "pointe a pitre": "GP",
+    "basse terre": "GP", "st lucia": "LC", "saint lucia": "LC", "castries": "LC",
+    "st vincent": "VC", "saint vincent": "VC", "barrow island": "VC", "grenada": "GD",
+    "barbados": "BB", "trinidad": "TT", "tobago": "TT", "port of spain": "TT", "chaguanas": "TT",
+    "tunapuna": "TT", "mayaro": "TT", "aruba": "AW", "curacao": "CW", "willemstad": "CW",
+    "bonaire": "BQ", "kralendijk": "BQ", "sint maarten": "SX", "philipsburg": "SX",
+    "saint barthelemy": "BL", "collectivity of saint martin": "MF",
+    # --- Europa ---
+    "iceland": "IS", "reykjanes": "IS", "vestmannaeyjar": "IS", "grindavik": "IS",
+    "reykjavik": "IS", "akureyri": "IS", "hengill": "IS", "katla": "IS", "bardarbunga": "IS",
+    "grimsvotn": "IS", "fagradalsfjall": "IS", "sundhnukur": "IS", "faroe": "FO", "torshavn": "FO",
+    "jan mayen": "SJ", "svalbard": "SJ", "spitsbergen": "SJ",
+    "norway": "NO", "oslo": "NO", "tromso": "NO", "stavanger": "NO", "drammen": "NO",
+    "fredrikstad": "NO", "trondheim": "NO", "bodo": "NO", "narvik": "NO", "hammerfest": "NO",
+    "kirkenes": "NO", "varanger": "NO", "lillehammer": "NO", "dombas": "NO", "sogne": "NO",
+    "hardanger": "NO", "alesund": "NO", "molde": "NO", "gjalp": "NO",
+    "sweden": "SE", "stockholm": "SE", "goteborg": "SE", "malmo": "SE", "uppsala": "SE",
+    "vasteras": "SE", "orebro": "SE", "jonkoping": "SE", "linkoping": "SE", "norrkoping": "SE",
+    "karlstad": "SE", "gavle": "SE", "sundsvall": "SE", "umea": "SE", "lulea": "SE",
+    "kiruna": "SE", "gallivare": "SE", "arjeplog": "SE", "skelleftea": "SE",
+    "finland": "FI", "helsinki": "FI", "espoo": "FI", "tampere": "FI", "turku": "FI",
+    "oulu": "FI", "jyvaskyla": "FI", "lahti": "FI", "kuopio": "FI", "rovaniemi": "FI",
+    "vaasa": "FI", "pori": "FI", "kotka": "FI", "hamina": "FI", "lappeenranta": "FI",
+    "joensuu": "FI", "kajaani": "FI", "kokkola": "FI", "mikkeli": "FI", "savonlinna": "FI",
+    "kuusamo": "FI", "sodankyla": "FI", "inari": "FI", "utoya": "FI",
+    "denmark": "DK", "copenhagen": "DK", "aarhus": "DK", "odense": "DK", "aalborg": "DK",
+    "estonia": "EE", "tallinn": "EE", "latvia": "LV", "riga": "LV", "lithuania": "LT",
+    "vilnius": "LT", "kaunas": "LT", "poland": "PL", "warsaw": "PL", "krakow": "PL",
+    "wroclaw": "PL", "poznan": "PL", "gdansk": "PL", "czech": "CZ", "prague": "CZ",
+    "ostrava": "CZ", "brno": "CZ", "slovakia": "SK", "bratislava": "SK", "kosice": "SK",
+    "hungary": "HU", "budapest": "HU", "debrecen": "HU", "szeged": "HU", "pecs": "HU",
+    "netherlands": "NL", "rotterdam": "NL", "the hague": "NL", "utrecht": "NL",
+    "eindhoven": "NL", "groningen": "NL", "maastricht": "NL", "belgium": "BE",
+    "brussels": "BE", "antwerp": "BE", "ghent": "BE", "liege": "BE", "namur": "BE",
+    "luxembourg": "LU", "united kingdom": "GB", "great britain": "GB", "england": "GB",
+    "scotland": "GB", "northern ireland": "GB", "shetland": "GB", "orkney": "GB",
+    "hebrides": "GB", "isle of man": "IM", "uk": "GB", "ireland": "IE", "dublin": "IE",
+    "galway": "IE", "cork": "IE",
+    "france": "FR", "strasbourg": "FR", "nice": "FR", "grenoble": "FR", "annecy": "FR",
+    "chamonix": "FR", "toulouse": "FR", "montpellier": "FR", "marseille": "FR", "lyon": "FR",
+    "bordeaux": "FR", "nantes": "FR", "rennes": "FR", "brest": "FR", "toulon": "FR",
+    "digne": "FR", "sisteron": "FR", "menton": "FR", "modane": "FR", "belfort": "FR",
+    "epinal": "FR", "chambery": "FR", "montelimar": "FR", "valence": "FR", "tarbes": "FR",
+    "perpignan": "FR", "saint etienne": "FR", "dijon": "FR", "auxerre": "FR", "nevers": "FR",
+    "bourges": "FR", "tours": "FR", "orleans": "FR", "rouen": "FR", "caen": "FR",
+    "le havre": "FR", "amiens": "FR", "lille": "FR", "arras": "FR", "calais": "FR",
+    "reims": "FR", "metz": "FR", "nancy": "FR", "mulhouse": "FR", "colmar": "FR",
+    "besancon": "FR", "clermont": "FR", "avignon": "FR", "arles": "FR", "cannes": "FR",
+    "antibes": "FR", "frejus": "FR", "monaco": "MC",
+    "spain": "ES", "españa": "ES", "canary": "ES", "canarias": "ES", "baleares": "ES",
+    "mallorca": "ES", "menorca": "ES", "ibiza": "ES", "alboran": "ES", "andalucia": "ES",
+    "murcia": "ES", "alicante": "ES", "granada": "ES", "malaga": "ES", "galicia": "ES",
+    "valladolid": "ES", "burgos": "ES", "soria": "ES", "pamplona": "ES", "zaragoza": "ES",
+    "barcelona": "ES", "girona": "ES", "tarragona": "ES", "teruel": "ES", "almeria": "ES",
+    "jaen": "ES", "sevilla": "ES", "badajoz": "ES", "huelva": "ES", "cadiz": "ES",
+    "melilla": "ES", "ceuta": "ES", "lorca": "ES",
+    "portugal": "PT", "azores": "PT", "madeira": "PT", "lisbon": "PT", "sao miguel": "PT",
+    "terceira": "PT", "faial": "PT", "sao jorge": "PT", "graciosa": "PT", "flores azores": "PT",
+    "italy": "IT", "sicily": "IT", "calabria": "IT", "sardinia": "IT", "amatrice": "IT",
+    "norcia": "IT", "ischia": "IT", "etna": "IT", "stromboli": "IT", "apennine": "IT",
+    "tuscany": "IT", "umbria": "IT", "posillipo": "IT", "vico equense": "IT",
+    "malta": "MT", "mellieha": "MT",
+    "greece": "GR", "crete": "GR", "kreta": "GR", "aegean": "GR", "peloponnese": "GR",
+    "thessaly": "GR", "santorini": "GR", "thira": "GR", "kefalonia": "GR", "lefkada": "GR",
+    "zakynthos": "GR", "zante": "GR", "rhodes": "GR", "lesbos": "GR", "chios": "GR",
+    "samos": "GR", "ikaria": "GR", "naxos": "GR", "corfu": "GR", "kerkira": "GR",
+    "preveza": "GR", "ioannina": "GR", "trikala": "GR", "larissa": "GR", "volos": "GR",
+    "thessaloniki": "GR", "komotini": "GR", "alexandroupoli": "GR", "kavala": "GR",
+    "drama": "GR", "serres": "GR", "xanthi": "GR", "oreostada": "GR", "edessa": "GR",
+    "naousa": "GR", "veria": "GR", "kozani": "GR", "florina": "GR", "kastoria": "GR",
+    "grevena": "GR",
+    "switzerland": "CH", "basel": "CH", "zurich": "CH", "geneva": "CH", "lausanne": "CH",
+    "chur": "CH", "sion": "CH", "lucerne": "CH", "interlaken": "CH", "st gallen": "CH",
+    "grisons": "CH", "austria": "AT", "vienna": "AT", "salzburg": "AT", "innsbruck": "AT",
+    "graz": "AT", "linz": "AT", "klagenfurt": "AT", "villach": "AT", "badgastein": "AT",
+    "liechtenstein": "LI", "andorra": "AD", "san marino": "SM", "vatican": "VA",
+    "ukraine": "UA", "crimea": "UA", "kyiv": "UA", "lviv": "UA", "odesa": "UA",
+    "kharkiv": "UA", "dnipro": "UA", "donetsk": "UA", "zaporizhzhia": "UA",
+    "belarus": "BY", "minsk": "BY", "moldova": "MD",
+    "romania": "RO", "vrancea": "RO", "carpathian": "RO",
+    "croatia": "HR", "zagreb": "HR", "split": "HR", "dubrovnik": "HR", "rijeka": "HR",
+    "osijek": "HR", "zadar": "HR", "sinj": "HR", "imotski": "HR", "petrinja": "HR",
+    "sisak": "HR", "karlovac": "HR", "bosnia": "BA", "sarajevo": "BA", "banja luka": "BA",
+    "serbia": "RS", "belgrade": "RS", "novi sad": "RS", "kragujevac": "RS", "kraljevo": "RS",
+    "slovenia": "SI", "ljubljana": "SI", "maribor": "SI", "montenegro": "ME",
+    "podgorica": "ME", "niksic": "ME", "kosovo": "XK", "pristina": "XK",
+    "albania": "AL", "tirana": "AL", "durres": "AL", "shkodra": "AL", "korca": "AL",
+    "vlore": "AL", "elbasan": "AL", "north macedonia": "MK", "bulgaria": "BG", "sofia": "BG",
+    "plovdiv": "BG", "varna": "BG",
+    "russia": "RU", "russian federation": "RU", "moscow": "RU", "saint petersburg": "RU",
+    "yekaterinburg": "RU", "novosibirsk": "RU", "irkutsk": "RU", "vladivostok": "RU",
+    "khabarovsk": "RU", "sochi": "RU", "kaliningrad": "RU", "murmansk": "RU",
+    "petropavlovsk": "RU", "yuzhno sakhalinsk": "RU", "kuril": "RU", "kamchatka": "RU",
+    "sakhalin": "RU", "sachalin": "RU", "commander islands": "RU", "buratia": "RU",
+    "baikal": "RU", "dagestan": "RU", "chechnya": "RU", "ossetia": "RU", "ingushetia": "RU",
+    "kabardino": "RU", "grozny": "RU", "makhachkala": "RU", "sea of okhotsk": "RU",
+    # --- Cáucaso / Asia Central / Sur / Sudeste ---
+    "state of georgia": "GE", "tbilisi": "GE", "kazbegi": "GE", "stepantsminda": "GE",
+    "shida kartli": "GE", "kakheti": "GE", "imereti": "GE", "samegrelo": "GE", "ajaria": "GE",
+    "georgia armenia": "GE", "georgia azerbaijan": "GE", "georgia turkey": "GE",
+    "georgia russian": "GE", "georgia black sea": "GE", "georgia caucasus": "GE",
+    "armenia": "AM", "yerevan": "AM", "gyumri": "AM", "vanadzor": "AM",
+    "azerbaijan": "AZ", "baku": "AZ", "ganja": "AZ", "shamakhy": "AZ", "shirvan": "AZ",
+    "kazakhstan": "KZ", "almaty": "KZ", "astana": "KZ", "aktau": "KZ", "atyrau": "KZ",
+    "karaganda": "KZ", "taraz": "KZ", "shymkent": "KZ", "semey": "KZ", "pavlodar": "KZ",
+    "kostanay": "KZ", "kyrgyzstan": "KG", "bishkek": "KG", "naryn": "KG", "osh": "KG",
+    "tajikistan": "TJ", "dushanbe": "TJ", "khorog": "TJ", "uzbekistan": "UZ",
+    "tashkent": "UZ", "samarkand": "UZ", "bukhara": "UZ", "namangan": "UZ", "andijan": "UZ",
+    "fergana": "UZ", "fargona": "UZ", "turkmenistan": "TM", "ashgabat": "TM", "karakum": "TM",
+    "afghanistan": "AF", "kabul": "AF", "herat": "AF", "kunduz": "AF", "jalalabad": "AF",
+    "hindu kush": "AF", "pakistan": "PK", "islamabad": "PK", "lahore": "PK", "quetta": "PK",
+    "karachi": "PK", "balochistan": "PK", "gilgit": "PK", "jammu": "IN",
+    "india": "IN", "new delhi": "IN", "delhi": "IN", "mumbai": "IN", "ahmedabad": "IN",
+    "kashmir": "IN", "srinagar": "IN", "ladakh": "IN", "gujarat": "IN", "rajasthan": "IN",
+    "assam": "IN", "sikkim": "IN", "andaman": "IN", "nicobar": "IN", "imphal": "IN",
+    "shillong": "IN", "dehradun": "IN", "laccadive": "IN",
+    "nepal": "NP", "kathmandu": "NP", "gorkha": "NP", "everest": "NP", "bhutan": "BT",
+    "thimphu": "BT", "bangladesh": "BD", "dhaka": "BD", "chittagong": "BD", "sylhet": "BD",
+    "sri lanka": "LK", "colombo": "LK", "maldives": "MV",
+    "myanmar": "MM", "burma": "MM", "mandalay": "MM", "naypyidaw": "MM", "sagaing": "MM",
+    "thailand": "TH", "bangkok": "TH", "chiang mai": "TH", "chiang rai": "TH", "phuket": "TH",
+    "kanchanaburi": "TH", "laos": "LA", "vientiane": "LA", "vietnam": "VN", "hanoi": "VN",
+    "ho chi minh": "VN", "dien bien": "VN", "cambodia": "KH", "phnom penh": "KH",
+    "malaysia": "MY", "kuala lumpur": "MY", "sabah": "MY", "penang": "MY", "johor": "MY",
+    "malacca": "MY", "singapore": "SG", "brunei": "BN",
+    "indonesia": "ID", "sumatra": "ID", "java": "ID", "sulawesi": "ID", "minahasa": "ID",
+    "borneo": "ID", "molucca": "ID", "halmahera": "ID", "sumba": "ID", "sumbawa": "ID",
+    "lombok": "ID", "bali": "ID", "nusa": "ID", "ambon": "ID", "palu": "ID", "makassar": "ID",
+    "aceh": "ID", "medan": "ID", "padang": "ID", "manado": "ID", "sunda": "ID",
+    "mentawai": "ID", "bandung": "ID", "yogyakarta": "ID", "batam": "ID", "denpasar": "ID",
+    "mataram": "ID", "kupang": "ID", "sorong": "ID", "jayapura": "ID", "manokwari": "ID",
+    "ternate": "ID", "tidore": "ID", "banda sea": "ID", "flores sea": "ID", "sawu sea": "ID",
+    "pantar": "ID", "damar": "ID", "raja ampat": "ID", "waingapu": "ID", "maumere": "ID",
+    "labuan bajo": "ID", "papua": "ID", "sea of sulawesi": "ID", "celebes sea": "ID",
+    "timor": "TL", "dili": "TL", "oecusse": "TL", "oecussi": "TL", "atambua": "ID",
+    "betun": "TL", "maliana": "TL", "suai": "TL", "liquica": "TL", "maubara": "TL",
+    "viqueque": "TL", "baucau": "TL", "philippines": "PH", "luzon": "PH", "mindanao": "PH",
+    "samar": "PH", "leyte": "PH", "cebu": "PH", "mindoro": "PH", "palawan": "PH",
+    "davao": "PH", "iloilo": "PH", "tacloban": "PH", "surigao": "PH", "sulu": "PH",
+    "moro gulf": "PH", "philippine sea": "PH", "sulu sea": "PH",
+    "taiwan": "TW", "taipei": "TW", "hualien": "TW", "taichung": "TW", "tainan": "TW",
+    "kaohsiung": "TW", "yilan": "TW", "hengchun": "TW", "orchid island": "TW",
+    "china": "CN", "beijing": "CN", "xinjiang": "CN", "tibet": "CN", "lhasa": "CN",
+    "sichuan": "CN", "yunnan": "CN", "qinghai": "CN", "gansu": "CN", "shaanxi": "CN",
+    "ningxia": "CN", "yushu": "CN", "changning": "CN", "wenshan": "CN", "xizang": "CN",
+    "shandong": "CN", "fujian": "CN", "guangdong": "CN", "guangxi": "CN", "hainan": "CN",
+    "harbin": "CN", "manzhouli": "CN", "hong kong": "HK", "mongolia": "MN",
+    "ulaanbaatar": "MN", "north korea": "KP", "pyongyang": "KP", "south korea": "KR",
+    "seoul": "KR", "pohang": "KR", "gyeongju": "KR", "jeju": "KR", "daejeon": "KR",
+    "korea": "KR",
+    "japan": "JP", "honshu": "JP", "hokkaido": "JP", "kyushu": "JP", "shikoku": "JP",
+    "okinawa": "JP", "ryukyu": "JP", "nansei": "JP", "bonin": "JP", "chiba": "JP",
+    "tohoku": "JP", "kanto": "JP", "chubu": "JP", "kansai": "JP", "chugoku": "JP",
+    "noshiro": "JP", "akita": "JP", "iwate": "JP", "miyagi": "JP", "fukushima": "JP",
+    "ibaraki": "JP", "kanagawa": "JP", "shizuoka": "JP", "aichi": "JP", "gifu": "JP",
+    "nagano": "JP", "niigata": "JP", "toyama": "JP", "ishikawa": "JP", "fukui": "JP",
+    "hyogo": "JP", "osaka": "JP", "kyoto": "JP", "nara": "JP", "wakayama": "JP",
+    "tottori": "JP", "shimane": "JP", "okayama": "JP", "hiroshima": "JP", "yamaguchi": "JP",
+    "kagawa": "JP", "tokushima": "JP", "ehime": "JP", "kochi": "JP", "oita": "JP",
+    "miyazaki": "JP", "kumamoto": "JP", "nagasaki": "JP", "kagoshima": "JP", "amami": "JP",
+    "tokunoshima": "JP", "yakushima": "JP", "tanegashima": "JP", "satsunan": "JP",
+    "iwoto": "JP", "okino": "JP", "torishima": "JP", "sea of japan": "JP",
+    # --- Oceanía ---
+    "australia": "AU", "sydney": "AU", "melbourne": "AU", "perth": "AU", "brisbane": "AU",
+    "adelaide": "AU", "canberra": "AU", "tasmania": "AU", "queensland": "AU",
+    "new south wales": "AU", "northern territory": "AU", "south australia": "AU",
+    "western australia": "AU", "tasman": "AU", "ballina": "AU", "leeton": "AU",
+    "meckering": "AU", "cadoux": "AU", "yilgarn": "AU", "kimberley": "AU", "broome": "AU",
+    "kununurra": "AU", "port hedland": "AU", "karratha": "AU", "newman": "AU", "telfer": "AU",
+    "tanami": "AU", "alice springs": "AU", "darwin": "AU", "jervis bay": "AU",
+    "wollongong": "AU", "byron bay": "AU", "gold coast": "AU", "mackay": "AU",
+    "townsville": "AU", "cairns": "AU", "cooktown": "AU", "mount isa": "AU",
+    "rockhampton": "AU", "gladstone": "AU", "bundaberg": "AU", "hervey bay": "AU",
+    "gympie": "AU", "tamworth": "AU", "armidale": "AU", "deniliquin": "AU",
+    "corryong": "AU", "warrnambool": "AU", "geelong": "AU", "bendigo": "AU",
+    "shepparton": "AU", "mildura": "AU", "wagga": "AU", "albury": "AU", "goulburn": "AU",
+    "lithgow": "AU", "mudgee": "AU", "muswellbrook": "AU", "tenterfield": "AU",
+    "glen innes": "AU", "yamba": "AU", "moree": "AU", "narromine": "AU", "coobar": "AU",
+    "broken hill": "AU", "port augusta": "AU", "whyalla": "AU", "port lincoln": "AU",
+    "mount gambier": "AU", "victor harbor": "AU", "king island": "AU",
+    "flinders island": "AU", "kangaroo island": "AU", "devonport": "AU", "launceston": "AU",
+    "hobart": "AU", "burnie": "AU", "bicheno": "AU", "strahan": "AU", "wyndham": "AU",
+    "carnarvon": "AU", "exmouth": "AU", "kalbarri": "AU", "geraldton": "AU",
+    "esperance": "AU", "narrogin": "AU", "toodyay": "AU", "merredin": "AU",
+    "kellerberrin": "AU", "bunbury": "AU", "mandurah": "AU", "rockingham": "AU",
+    "coral sea": "AU", "macquarie": "AU", "norfolk": "NF", "cocos": "CC", "keeling": "CC",
+    "christmas island": "CX",
+    "new zealand": "NZ", "wellington": "NZ", "christchurch": "NZ", "auckland": "NZ",
+    "rotorua": "NZ", "taupo": "NZ", "napier": "NZ", "gisborne": "NZ", "kaitaia": "NZ",
+    "kaikoura": "NZ", "nelson": "NZ", "blenheim": "NZ", "picton": "NZ", "greymouth": "NZ",
+    "hokitika": "NZ", "timaru": "NZ", "ochta": "NZ", "wanaka": "NZ", "queenstown": "NZ",
+    "alexandra": "NZ", "dunedin": "NZ", "invercargill": "NZ", "gore": "NZ", "thames": "NZ",
+    "waihao": "NZ", "cromwell": "NZ", "taranaki": "NZ", "new plymouth": "NZ",
+    "whakatane": "NZ", "opotiki": "NZ", "tauranga": "NZ", "wairoa": "NZ", "pahiatua": "NZ",
+    "featherston": "NZ", "masterton": "NZ", "cartington": "NZ", "foxton": "NZ",
+    "levin": "NZ", "paraparaumu": "NZ", "meremere": "NZ", "whitianga": "NZ",
+    "coromandel": "NZ", "whangarei": "NZ", "kerikeri": "NZ", "kaeo": "NZ", "mititai": "NZ",
+    "dargaville": "NZ", "ohakune": "NZ", "fiordland": "NZ", "kermadec": "NZ",
+    "chatham": "NZ", "hikurangi": "NZ", "puysegur": "NZ", "snares": "NZ", "antipodes": "NZ",
+    "bounty islands": "NZ", "campbell island": "NZ", "three kings": "NZ",
+    "papua new guinea": "PG", "new britain": "PG", "new ireland": "PG", "bougainville": "PG",
+    "port moresby": "PG", "madang": "PG", "kokopo": "PG", "kimbe": "PG", "rabaul": "PG",
+    "manus": "PG",
+    "solomon islands": "SB", "solomon sea": "SB", "choiseul": "SB", "malaita": "SB",
+    "guadalcanal": "SB", "new georgia": "SB", "solomons": "SB",
+    "vanuatu": "VU", "efate": "VU", "tanna": "VU", "malampa": "VU", "espiritu santo": "VU",
+    "new caledonia": "NC", "loyalty islands": "NC", "belep": "NC",
+    "fiji": "FJ", "viti levu": "FJ", "taveuni": "FJ", "kadavu": "FJ", "rotuma": "FJ",
+    "tonga": "TO", "ha apai": "TO", "vava u": "TO", "niuafo ou": "TO", "tongatapu": "TO",
+    "samoa": "WS", "upolu": "WS", "savaii": "WS", "american samoa": "AS", "tutuila": "AS",
+    "french polynesia": "PF", "tahiti": "PF", "marquesas": "PF", "tuamotu": "PF",
+    "society islands": "PF", "austral islands": "PF", "gambier": "PF", "mangareva": "PF",
+    "raiatea": "PF", "bora bora": "PF", "hikuerak": "PF", "pitcairn": "PN",
+    "cook islands": "CK", "rarotonga": "CK", "aitutaki": "CK", "niue": "NU", "tokelau": "TK",
+    "wallis": "WF", "futuna": "WF", "kiribati": "KI", "banaba": "KI", "tarawa": "KI",
+    "kiritimati": "KI", "nauru": "NR", "tuvalu": "TV", "funafuti": "TV",
+    "marshall islands": "MH", "majuro": "MH", "ebeye": "MH", "micronesia": "FM",
+    "pohnpei": "FM", "chuuk": "FM", "yap": "FM", "kosrae": "FM", "palau": "PW", "koror": "PW",
+    # --- África / Oriente Medio ---
+    "morocco": "MA", "rabat": "MA", "casablanca": "MA", "marrakech": "MA", "marrakesh": "MA",
+    "fez": "MA", "tangier": "MA", "agadir": "MA", "oujda": "MA", "meknes": "MA",
+    "kenitra": "MA", "tetouan": "MA", "safi": "MA", "essaouira": "MA", "ouarzazate": "MA",
+    "errachidia": "MA", "midelt": "MA", "al hoceima": "MA", "nador": "MA", "azilal": "MA",
+    "khouribga": "MA", "beni mellal": "MA", "ifrane": "MA", "imiligh": "MA", "azagour": "MA",
+    "zagora": "MA", "merzouga": "MA", "erfoud": "MA", "tinghir": "MA", "demnate": "MA",
+    "tazenakht": "MA", "tamegroute": "MA", "taroudant": "MA", "toubkal": "MA", "tichka": "MA",
+    "ourika": "MA", "amizmiz": "MA", "western sahara": "EH", "sahara": "EH",
+    "mauritania": "MR", "nouakchott": "MR", "nouadhibou": "MR", "zouerate": "MR",
+    "chinguetti": "MR", "tiris": "MR", "algeria": "DZ", "algiers": "DZ", "oran": "DZ",
+    "constantine": "DZ", "annaba": "DZ", "batna": "DZ", "setif": "DZ", "bejaia": "DZ",
+    "tipaza": "DZ", "boumerdes": "DZ", "khenchela": "DZ", "mascara": "DZ", "relizane": "DZ",
+    "hodna": "DZ", "barika": "DZ", "biskra": "DZ", "ghardaia": "DZ", "timimoun": "DZ",
+    "touggourt": "DZ", "el meniaa": "DZ", "in salah": "DZ", "reggane": "DZ",
+    "tamanrasset": "DZ", "djanet": "DZ", "illizi": "DZ", "tebessa": "DZ", "souk ahras": "DZ",
+    "el tarf": "DZ", "skikda": "DZ", "jijel": "DZ", "tlemcen": "DZ", "mostaganem": "DZ",
+    "chlef": "DZ", "medea": "DZ", "blida": "DZ", "bouira": "DZ", "tizi ouzou": "DZ",
+    "laghouat": "DZ", "el oued": "DZ", "ouargla": "DZ", "tindouf": "DZ",
+    "tunisia": "TN", "tunis": "TN", "sfax": "TN", "sousse": "TN", "kairouan": "TN",
+    "gafsa": "TN", "djerba": "TN", "bizerte": "TN", "kasserine": "TN", "sbeitla": "TN",
+    "el kseib": "TN", "tajerouine": "TN",
+    "libya": "LY", "benghazi": "LY", "misrata": "LY", "misurata": "LY", "sabha": "LY",
+    "ghadames": "LY", "murzuq": "LY", "jalu": "LY", "kufra": "LY", "derna": "LY",
+    "tobruk": "LY", "zawiya": "LY", "sirte": "LY", "ajdabiya": "LY", "ubari": "LY",
+    "ghat": "LY", "awbari": "LY", "brak": "LY", "germa": "LY", "marada": "LY",
+    "egypt": "EG", "cairo": "EG", "aswan": "EG", "luxor": "EG", "hurghada": "EG",
+    "suez": "EG", "sinai": "EG", "taba": "EG", "dahab": "EG", "sharm": "EG", "marsa": "EG",
+    "safaga": "EG", "qena": "EG", "sohag": "EG", "asyut": "EG", "mansoura": "EG",
+    "zagazig": "EG", "banha": "EG", "tanta": "EG", "damanhur": "EG", "fayoum": "EG",
+    "beni suef": "EG", "minya": "EG", "matruh": "EG", "siwa": "EG", "kharga": "EG",
+    "farafra": "EG", "bahariya": "EG", "sokhna": "EG", "tor sina": "EG", "nuweiba": "EG",
+    "sudan": "SD", "khartoum": "SD", "darfur": "SD", "omdurman": "SD", "kassala": "SD",
+    "el obeid": "SD", "al obeid": "SD", "port sudan": "SD", "el fasher": "SD",
+    "fasher": "SD", "nyala": "SD", "kosti": "SD", "wad madani": "SD", "sinja": "SD",
+    "sennar": "SD", "south sudan": "SS", "juba": "SS", "malakal": "SS", "wau": "SS",
+    "yambio": "SS", "torit": "SS", "bentiu": "SS",
+    "chad": "TD", "ndjamena": "TD", "moundou": "TD",
+    "niger": "NE", "niamey": "NE", "zinder": "NE", "agadez": "NE", "dosso": "NE",
+    "tahoua": "NE", "maradi": "NE", "arlit": "NE", "bilma": "NE",
+    "mali": "ML", "bamako": "ML", "timbuktu": "ML", "gao": "ML", "kidal": "ML",
+    "mopti": "ML", "sikasso": "ML", "kayes": "ML", "hombori": "ML",
+    "burkina faso": "BF", "ouagadougou": "BF", "bobo dioulasso": "BF", "koudougou": "BF",
+    "senegal": "SN", "dakar": "SN", "tambacounda": "SN", "kaolack": "SN", "ziguinchor": "SN",
+    "thies": "SN", "louga": "SN", "kolda": "SN", "matam": "SN", "gambia": "GM",
+    "banjul": "GM", "serekunda": "GM", "brikama": "GM",
+    "guinea bissau": "GW", "bissau": "GW", "guinea": "GN", "conakry": "GN", "kindia": "GN",
+    "boke": "GN", "labe": "GN", "kankan": "GN", "fouta djallon": "GN", "gueckedou": "GN",
+    "macenta": "GN", "siguiri": "GN", "dabola": "GN", "kissidougou": "GN", "nzerekore": "GN",
+    "beyla": "GN", "mandiana": "GN", "dinguiraye": "GN", "fria": "GN", "coyah": "GN",
+    "dubreka": "GN", "kamsar": "GN", "sierra leone": "SL", "freetown": "SL", "koidu": "SL",
+    "kenema": "SL", "makeni": "SL", "liberia": "LR", "monrovia": "LR", "ganta": "LR",
+    "robertsport": "LR", "bensonville": "LR", "cote d ivoire": "CI", "ivory coast": "CI",
+    "abidjan": "CI", "bouake": "CI", "korhogo": "CI", "daloa": "CI", "san pedro": "CI",
+    "yamoussoukro": "CI", "gagnoa": "CI", "dabou": "CI", "grand lahou": "CI", "sassandra": "CI",
+    "ghana": "GH", "accra": "GH", "kumasi": "GH", "tamale": "GH", "takoradi": "GH",
+    "tema": "GH", "obuasi": "GH", "koforidua": "GH", "sunyani": "GH", "cape coast": "GH",
+    "elmina": "GH", "axim": "GH", "tarkwa": "GH", "buipe": "GH", "togo": "TG", "lome": "TG",
+    "kara": "TG", "dapaong": "TG", "anecho": "TG", "kpalime": "TG", "benin city": "NG",
+    "benin": "BJ", "porto novo": "BJ", "cotonou": "BJ", "parakou": "BJ", "abomey": "BJ",
+    "lokossa": "BJ", "bassila": "BJ", "dassa zoume": "BJ",
+    "nigeria": "NG", "lagos": "NG", "abuja": "NG", "kano": "NG", "jos": "NG", "yola": "NG",
+    "maiduguri": "NG", "sokoto": "NG", "zaria": "NG", "port harcourt": "NG",
+    "abeokuta": "NG", "ibadan": "NG", "akure": "NG", "kaduna": "NG", "nassarawa": "NG",
+    "zamfara": "NG", "katsina": "NG", "bauchi": "NG", "taraba": "NG", "borno": "NG",
+    "yobe": "NG", "gombe": "NG", "jalingo": "NG", "minna": "NG", "illore": "NG",
+    "iffon": "NG", "olupona": "NG", "ejigbo": "NG", "ile ife": "NG",
+    "cameroon": "CM", "yaounde": "CM", "douala": "CM", "garoua": "CM", "maroua": "CM",
+    "bamenda": "CM", "buea": "CM", "limbe": "CM", "kribi": "CM", "edea": "CM",
+    "nkongsamba": "CM", "bafoussam": "CM", "bertoua": "CM", "ngaoundere": "CM",
+    "meiganga": "CM", "djoule": "CM", "goyka": "CM",
+    "central african republic": "CF", "bangui": "CF", "bimbo": "CF", "boda": "CF",
+    "berberati": "CF", "bossangoa": "CF", "kaga bandoro": "CF", "alindao": "CF",
+    "equatorial guinea": "GQ", "malabo": "GQ", "bata": "GQ", "mongomo": "GQ", "riaba": "GQ",
+    "sao tome": "ST", "principe": "ST", "gabon": "GA", "libreville": "GA",
+    "port gentil": "GA", "franceville": "GA", "oyem": "GA", "lambarene": "GA", "bitam": "GA",
+    "koulamoutou": "GA", "mouila": "GA", "angondje": "GA", "lastourville": "GA",
+    "dr congo": "CD", "democratic republic of the congo": "CD",
+    "democratic republic of congo": "CD", "congo democratic": "CD", "drc": "CD",
+    "kivu": "CD", "north kivu": "CD", "south kivu": "CD", "goma": "CD", "bukavu": "CD",
+    "ituri": "CD", "lubumbashi": "CD", "katanga": "CD", "haut katanga": "CD",
+    "kampene": "CD", "kisangani": "CD", "mbuji mayi": "CD", "rupela": "CD", "bondo": "CD",
+    "bukama": "CD", "shabunda": "CD", "fizi": "CD", "uvira": "CD", "walikale": "CD",
+    "masisi": "CD", "lubero": "CD", "nyiragongo": "CD", "nyamuragira": "CD",
+    "congo": "CG", "brazzaville": "CG", "pointe noire": "CG", "dolisie": "CG",
+    "kinkala": "CG", "sibiti": "CG", "impfondo": "CG", "makoua": "CG", "owando": "CG",
+    "ouesso": "CG", "angola": "AO", "luanda": "AO", "huambo": "AO", "lubango": "AO",
+    "namibe": "AO", "sumbe": "AO", "malanje": "AO", "gabela": "AO", "caconda": "AO",
+    "dondo": "AO", "waco kiji": "AO", "soyo": "AO", "cabinda": "AO",
+    "uganda": "UG", "kampala": "UG", "kasese": "UG", "fort portal": "UG", "mbarara": "UG",
+    "gulu": "UG", "lira": "UG", "masaka": "UG", "jinja": "UG", "soroti": "UG",
+    "mukono": "UG", "hoima": "UG", "rwanda": "RW", "kigali": "RW", "gisenyi": "RW",
+    "gitarama": "RW", "huye": "RW", "rusizi": "RW", "rubavu": "RW", "burundi": "BI",
+    "bujumbura": "BI", "gitega": "BI", "ngozi": "BI", "rumonge": "BI", "karuzi": "BI",
+    "rutana": "BI",
+    "ethiopia": "ET", "addis ababa": "ET", "addis": "ET", "abyssinia": "ET", "afar": "ET",
+    "dallol": "ET", "erta ale": "ET", "mekelle": "ET", "gondar": "ET", "dessie": "ET",
+    "dabbahu": "ET", "kobo": "ET", "sodo": "ET", "diredawa": "ET", "harar": "ET",
+    "jijiga": "ET", "moyale": "ET", "yabelo": "ET", "corbetti": "ET", "aluto": "ET",
+    "eritrea": "ER", "asmara": "ER", "massawa": "ER", "dahlac": "ER", "keren": "ER",
+    "nakfa": "ER", "assab": "ER", "djibouti": "DJ",
+    "somalia": "SO", "mogadishu": "SO", "hargeisa": "SO", "galkayo": "SO", "baidoa": "SO",
+    "kismaayo": "SO", "beledweyne": "SO", "barawa": "SO", "marka": "SO", "bosaso": "SO",
+    "kenya": "KE", "nairobi": "KE", "kisumu": "KE", "nakuru": "KE", "eldoret": "KE",
+    "mbale": "KE", "malindi": "KE", "mombasa": "KE", "lamu": "KE", "lodwar": "KE",
+    "garissa": "KE", "isiolo": "KE", "nyahururu": "KE", "kakamega": "KE", "bungoma": "KE",
+    "tanzania": "TZ", "dar es salaam": "TZ", "dodoma": "TZ", "arusha": "TZ",
+    "kilimanjaro": "TZ", "tanganyika": "TZ", "kigoma": "TZ", "mbeya": "TZ", "mwanza": "TZ",
+    "tabora": "TZ", "morogoro": "TZ", "tanga": "TZ", "buguma": "TZ", "bukoba": "TZ",
+    "sengerema": "TZ", "ngara": "TZ",
+    "zambia": "ZM", "lusaka": "ZM", "kafue": "ZM", "kariba": "ZM", "ndola": "ZM",
+    "kitwe": "ZM", "livingstone": "ZM", "kasama": "ZM", "choma": "ZM", "monze": "ZM",
+    "chinsali": "ZM", "malawi": "MW", "lilongwe": "MW", "salima": "MW", "mzuzu": "MW",
+    "blantyre": "MW", "zomba": "MW", "mangochi": "MW", "karonga": "MW", "dedza": "MW",
+    "nkhata bay": "MW",
+    "mozambique": "MZ", "maputo": "MZ", "nampula": "MZ", "tete": "MZ", "zambezia": "MZ",
+    "sofala": "MZ", "inhambane": "MZ", "pemba": "MZ", "cabo delgado": "MZ", "xai xai": "MZ",
+    "vilankulo": "MZ", "mocimboa": "MZ", "quelimane": "MZ", "anguanja": "MZ",
+    "zimbabwe": "ZW", "harare": "ZW", "gwanda": "ZW", "bulawayo": "ZW", "masvingo": "ZW",
+    "kwekwe": "ZW", "shamva": "ZW", "chiredzi": "ZW",
+    "botswana": "BW", "gaborone": "BW", "francistown": "BW", "mahalapye": "BW",
+    "lobatse": "BW", "serowe": "BW", "kanye": "BW", "jwaneng": "BW",
+    "namibia": "NA", "windhoek": "NA", "walvis bay": "NA", "walvisbay": "NA",
+    "swakopmund": "NA", "otjiwarongo": "NA", "outjo": "NA", "ruacana": "NA", "arandis": "NA",
+    "gobabis": "NA", "keetmanshoop": "NA", "luderitz": "NA", "omaruru": "NA",
+    "oshakati": "NA", "ondangwa": "NA", "rupara": "NA",
+    "south africa": "ZA", "johannesburg": "ZA", "cape town": "ZA", "durban": "ZA",
+    "pretoria": "ZA", "rustenburg": "ZA", "klerksdorp": "ZA", "tulbagh": "ZA", "karoo": "ZA",
+    "mpumalanga": "ZA", "lesotho": "LS", "maseru": "LS", "eswatini": "SZ",
+    "swaziland": "SZ", "mbabane": "SZ",
+    "madagascar": "MG", "antananarivo": "MG", "toamasina": "MG", "mahajanga": "MG",
+    "diego suarez": "MG", "antsiranana": "MG", "fianarantsoa": "MG", "toliara": "MG",
+    "antsirabe": "MG", "moramanga": "MG", "morondava": "MG", "nosy be": "MG",
+    "mayotte": "YT", "mamoudzou": "YT", "dzaoudzi": "YT", "comoros": "KM", "moroni": "KM",
+    "mutsamudu": "KM", "fomboni": "KM", "anzjouan": "KM", "grande comore": "KM", "mwali": "KM",
+    "seychelles": "SC", "mahe": "SC", "praslin": "SC", "la digue": "SC",
+    "mauritius": "MU", "port louis": "MU", "rodrigues": "MU", "cargados carajos": "MU",
+    "reunion": "RE", "fournaise": "RE",
+    "cape verde": "CV", "cabo verde": "CV", "sao vicente": "CV", "fogo": "CV",
+    "santo antao": "CV", "boavista": "CV",
+    # --- Atlántico Sur / Antártida ---
+    "ascension": "SH", "tristan": "SH", "saint helena": "SH", "st helena": "SH",
+    "gough": "SH", "bouvet": "BV", "south georgia": "GS", "south sandwich": "GS",
+    "falkland": "FK", "malvinas": "FK", "crozet": "TF", "amsterdam island": "TF",
+    "kerguelen": "TF", "saint paul island": "TF", "europa island": "TF", "juan de nova": "TF",
+    "glorioso": "TF", "tromelin": "TF", "scattered islands": "TF", "heard": "HM",
+    "chagos": "IO", "diego garcia": "IO", "british indian ocean": "IO",
+    "antarctic": "AQ", "antarctica": "AQ", "adelie": "AQ", "ross sea": "AQ",
+    "weddell": "AQ", "larsen": "AQ", "riiser larsen": "AQ", "duse": "AQ", "balleny": "AQ",
+    "scotia": "AQ", "bransfield": "AQ", "learmonth": "AQ", "south orkney": "AQ",
+    "south shetland": "AQ", "cape adare": "AQ", "mcmurdo": "AQ", "amundsen scott": "AQ",
+    "ross island": "AQ", "deception island": "AQ", "livingston island": "AQ",
+    "elephant island": "AQ", "king george island": "AQ", "george v island": "AQ",
+    "alexander island": "AQ", "charcot island": "AQ", "filchner": "AQ", "ronne": "AQ",
+    "amery": "AQ", "shackleton": "AQ", "maud": "AQ", "princess elizabeth": "AQ",
+    # --- Oriente Medio ---
+    "turkey": "TR", "turkiye": "TR", "istanbul": "TR", "ankara": "TR", "izmir": "TR",
+    "bodrum": "TR", "kahramanmaras": "TR", "gaziantep": "TR", "hatay": "TR", "malatya": "TR",
+    "elazig": "TR", "mersin": "TR", "adana": "TR", "antalya": "TR", "konya": "TR",
+    "anatolia": "TR", "canakkale": "TR", "gallipoli": "TR", "samsun": "TR", "trabzon": "TR",
+    "van turkey": "TR", "hakkari": "TR", "sirnak": "TR", "mardin": "TR", "sanliurfa": "TR",
+    "adiyaman": "TR", "osmaniye": "TR", "antakya": "TR", "narlica": "TR", "pazarcik": "TR",
+    "elbistan": "TR", "cyprus": "CY", "nicosia": "CY", "limassol": "CY", "paphos": "CY",
+    "larnaca": "CY", "famagusta": "CY",
+    "syria": "SY", "aleppo": "SY", "latakia": "SY", "idlib": "SY", "lebanon": "LB",
+    "beirut": "LB", "israel": "IL", "jerusalem": "IL", "tel aviv": "IL", "eilat": "IL",
+    "dead sea": "IL", "palestine": "PS", "gaza": "PS", "ramallah": "PS", "nablus": "PS",
+    "hebron": "PS", "jericho": "PS", "bethlehem": "PS", "west bank": "PS",
+    "jordan": "JO", "amman": "JO", "aqaba": "JO", "iraq": "IQ", "baghdad": "IQ",
+    "mosul": "IQ", "kurdistan": "IQ", "halabja": "IQ",
+    "iran": "IR", "tehran": "IR", "tabriz": "IR", "kerman": "IR", "kermanshah": "IR",
+    "isfahan": "IR", "hormozgan": "IR", "khuzestan": "IR", "luristan": "IR", "bushehr": "IR",
+    "kish": "IR", "qeshm": "IR", "hormuz": "IR", "jask": "IR", "chabahar": "IR",
+    "zahedan": "IR", "birjand": "IR", "kashan": "IR", "arak": "IR", "saveh": "IR",
+    "qom": "IR", "qum": "IR", "karaj": "IR", "qazvin": "IR", "zanjan": "IR",
+    "ardabil": "IR", "urmia": "IR", "maragheh": "IR", "miandoab": "IR", "ilam": "IR",
+    "ahvaz": "IR", "ahwaz": "IR", "masjed": "IR", "shiraz": "IR", "kazerun": "IR",
+    "behbahan": "IR", "yasuj": "IR", "yazd": "IR", "mashhad": "IR", "bojnurd": "IR",
+    "sabzevar": "IR", "neyshabur": "IR", "bandar abbass": "IR", "bandar lengeh": "IR",
+    "bandar kong": "IR", "konarak": "IR", "sirik": "IR", "minab": "IR", "rudan": "IR",
+    "bashagard": "IR", "khamir": "IR", "damghan": "IR", "shahrud": "IR", "semnan": "IR",
+    "sari": "IR", "gorgan": "IR", "gonbad": "IR", "khoy": "IR",
+    "kuwait": "KW", "bahrain": "BH", "manama": "BH", "muharraq": "BH", "qatar": "QA",
+    "doha": "QA", "united arab emirates": "AE", "uae": "AE", "dubai": "AE",
+    "abu dhabi": "AE", "sharjah": "AE", "ajman": "AE", "ras al khaimah": "AE",
+    "fujairah": "AE", "umm al quwain": "AE", "oman": "OM", "muscat": "OM", "salalah": "OM",
+    "sohar": "OM", "nizwa": "OM", "dhofar": "OM",
+    "saudi arabia": "SA", "riyadh": "SA", "jeddah": "SA", "mecca": "SA", "makkah": "SA",
+    "medina": "SA", "madinah": "SA", "dammam": "SA", "khobar": "SA", "qatif": "SA",
+    "katif": "SA", "tabuk": "SA", "abha": "SA", "jizan": "SA", "jazan": "SA",
+    "najran": "SA", "buraydah": "SA", "qassim": "SA", "taif": "SA", "yanbu": "SA",
+    "jubail": "SA", "hofuf": "SA", "unayzah": "SA", "sakaka": "SA", "jouf": "SA",
+    "jawf": "SA", "sharurah": "SA", "neom": "SA", "asir": "SA",
+    "yemen": "YE", "sanaa": "YE", "sana a": "YE", "aden": "YE", "taiz": "YE",
+    "hodeidah": "YE", "hudaydah": "YE", "marib": "YE", "saada": "YE", "ibb": "YE",
+    "dhamar": "YE", "lahij": "YE", "abyan": "YE", "shabwah": "YE", "hadramawt": "YE",
+    "mukalla": "YE",
+}
+
+def _norm_country_text(s):
+    """Normaliza texto para el escaneo: minúsculas, sin guiones/apóstrofes/puntos."""
+    try:
+        return re.sub(r"\s+", " ", re.sub(r"[-'.]", " ", str(s or "").lower())).strip()
+    except Exception:
+        return ""
+
+# Alternativa ordenada por longitud descendente: los términos más específicos
+# ("papua new guinea", "state of georgia", "san salvador de jujuy") ganan a los
+# subcadenas más cortas ("guinea", "georgia", "san salvador").
+_COUNTRY_RE = re.compile(
+    r"(?<![a-z0-9])(" + "|".join(re.escape(t) for t in sorted(_COUNTRY_TERMS, key=len, reverse=True)) + r")(?![a-z0-9])"
+)
+
+def flag_emoji(code):
+    """Bandera Unicode a partir de un código ISO-3166 alfa-2 (🌐 si no aplica)."""
+    try:
+        if code and len(code) == 2 and code.isalpha() and code.isascii():
+            return "".join(chr(0x1F1E6 + (ord(ch) - 65)) for ch in code.upper())
+    except Exception:
+        pass
+    return "🌐"
+
+def classify_event_country(lat, lon, place, auth=""):
+    """
+    Clasificador mundial de eventos sísmicos.
+    1) Los 5 países foco (PA/VE/ES/AR/HN) conservan la regla estricta con cajas.
+    2) El resto del mundo se clasifica por nombres de país/región en el texto.
+    3) Mar abierto / dorsales sin nombre → (GLOBAL, Internacional, 🌐).
+    Devuelve (code, name, flag).
+    """
+    try:
+        code = identify_target_country(lat, lon, place, auth)
+        if code:
+            return code, TARGET_COUNTRIES[code]["name"], flag_emoji(code)
+        m = _COUNTRY_RE.search(_norm_country_text(place))
+        if m:
+            c = _COUNTRY_TERMS[m.group(1)]
+            return c, COUNTRY_NAMES_ES.get(c, c.title()), flag_emoji(c)
+    except Exception:
+        pass
+    return GLOBAL_CODE, GLOBAL_NAME, "🌐"
+
 # --- SSE & Realtime Push Alert Subscriptions ---
 _sse_clients = []
 _sse_lock = threading.Lock()
@@ -795,8 +1412,8 @@ def process_emsc_ws_message(msg_text):
         unid = props.get("unid") or data.get("id") or str(int(time.time() * 1000))
         time_str = props.get("time", "")
 
-        country_code = identify_target_country(lat, lon, place, auth)
-        if not country_code:
+        country_code, country_name, country_flag = classify_event_country(lat, lon, place, auth)
+        if country_code not in TARGET_COUNTRIES and mag < GLOBAL_MIN_MAG:
             return None
 
         try:
@@ -805,7 +1422,6 @@ def process_emsc_ws_message(msg_text):
         except Exception:
             time_ms = int(time.time() * 1000)
 
-        country_meta = TARGET_COUNTRIES[country_code]
         preds = calculate_seismic_predictions(lat, lon, depth, mag, time_ms)
 
         live_event_id = f"emsc-live-{unid}"
@@ -824,8 +1440,8 @@ def process_emsc_ws_message(msg_text):
                 "source": f"EMSC/LIVE-{auth}",
                 "source_feed": f"EMSC Live WebSocket ({auth})",
                 "country_code": country_code,
-                "country_name": country_meta["name"],
-                "country_flag": country_meta["flag"],
+                "country_name": country_name,
+                "country_flag": country_flag,
                 "pga": None,
                 "is_live_stream": True,
                 "is_consensus": True,
@@ -842,8 +1458,8 @@ def process_emsc_ws_message(msg_text):
                 _ram_quake_cache = {
                     "type": "FeatureCollection",
                     "metadata": {
-                        "title": "Red Sísmica Focalizada",
-                        "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras"],
+                        "title": "Red Sísmica Mundial en Tiempo Real",
+                        "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras", "Resto del mundo (M ≥ 4.0)"],
                         "total_events": 0,
                         "counts_by_country": {"PA": 0, "VE": 0, "ES": 0, "AR": 0, "HN": 0},
                         "realtime_streaming": True
@@ -876,8 +1492,7 @@ def process_emsc_ws_message(msg_text):
             counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0, "HN": 0}
             for f in features:
                 c_code = f.get("properties", {}).get("country_code")
-                if c_code in counts:
-                    counts[c_code] += 1
+                counts[c_code] = counts.get(c_code, 0) + 1
             _ram_quake_cache["metadata"]["counts_by_country"] = counts
             _ram_quake_cache["metadata"]["total_events"] = len(features)
             _last_ram_update_time = time.time()
@@ -1089,7 +1704,10 @@ def fetch_emsc_region(region):
                     place = props.get("flynn_region", "")
                     auth = props.get("auth", "EMSC")
                     
-                    country_code = identify_target_country(lat, lon, place, auth)
+                    country_code, country_name, country_flag = classify_event_country(lat, lon, place, auth)
+                    mag_val = _safe_float(props.get("mag"), 0.0)
+                    if country_code not in TARGET_COUNTRIES and mag_val < GLOBAL_MIN_MAG:
+                        continue
                     if country_code:
                         try:
                             time_str = props["time"].replace('Z', '+00:00')
@@ -1097,21 +1715,67 @@ def fetch_emsc_region(region):
                         except Exception:
                             time_ms = int(time.time() * 1000)
 
-                        country_meta = TARGET_COUNTRIES[country_code]
                         events.append({
                             "id": f"emsc-{f.get('id') or props.get('unid')}",
-                            "mag": _safe_float(props.get("mag"), 0.0),
+                            "mag": mag_val,
                             "place": f"{place} ({auth})",
                             "time": time_ms,
                             "coords": [lon, lat, depth],
                             "source": f"EMSC/{auth}",
                             "country_code": country_code,
-                            "country_name": country_meta["name"],
-                            "country_flag": country_meta["flag"],
+                            "country_name": country_name,
+                            "country_flag": country_flag,
                             "pga": None
                         })
     except Exception:
         pass
+    return events
+
+def fetch_emsc_global():
+    """Ingesta EMSC sin recorte geográfico: todos los países del mundo con M >= GLOBAL_MIN_MAG."""
+    t0 = time.time()
+    url = f"https://www.seismicportal.eu/fdsnws/event/1/query?format=json&minmag={GLOBAL_MIN_MAG}&limit=100"
+    events = []
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'GlobalQuake-Precision/1.1.2'})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            dt = int((time.time() - t0) * 1000)
+            for f in data.get("features", []):
+                coords = f.get("geometry", {}).get("coordinates", [])
+                props = f.get("properties", {})
+                if len(coords) >= 2 and props.get("time"):
+                    lon, lat = float(coords[0]), float(coords[1])
+                    depth = abs(float(coords[2])) if len(coords) > 2 else 10.0
+                    place = props.get("flynn_region", "")
+                    auth = props.get("auth", "EMSC")
+
+                    country_code, country_name, country_flag = classify_event_country(lat, lon, place, auth)
+                    if country_code not in TARGET_COUNTRIES and _safe_float(props.get("mag"), 0.0) < GLOBAL_MIN_MAG:
+                        continue
+                    try:
+                        time_str = props["time"].replace('Z', '+00:00')
+                        time_ms = int(datetime.fromisoformat(time_str).timestamp() * 1000)
+                    except Exception:
+                        time_ms = int(time.time() * 1000)
+
+                    events.append({
+                        "id": f"emsc-global-{f.get('id') or props.get('unid')}",
+                        "mag": _safe_float(props.get("mag"), 0.0),
+                        "place": f"{place} ({auth})",
+                        "time": time_ms,
+                        "coords": [lon, lat, depth],
+                        "source": f"EMSC/{auth}",
+                        "country_code": country_code,
+                        "country_name": country_name,
+                        "country_flag": country_flag,
+                        "pga": None
+                    })
+            _server_telemetry["emsc_global"]["latency_ms"] = dt
+            _server_telemetry["emsc_global"]["status"] = "ONLINE"
+            _server_telemetry["emsc_global"]["last_sync"] = int(time.time() * 1000)
+    except Exception:
+        _server_telemetry["emsc_global"]["status"] = "DEGRADED"
     return events
 
 def fetch_usgs_feed():
@@ -1131,9 +1795,10 @@ def fetch_usgs_feed():
                     props = f.get("properties", {})
                     place = props.get("place") or ""
                     
-                    country_code = identify_target_country(lat, lon, place, "USGS")
+                    country_code, country_name, country_flag = classify_event_country(lat, lon, place, "USGS")
+                    if country_code not in TARGET_COUNTRIES and _safe_float(props.get("mag"), 0.0) < GLOBAL_MIN_MAG:
+                        continue
                     if country_code:
-                        country_meta = TARGET_COUNTRIES[country_code]
                         events.append({
                             "id": f.get("id"),
                             "mag": _safe_float(props.get("mag"), 0.0),
@@ -1142,8 +1807,8 @@ def fetch_usgs_feed():
                             "coords": [lon, lat, depth],
                             "source": "USGS",
                             "country_code": country_code,
-                            "country_name": country_meta["name"],
-                            "country_flag": country_meta["flag"],
+                            "country_name": country_name,
+                            "country_flag": country_flag,
                             "pga": None,
                             "felt": _safe_int(props.get("felt"), 0)
                         })
@@ -1162,9 +1827,10 @@ def fetch_gq_events():
         if m:
             uuid, lat, lon, depth, origin, mag, pga, region = m.groups()
             lat_f, lon_f, depth_f = float(lat), float(lon), abs(float(depth))
-            country_code = identify_target_country(lat_f, lon_f, region, "GQ")
+            country_code, country_name, country_flag = classify_event_country(lat_f, lon_f, region, "GQ")
+            if country_code not in TARGET_COUNTRIES and float(mag) < GLOBAL_MIN_MAG:
+                continue
             if country_code:
-                country_meta = TARGET_COUNTRIES[country_code]
                 events.append({
                     "id": f"gq-{uuid[:8]}",
                     "mag": round(float(mag), 2),
@@ -1173,8 +1839,8 @@ def fetch_gq_events():
                     "coords": [lon_f, lat_f, depth_f],
                     "source": "GlobalQuake",
                     "country_code": country_code,
-                    "country_name": country_meta["name"],
-                    "country_flag": country_meta["flag"],
+                    "country_name": country_name,
+                    "country_flag": country_flag,
                     "pga": float(pga)
                 })
     _server_telemetry["gq_primary"]["events_count"] = len(events)
@@ -1222,7 +1888,9 @@ def merge_and_triangulate_events(raw_events):
         confidence_score = min(99, 85 + sources_count * 7) if is_consensus else 85
 
         country_code = primary_ref["country_code"]
-        country_meta = TARGET_COUNTRIES[country_code]
+        country_meta = TARGET_COUNTRIES.get(country_code)
+        country_name = country_meta["name"] if country_meta else primary_ref.get("country_name") or COUNTRY_NAMES_ES.get(country_code, GLOBAL_NAME)
+        country_flag = (country_meta["flag"] if country_meta else "") or primary_ref.get("country_flag") or flag_emoji(country_code)
 
         cluster_felt = max([_safe_int(ev.get("felt"), 0) for ev in matched_cluster]) if matched_cluster else 0
         comm_felt = get_felt_reports(primary_ref["id"])
@@ -1250,8 +1918,8 @@ def merge_and_triangulate_events(raw_events):
                 "confidence_score": confidence_score,
                 "confidence_text": confidence_text,
                 "country_code": country_code,
-                "country_name": country_meta["name"],
-                "country_flag": country_meta["flag"],
+                "country_name": country_name,
+                "country_flag": country_flag,
                 "felt": total_felt,
                 "felt_reports": total_felt,
                 "usgs_felt": cluster_felt,
@@ -1276,12 +1944,13 @@ def merge_and_triangulate_events(raw_events):
 def _execute_full_fetch():
     """Ejecución concurrente de la ingesta sísmica multired"""
     raw_events = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=7) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         f_usgs = executor.submit(fetch_usgs_feed)
         f_gq = executor.submit(fetch_gq_events)
+        f_global = executor.submit(fetch_emsc_global)
         f_regions = [executor.submit(fetch_emsc_region, reg) for reg in QUERY_REGIONS]
 
-        for future in [f_gq, f_usgs] + f_regions:
+        for future in [f_gq, f_usgs, f_global] + f_regions:
             try:
                 res = future.result()
                 if res:
@@ -1304,8 +1973,7 @@ def _execute_full_fetch():
         counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0, "HN": 0}
         for f in fused_features:
             cc = f["properties"].get("country_code")
-            if cc in counts:
-                counts[cc] += 1
+            counts[cc] = counts.get(cc, 0) + 1
             # Incorporar mecanismo focal (tensor de momento / beachball)
             try:
                 coords = f.get("geometry", {}).get("coordinates", [0, 0, 10])
@@ -1334,8 +2002,8 @@ def _execute_full_fetch():
             "type": "FeatureCollection",
             "metadata": {
                 "generated": int(time.time() * 1000),
-                "title": "Red Sísmica Focalizada en Tiempo Real: Panamá, Venezuela, España y Argentina",
-                "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras"],
+                "title": "Red Sísmica Mundial en Tiempo Real: Foco en Panamá, Venezuela, España, Argentina y Honduras",
+                "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras", "Resto del mundo (M ≥ 4.0)"],
                 "total_events": len(fused_features),
                 "counts_by_country": counts,
                 "consensus_events": len([f for f in fused_features if f["properties"]["is_consensus"]]),
@@ -1350,8 +2018,8 @@ def _execute_full_fetch():
     return {
         "type": "FeatureCollection",
         "metadata": {
-            "title": "Red Sísmica Focalizada",
-            "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras"],
+            "title": "Red Sísmica Mundial",
+            "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras", "Resto del mundo (M ≥ 4.0)"],
             "total_events": 0,
             "counts_by_country": {"PA": 0, "VE": 0, "ES": 0, "AR": 0, "HN": 0},
             "realtime_streaming": True
@@ -1471,10 +2139,7 @@ def register_mesh_node(node_id, lat, lon, accuracy=10.0, pga=0.0, sta_lta=1.0, n
         for nid in expired:
             _mesh_nodes.pop(nid, None)
 
-        country_code = reverse_geocode_country(float(lat), float(lon))
-        if country_code not in TARGET_COUNTRIES:
-            country_code = "VE"
-        country_name = TARGET_COUNTRIES[country_code]["name"]
+        country_code, country_name, _flag = classify_event_country(float(lat), float(lon), "", "")
 
         # Detectar si el nodo es móvil (con acelerómetro) o computadora de escritorio (nodo centinela fijo)
         if node_type == "auto":
@@ -1639,10 +2304,7 @@ def process_mesh_trigger(node_id, lat, lon, pga, sta_lta=4.0, device="Mobile Acc
 
                 # Estimación de Magnitud preliminar empírica M_L basada en PGA y número de nodos
                 est_mag = round(min(7.8, max(3.0, 2.7 + 1.25 * math.log10(max(1.0, pga_max)) + 0.35 * math.log10(nodes_count))), 1)
-                country_code = reverse_geocode_country(epi_lat, epi_lon)
-                if country_code not in TARGET_COUNTRIES:
-                    country_code = "VE"
-                country_name = TARGET_COUNTRIES[country_code]["name"]
+                country_code, country_name, _flag = classify_event_country(epi_lat, epi_lon, "", "")
                 cluster_id = f"mesh-eew-{int(now * 1000)}"
 
                 # Construir evento GeoJSON unificado compatible con todo el sistema
@@ -2192,7 +2854,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
                 "status": "connected",
                 "service": "KorshQuake EEW Realtime Stream",
                 "engine": "EMSC-WebSocket-P/S-Predictor",
-                "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras"],
+                "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras", "Resto del mundo (M ≥ 4.0)"],
                 "timestamp": int(time.time() * 1000)
             })
             try:
@@ -2284,7 +2946,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             status_data = {
                 "version": CURRENT_VERSION,
                 "software_name": "KorshQuake",
-                "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras"],
+                "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras", "Resto del mundo (M ≥ 4.0)"],
                 "streaming_mode": "ACTIVE_RAM_STREAMING",
                 "refresh_interval_ms": 2800,
                 "ram_cache_age_ms": ram_age,
@@ -2346,11 +3008,10 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             for f in features:
                 props = f.get("properties", {})
                 cc = props.get("country_code")
-                mag = float(props.get("mag") or 0.0)
+                mag = float(props.get("mag") or 0)
                 ev_time = float(props.get("time") or 0)
 
-                if cc in counts:
-                    counts[cc] += 1
+                counts[cc] = counts.get(cc, 0) + 1
                 if mag > max_mag:
                     max_mag = mag
                     strongest_event = props
@@ -2510,15 +3171,14 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             counts = {"PA": 0, "VE": 0, "ES": 0, "AR": 0, "HN": 0}
             for f in filtered:
                 cc = f.get("properties", {}).get("country_code")
-                if cc in counts:
-                    counts[cc] += 1
+                counts[cc] = counts.get(cc, 0) + 1
 
             response_data = {
                 "type": "FeatureCollection",
                 "metadata": {
                     "generated": int(time.time() * 1000),
-                    "title": "KorshQuake API v1.1.2 - Panamá, Venezuela, España y Argentina",
-                    "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras"],
+                    "title": "KorshQuake API — Cobertura Mundial (foco PA/VE/ES/AR/HN)",
+                    "target_countries": ["Panamá", "Venezuela", "España", "Argentina", "Honduras", "Resto del mundo (M ≥ 4.0)"],
                     "total_events": len(filtered),
                     "raw_pool_events": len(raw_features),
                     "counts_by_country": counts,

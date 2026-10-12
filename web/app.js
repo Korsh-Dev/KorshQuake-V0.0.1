@@ -595,7 +595,7 @@ let currentCountryFilter = 'all';
 
 // Coordenadas y vistas por país
 const REGION_VIEWPORTS = {
-  all: { center: [15.0, -40.0], zoom: 3, title: "Mapa Sísmico: Panamá, Venezuela, España, Argentina y Honduras" },
+  all: { center: [12.0, -30.0], zoom: 2, title: "Mapa Sísmico Mundial: Todos los Países (foco en Panamá, Venezuela, España, Argentina y Honduras)" },
   PA: { center: [8.538, -80.782], zoom: 7.5, title: "Panamá - Monitoreo Sísmico Nacional" },
   VE: { center: [8.000, -66.100], zoom: 6.5, title: "Venezuela - Monitoreo Sísmico Nacional" },
   ES: { center: [40.200, -3.750], zoom: 6.0, title: "España - Monitoreo Peninsular e Insular" },
@@ -800,8 +800,8 @@ function initMap() {
   if (!mapContainer) return;
 
   map = L.map('map', {
-    center: [15.0, -40.0],
-    zoom: 3,
+    center: [12.0, -30.0],
+    zoom: 2,
     minZoom: 1.5,
     maxZoom: 18,
     zoomControl: false,
@@ -952,7 +952,7 @@ function setCountryFilter(code) {
 // Update Country Pill Counts
 function updateCountryPillCounts(counts) {
   if (!counts) return;
-  const countAll = (counts.PA || 0) + (counts.VE || 0) + (counts.ES || 0) + (counts.AR || 0);
+  const countAll = Object.values(counts).reduce((sum, n) => sum + (Number(n) || 0), 0);
   const elAll = document.getElementById('count-pill-all');
   const elPa = document.getElementById('count-pill-pa');
   const elVe = document.getElementById('count-pill-ve');

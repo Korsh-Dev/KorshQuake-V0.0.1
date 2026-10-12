@@ -1,11 +1,13 @@
 # KorshQuake v1.1.9 PRO 🌍⚡
 
-**KorshQuake** es un centro de monitoreo, detección y alerta temprana de terremotos en tiempo real enfocado exclusivamente en cinco territorios:
+**KorshQuake** es un centro de monitoreo, detección y alerta temprana de terremotos en tiempo real con **cobertura de todos los países del mundo**, con foco prioritario en cinco territorios:
 - 🇵🇦 **Panamá**
 - 🇻🇪 **Venezuela**
 - 🇪🇸 **España** (Península, Baleares e Islas Canarias)
 - 🇦🇷 **Argentina**
 - 🇭🇳 **Honduras**
+
+Para el resto del planeta se publican todos los eventos **M ≥ 4.0** clasificados por país (USGS + EMSC sin recorte geográfico); los países foco se publican con cualquier magnitud. Los eventos en mar abierto o dorsales oceánicas se etiquetan como 🌐 **Internacional**.
 
 El sistema ingiere y triangula en paralelo datos de redes sismológicas oficiales (IGN, FUNVISIS, INPRES, OSOP/RSN, EMSC y USGS) con refresco continuo en memoria RAM cada 2.8 segundos y respuesta de API en menos de 40 ms.
 
@@ -97,7 +99,7 @@ server {
 ## 📡 Endpoints de la API
 - `GET /api/events/live`: Canal de transmisión continua SSE (*Server-Sent Events*) para alertas sísmicas y detección de Onda P/S en tiempo real.
 - `GET /api/predict`    : Motor EEW de predicción de arribo de Onda P ($7.8\text{ km/s}$) y Onda S ($4.1\text{ km/s}$), PGA y MMI hacia centros urbanos.
-- `GET /api/quakes`     : GeoJSON en memoria RAM con sismos filtrados de Panamá, Venezuela, España y Argentina.
+- `GET /api/quakes`     : GeoJSON en memoria RAM con sismos de todos los países (foco PA/VE/ES/AR/HN + M ≥ 4.0 mundial). Acepta `?country=JP,DE` etc.
 - `GET /api/status`     : Telemetría del servidor, modo de streaming y latencias.
 - `GET /api/servers`    : Estado y latencia de las redes sismológicas conectadas.
 - `GET /api/logs`       : Logs en tiempo real del motor sísmico.

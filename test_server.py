@@ -40,9 +40,9 @@ class TestKorshQuakeServer(unittest.TestCase):
         self.assertEqual(data["software_name"], "KorshQuake")
         self.assertIn("apk_url", data)
         self.assertIn("target_countries", data)
-        self.assertEqual(set(data["target_countries"]), {"Panamá", "Venezuela", "España", "Argentina", "Honduras"})
+        self.assertEqual(set(data["target_countries"]), {"Panamá", "Venezuela", "España", "Argentina", "Honduras", "Resto del mundo (M ≥ 4.0)"})
 
-    def test_quakes_strictly_target_countries(self):
+    def test_quakes_valid_country_codes(self):
         url = f"http://127.0.0.1:{self.port}/api/quakes"
         req = urllib.request.urlopen(url, timeout=12)
         self.assertEqual(req.status, 200)
@@ -52,20 +52,82 @@ class TestKorshQuakeServer(unittest.TestCase):
         self.assertIsInstance(data["features"], list)
         self.assertGreater(len(data["features"]), 0, "Debe haber al menos un evento en el feed")
 
-        allowed_codes = {"PA", "VE", "ES", "AR", "HN"}
-        allowed_names = {"Panamá", "Venezuela", "España", "Argentina", "Honduras"}
-
-        # Verificar rigurosamente que el 100% de los sismos pertenezcan a los 4 países
+        # Cobertura mundial: cada evento debe traer un código ISO válido o GLOBAL,
+        # con nombre de país no vacío. Ya no se limita a los 5 países foco.
         for f in data["features"]:
             props = f.get("properties", {})
             country_code = props.get("country_code")
             country_name = props.get("country_name")
             
-            self.assertIn(country_code, allowed_codes, f"País no permitido detectado: {country_code} ({props.get('place')})")
-            self.assertIn(country_name, allowed_names, f"Nombre de país no permitido: {country_name}")
+            valid = (
+                country_code == server.GLOBAL_CODE or
+                (isinstance(country_code, str) and len(country_code) == 2 and country_code.isalpha() and country_code.isupper())
+            )
+            self.assertTrue(valid, f"Código de país inválido: {country_code} ({props.get('place')})")
+            self.assertTrue(country_name, f"Nombre de país vacío para {country_code} ({props.get('place')})")
+            if country_code != server.GLOBAL_CODE:
+                self.assertGreaterEqual(props.get("mag", 0), 0)
 
         counts = data.get("metadata", {}).get("counts_by_country", {})
-        self.assertTrue(any(counts[c] > 0 for c in allowed_codes), "Al menos un país debe tener eventos")
+        self.assertTrue(any(v > 0 for v in counts.values()), "Al menos un país debe tener eventos")
+
+    def test_classify_event_country_global(self):
+        # Países foco conservan la regla estricta
+        code, name, flag = server.classify_event_country(8.42, -80.1, "Panama City region", "USGS")
+        self.assertEqual(code, "PA")
+        self.assertEqual(name, "Panamá")
+        self.assertEqual(flag, "🇵🇦")
+
+        # Resto del mundo por texto de place/flynn_region
+        cases = [
+            (38.3, 142.3, "offshore east coast of Honshu, Japan", "JP", "Japón"),
+            (0.5, 122.5, "MINAHASA, SULAWESI, INDONESIA", "ID", "Indonesia"),
+            (-33.5, -70.6, "near Santiago, Chile", "CL", "Chile"),
+            (51.9, -176.0, "Fox Islands, Alaska", "US", "Estados Unidos"),
+            (-6.0, 155.5, "New Britain region, Papua New Guinea", "PG", "Papúa Nueva Guinea"),
+            (19.1, -99.1, "near Mexico City, Mexico", "MX", "México"),
+            (64.1, -21.9, "near Reykjavik, Iceland", "IS", "Islandia"),
+            (-4.5, 120.0, "SULAWESI SEA, INDONESIA", "ID", "Indonesia"),
+            (16.5, -145.6, "Mariana Islands region", "MP", "Marianas del Norte"),
+            (28.2, 84.7, "Nepal-India border region", "NP", "Nepal"),
+        ]
+        for lat, lon, place, want_code, want_name in cases:
+            code, name, flag = server.classify_event_country(lat, lon, place, "USGS")
+            self.assertEqual(code, want_code, f"place={place!r} → {code}, esperaba {want_code}")
+            self.assertEqual(name, want_name, f"place={place!r} → {name}, esperaba {want_name}")
+            self.assertEqual(len(flag), 2, f"flag inválida para {want_code}")
+
+        # Mar abierto sin nombre de país → GLOBAL/Internacional
+        code, name, flag = server.classify_event_country(-50.0, -150.0, "Southeastern Pacific Rise", "EMSC")
+        self.assertEqual(code, server.GLOBAL_CODE)
+        self.assertEqual(name, server.GLOBAL_NAME)
+        self.assertEqual(flag, "🌐")
+
+    def test_global_threshold_rejects_small_events(self):
+        # M3.5 en Japón (fuera de países foco) se descarta; M5.2 pasa como JP
+        base_props = {
+            "time": "2026-10-09T22:00:00Z",
+            "auth": "JMA",
+            "lat": 38.3,
+            "lon": 142.3,
+            "depth": 10.0,
+        }
+        for mag, expect_none in [(3.5, True), (5.2, False)]:
+            ws_msg = json.dumps({
+                "action": "create",
+                "data": {
+                    "id": f"test_global_{mag}",
+                    "geometry": {"type": "Point", "coordinates": [142.3, 38.3, -10.0]},
+                    "properties": dict(base_props, unid=f"test_global_{mag}", mag=mag, flynn_region="OFFSHORE EAST COAST OF HONSHU, JAPAN"),
+                }
+            })
+            event = server.process_emsc_ws_message(ws_msg)
+            if expect_none:
+                self.assertIsNone(event, f"M{mag} fuera de países foco debía descartarse")
+            else:
+                self.assertIsNotNone(event, f"M{mag} en Japón debía publicarse")
+                self.assertEqual(event["properties"]["country_code"], "JP")
+                self.assertEqual(event["properties"]["country_name"], "Japón")
 
     def test_apk_download(self):
         url = f"http://127.0.0.1:{self.port}/KorshQuake.apk"
@@ -114,7 +176,8 @@ class TestKorshQuakeServer(unittest.TestCase):
         self.assertIn("total_events", data)
         self.assertIn("max_magnitude", data)
         self.assertIn("uptime_seconds", data)
-        self.assertEqual(set(data["counts_by_country"].keys()), {"PA", "VE", "ES", "AR", "HN"})
+        self.assertTrue({"PA", "VE", "ES", "AR", "HN"}.issubset(set(data["counts_by_country"].keys())),
+                        "Los 5 países foco deben estar siempre presentes en counts_by_country")
 
     def test_health_endpoint(self):
         for ep in ["/api/health", "/health"]:
