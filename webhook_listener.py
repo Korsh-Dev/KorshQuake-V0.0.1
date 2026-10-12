@@ -44,7 +44,7 @@ class WebhookHandler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
-        self.wfile.write(json.dumps({"service": "korshquake-webhook", "status": "online"}).encode('utf-8'))
+        self.wfile.write(json.dumps({"service": "korshquake-webhook", "status": "online", "signature_check": bool(WEBHOOK_SECRET)}).encode('utf-8'))
 
     def log_message(self, format, *args):
         pass
