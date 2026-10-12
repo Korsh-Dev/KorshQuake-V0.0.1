@@ -20,9 +20,36 @@ import socket
 import ssl
 import struct
 import base64
+import html as html_lib
+from xml.sax.saxutils import escape as xml_escape
 from datetime import datetime, timezone
 
 _server_start_time = time.time()
+
+
+def _safe_float(val, default=None):
+    """Convierte a float sin reventar ante None/strings malformados (evita 500 en POSTs)."""
+    try:
+        if val is None:
+            return default
+        return float(val)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_int(val, default=None):
+    """Convierte a int de forma tolerante (acepta '3', 3.7, None, basura)."""
+    try:
+        if val is None:
+            return default
+        return int(float(val))
+    except (TypeError, ValueError):
+        return default
+
+
+def _csv_escape(val):
+    """Escapa comillas dobles para CSV RFC 4180."""
+    return str(val).replace('"', '""')
 
 CURRENT_VERSION = "1.1.9 PRO"
 CURRENT_VERSION_CODE = 119
@@ -182,8 +209,8 @@ def get_shakemap_data(quake_id):
         return {"quake_id": q_id, "total_reports": 0, "points": []}
 
 def search_quakes_history(query=None, country=None, min_mag=None, max_mag=None, limit=50, offset=0):
-    limit = min(200, max(1, int(limit)))
-    offset = max(0, int(offset))
+    limit = min(200, max(1, _safe_int(limit, 50)))
+    offset = max(0, _safe_int(offset, 0))
     sql = "SELECT raw_json FROM quakes WHERE 1=1"
     params = []
 
@@ -194,11 +221,15 @@ def search_quakes_history(query=None, country=None, min_mag=None, max_mag=None, 
         sql += " AND country_code = ?"
         params.append(country.upper())
     if min_mag is not None:
-        sql += " AND mag >= ?"
-        params.append(float(min_mag))
+        min_mag_val = _safe_float(min_mag, None)
+        if min_mag_val is not None:
+            sql += " AND mag >= ?"
+            params.append(min_mag_val)
     if max_mag is not None:
-        sql += " AND mag <= ?"
-        params.append(float(max_mag))
+        max_mag_val = _safe_float(max_mag, None)
+        if max_mag_val is not None:
+            sql += " AND mag <= ?"
+            params.append(max_mag_val)
 
     sql += " ORDER BY time DESC LIMIT ? OFFSET ?;"
     params.extend([limit, offset])
@@ -339,6 +370,11 @@ def record_felt_report(quake_id, client_ip, lat=None, lon=None, intensity=None):
         _community_report_ips[ip_key] = now
         _community_reports[q_id] = _community_reports.get(q_id, 0) + 1
         new_total = _community_reports[q_id]
+        # Poda anti-fuga del registro anti-duplicado (claves > 2h ya no aplican)
+        if len(_community_report_ips) > 20000:
+            _stale_ips = [k for k, v in _community_report_ips.items() if (now - v) > 7200.0]
+            for k in _stale_ips:
+                _community_report_ips.pop(k, None)
         save_community_reports()
         try:
             with _db_lock:
@@ -1258,8 +1294,11 @@ def _execute_full_fetch():
                 )
             except Exception:
                 pass
-            # Conteo de reportes ciudadanos
-            f["properties"]["felt_reports"] = get_felt_reports(f.get("id"))
+            # Conteo de reportes ciudadanos: conservar el total fusionado (USGS felt + comunidad)
+            # y solo elevarlo con el conteo comunitario cuando el evento no traía total (mesh/EMSC live)
+            comm_felt_ct = get_felt_reports(f.get("id"))
+            prev_felt_ct = _safe_int(f["properties"].get("felt_reports"), 0)
+            f["properties"]["felt_reports"] = max(prev_felt_ct, comm_felt_ct)
             # Persistencia transaccional en SQLite
             save_quake_to_db(f)
 
@@ -1268,6 +1307,7 @@ def _execute_full_fetch():
         _server_telemetry["inpres_ar"]["events_count"] = counts["AR"]
         _server_telemetry["upa_pa"]["events_count"] = counts["PA"]
         _server_telemetry["emsc_regional"]["events_count"] = len(raw_events)
+        _active_feed_statuses = {"ONLINE", "LIVE_WS", "LIVE_STREAM"}
 
         return {
             "type": "FeatureCollection",
@@ -1278,7 +1318,7 @@ def _execute_full_fetch():
                 "total_events": len(fused_features),
                 "counts_by_country": counts,
                 "consensus_events": len([f for f in fused_features if f["properties"]["is_consensus"]]),
-                "active_servers": len([s for s in _server_telemetry.values() if s["status"] == "ONLINE"]),
+                "active_servers": len([s for s in _server_telemetry.values() if s["status"] in _active_feed_statuses]),
                 "realtime_streaming": True,
                 "sync_frequency_seconds": 2.8,
                 "memory_latency_ms": 0.4
@@ -1563,6 +1603,11 @@ def process_mesh_trigger(node_id, lat, lon, pga, sta_lta=4.0, device="Mobile Acc
             # Cooldown de 4 segundos por región para no duplicar alertas del mismo frente de onda
             if force_cluster or (now - last_alert_time) > 4.0:
                 _last_cluster_by_region[region_key] = now
+                # Poda anti-fuga: descartar regiones sin alertas recientes
+                if len(_last_cluster_by_region) > 500:
+                    _stale_regions = [k for k, v in _last_cluster_by_region.items() if (now - v) > 3600.0]
+                    for k in _stale_regions:
+                        _last_cluster_by_region.pop(k, None)
 
                 # Epicentro ponderado por amplitud PGA
                 weights = [max(0.1, n["pga"]) for n in unique_nodes.values()]
@@ -1729,6 +1774,10 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
         # Leer cuerpo de la solicitud JSON
         try:
             content_length = int(self.headers.get("Content-Length", 0))
+            if content_length > 1_000_000:
+                self.close_connection = True
+                send_json({"error": "Payload too large"}, 413)
+                return
             post_body = self.rfile.read(content_length) if content_length > 0 else b"{}"
             body = json.loads(post_body.decode("utf-8")) if post_body else {}
         except Exception as e:
@@ -1737,31 +1786,31 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
 
         # 1. Telemetría / Ping periódico de nodo (APK / Web Móvil)
         if path in ["/api/nodes/ping", "/api/nodes/telemetry"]:
-            node_id = str(body.get("node_id", f"node-{int(time.time()*1000)}"))
-            lat = float(body.get("lat", 0.0))
-            lon = float(body.get("lon", 0.0))
-            accuracy = float(body.get("accuracy", 15.0))
-            pga = float(body.get("pga", 0.0))
-            sta_lta = float(body.get("sta_lta", 1.0))
-            noise_floor = float(body.get("noise_floor", 0.02))
-            platform = str(body.get("platform", "mobile"))
-            device = str(body.get("device", "Phone Sensor"))
+            node_id = str(body.get("node_id", f"node-{int(time.time()*1000)}"))[:120]
+            lat = _safe_float(body.get("lat"), 0.0)
+            lon = _safe_float(body.get("lon"), 0.0)
+            accuracy = _safe_float(body.get("accuracy"), 15.0)
+            pga = _safe_float(body.get("pga"), 0.0)
+            sta_lta = _safe_float(body.get("sta_lta"), 1.0)
+            noise_floor = _safe_float(body.get("noise_floor"), 0.02)
+            platform = str(body.get("platform", "mobile"))[:80]
+            device = str(body.get("device", "Phone Sensor"))[:120]
             gps_enabled = bool(body.get("gps_enabled", True))
-            location_mode = str(body.get("location_mode", "gps_fine"))
+            location_mode = str(body.get("location_mode", "gps_fine"))[:40]
             
-            node_type = str(body.get("node_type", "auto"))
+            node_type = str(body.get("node_type", "auto"))[:20]
             result = register_mesh_node(node_id, lat, lon, accuracy, pga, sta_lta, noise_floor, platform, device, gps_enabled, location_mode, node_type)
             send_json(result)
             return
 
         # 2. Disparo de acelerómetro anómalo (Seismic Trigger)
         if path == "/api/nodes/trigger":
-            node_id = str(body.get("node_id", f"node-{int(time.time()*1000)}"))
-            lat = float(body.get("lat", 0.0))
-            lon = float(body.get("lon", 0.0))
-            pga = float(body.get("pga", 0.0))
-            sta_lta = float(body.get("sta_lta", 4.0))
-            device = str(body.get("device", "Phone Sensor"))
+            node_id = str(body.get("node_id", f"node-{int(time.time()*1000)}"))[:120]
+            lat = _safe_float(body.get("lat"), 0.0)
+            lon = _safe_float(body.get("lon"), 0.0)
+            pga = _safe_float(body.get("pga"), 0.0)
+            sta_lta = _safe_float(body.get("sta_lta"), 4.0)
+            device = str(body.get("device", "Phone Sensor"))[:120]
             
             result = process_mesh_trigger(node_id, lat, lon, pga, sta_lta, device)
             send_json(result)
@@ -1769,10 +1818,10 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
 
         # 3. Disparo de prueba de cluster multi-nodo (Exclusivo administracion y pruebas)
         if path in ["/api/nodes/test_cluster", "/api/admin/test_cluster"]:
-            lat = float(body.get("lat", 10.48))
-            lon = float(body.get("lon", -66.90))
-            pga = float(body.get("pga", 35.0))
-            nodes_count = int(body.get("nodes_count", 3))
+            lat = _safe_float(body.get("lat"), 10.48)
+            lon = _safe_float(body.get("lon"), -66.90)
+            pga = _safe_float(body.get("pga"), 35.0)
+            nodes_count = _safe_int(body.get("nodes_count"), 3)
             
             result = simulate_mesh_test_cluster(lat, lon, pga, nodes_count)
             send_json(result)
@@ -1808,7 +1857,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             quake_id = body.get("quake_id")
             if not quake_id and path.startswith("/api/quakes/"):
                 parts = path.strip("/").split("/")
-                if len(parts) >= 3 and parts[0] == "api" and parts[1] == "quakes" and parts[3] == "report":
+                if len(parts) >= 4 and parts[0] == "api" and parts[1] == "quakes" and parts[3] == "report":
                     quake_id = parts[2]
             if not quake_id:
                 send_json({"error": "Missing quake_id parameter"}, 400)
@@ -1827,7 +1876,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             keys = body.get("keys", {})
             p256dh = keys.get("p256dh", "")
             auth = keys.get("auth", "")
-            min_mag = float(body.get("min_mag", 4.0))
+            min_mag = _safe_float(body.get("min_mag"), 4.0)
             target_country = body.get("country", "ALL")
             if not endpoint:
                 send_json({"error": "Missing endpoint parameter"}, 400)
@@ -1950,7 +1999,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
                 props = f.get("properties", {})
                 coords = f.get("geometry", {}).get("coordinates", [0, 0, 10])
                 t_utc = datetime.fromtimestamp(props.get("time", 0) / 1000.0, timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC') if props.get("time") else ""
-                csv_lines.append(f'"{f.get("id")}","{t_utc}",{props.get("time", 0)},{coords[1]},{coords[0]},{coords[2] if len(coords)>2 else 10},{props.get("mag", 0)},"{props.get("place", "")}","{props.get("country_code", "")}","{props.get("country_name", "")}",{props.get("felt_reports", 0)},"{props.get("source_feed", "")}"')
+                csv_lines.append(f'"{_csv_escape(f.get("id"))}","{_csv_escape(t_utc)}",{props.get("time", 0)},{coords[1]},{coords[0]},{coords[2] if len(coords)>2 else 10},{props.get("mag", 0)},"{_csv_escape(props.get("place", ""))}","{_csv_escape(props.get("country_code", ""))}","{_csv_escape(props.get("country_name", ""))}",{props.get("felt_reports", 0)},"{_csv_escape(props.get("source_feed", ""))}"')
             payload = "\n".join(csv_lines).encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'text/csv; charset=utf-8')
@@ -1972,10 +2021,11 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             for f in features:
                 props = f.get("properties", {})
                 coords = f.get("geometry", {}).get("coordinates", [0, 0, 10])
-                ev_id = f.get("id", "qk")
+                ev_id = xml_escape(str(f.get("id", "qk")), {'"': "&quot;"})
+                place_xml = xml_escape(str(props.get("place", "Epicentro")))
                 t_iso = datetime.fromtimestamp(props.get("time", 0) / 1000.0, timezone.utc).isoformat() + "Z" if props.get("time") else ""
                 xml_lines.append(f'    <event publicID="smi:quake.korsh.online/event/{ev_id}">')
-                xml_lines.append(f'      <description><text>{props.get("place", "Epicentro")}</text><type>region name</type></description>')
+                xml_lines.append(f'      <description><text>{place_xml}</text><type>region name</type></description>')
                 xml_lines.append(f'      <origin publicID="smi:quake.korsh.online/origin/{ev_id}">')
                 xml_lines.append(f'        <time><value>{t_iso}</value></time>')
                 xml_lines.append(f'        <latitude><value>{coords[1]}</value></latitude>')
@@ -2021,14 +2071,15 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
             desc = "Monitoreo sísmico y predicción de ondas en tiempo real."
             mag_str = "M --"
             place_str = "Sismo Detectado"
+            event_id = html_lib.escape(event_id, quote=True)
             if matched:
                 p = matched.get("properties", {})
-                mag_val = p.get("mag", 0)
+                mag_val = _safe_float(p.get("mag"), 0.0)
                 mag_str = f"M {mag_val:.1f}"
-                place_str = p.get("place", "Epicentro Sísmico")
-                country = p.get("country_name", "")
+                place_str = html_lib.escape(str(p.get("place") or "Epicentro Sísmico"), quote=True)
+                country = html_lib.escape(str(p.get("country_name") or ""), quote=True)
                 coords = matched.get("geometry", {}).get("coordinates", [0, 0, 10])
-                depth = coords[2] if len(coords) > 2 else 10
+                depth = _safe_float(coords[2] if len(coords) > 2 else 10, 10.0)
                 title = f"Sismo {mag_str} - {place_str} ({country}) | KorshQuake"
                 desc = f"Sismo de magnitud {mag_str} localizado en {place_str} a {depth:.0f} km de profundidad. Consulta frentes de onda ak135, telemetría y mapa interactivo en vivo."
 
@@ -2276,7 +2327,7 @@ class GlobalQuakeHandler(http.server.SimpleHTTPRequestHandler):
                 "strong_events_count": len(strong_quakes),
                 "recent_last_hour_count": recent_hour,
                 "active_live_alerts_count": len(live_alerts),
-                "active_networks": len([s for s in _server_telemetry.values() if s["status"] == "ONLINE"]),
+                "active_networks": len([s for s in _server_telemetry.values() if s["status"] in ("ONLINE", "LIVE_WS", "LIVE_STREAM")]),
                 "streaming_refresh_rate_sec": 2.8,
                 "timestamp": int(now_ms)
             }

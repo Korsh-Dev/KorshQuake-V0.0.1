@@ -1,10 +1,11 @@
-# KorshQuake v1.1.2 PRO 🌍⚡
+# KorshQuake v1.1.9 PRO 🌍⚡
 
-**KorshQuake** es un centro de monitoreo, detección y alerta temprana de terremotos en tiempo real enfocado exclusivamente en cuatro territorios:
+**KorshQuake** es un centro de monitoreo, detección y alerta temprana de terremotos en tiempo real enfocado exclusivamente en cinco territorios:
 - 🇵🇦 **Panamá**
 - 🇻🇪 **Venezuela**
 - 🇪🇸 **España** (Península, Baleares e Islas Canarias)
 - 🇦🇷 **Argentina**
+- 🇭🇳 **Honduras**
 
 El sistema ingiere y triangula en paralelo datos de redes sismológicas oficiales (IGN, FUNVISIS, INPRES, OSOP/RSN, EMSC y USGS) con refresco continuo en memoria RAM cada 2.8 segundos y respuesta de API en menos de 40 ms.
 

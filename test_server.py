@@ -1,6 +1,7 @@
 import unittest
 import json
 import urllib.request
+import urllib.error
 import threading
 import time
 import os
@@ -556,6 +557,63 @@ class TestKorshQuakeServer(unittest.TestCase):
         self.assertIn("rake", fm)
         self.assertIn("beachball_svg", fm)
         self.assertIn("<svg", fm["beachball_svg"])
+
+    # --- Regresión: auditoría de robustez (inputs malformados no deben producir 500) ---
+
+    def _post_json(self, path, payload, expect_status=200):
+        url = f"http://127.0.0.1:{self.port}{path}"
+        data = json.dumps(payload).encode('utf-8') if not isinstance(payload, bytes) else payload
+        req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'}, method='POST')
+        try:
+            resp = urllib.request.urlopen(req, timeout=5)
+            status, body = resp.status, resp.read().decode('utf-8')
+        except urllib.error.HTTPError as e:
+            status, body = e.code, e.read().decode('utf-8')
+        self.assertEqual(status, expect_status, f"{path} -> {status}: {body[:200]}")
+        return body
+
+    def test_telemetry_malformed_numbers_no_crash(self):
+        body = self._post_json("/api/nodes/ping", {"node_id": "audit-node", "lat": "abc", "lon": None, "pga": "NaN-ish"})
+        res = json.loads(body)
+        self.assertIn("node_id", res)
+
+    def test_trigger_malformed_numbers_no_crash(self):
+        body = self._post_json("/api/nodes/trigger", {"node_id": "audit-node", "lat": [1], "pga": {"x": 1}})
+        res = json.loads(body)
+        self.assertIn("cluster_detected", res)
+
+    def test_report_missing_quake_id_returns_400_not_500(self):
+        # POST /api/quakes/report sin quake_id: antes reventaba con IndexError (500)
+        self._post_json("/api/quakes/report", {}, expect_status=400)
+
+    def test_push_subscribe_bad_min_mag_no_crash(self):
+        body = self._post_json("/api/push/subscribe", {
+            "endpoint": "https://fcm.googleapis.com/fcm/send/audit-token",
+            "keys": {"p256dh": "k", "auth": "a"},
+            "min_mag": "no-es-numero"
+        })
+        self.assertTrue(json.loads(body).get("success"))
+
+    def test_history_bad_query_params_no_crash(self):
+        url = f"http://127.0.0.1:{self.port}/api/quakes/history?limit=abc&offset=xyz&min_mag=foo&max_mag=bar"
+        resp = urllib.request.urlopen(url, timeout=5)
+        self.assertEqual(resp.status, 200)
+        data = json.loads(resp.read().decode('utf-8'))
+        self.assertIn("features", data)
+
+    def test_csv_export_valid_quoting(self):
+        url = f"http://127.0.0.1:{self.port}/api/export/csv"
+        resp = urllib.request.urlopen(url, timeout=10)
+        self.assertEqual(resp.status, 200)
+        text = resp.read().decode('utf-8')
+        lines = text.strip().split("\n")
+        self.assertEqual(lines[0].split(",")[0], "id")
+        import csv as csv_mod
+        import io
+        rows = list(csv_mod.reader(io.StringIO(text)))
+        self.assertEqual(len(rows[0]), 12)
+        for row in rows[1:]:
+            self.assertEqual(len(row), 12, f"fila CSV con columnas rotas: {row}")
 
 if __name__ == '__main__':
     unittest.main()
